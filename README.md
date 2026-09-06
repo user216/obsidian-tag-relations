@@ -55,6 +55,28 @@ Press **Show notes** to list the notes carrying your selected tags. **Match mode
 
 The list is a **snapshot**, not a live query. It fills only when you press the button, so you can keep clicking around the graph to investigate results without the list shifting under you. When the selection, match mode, or vault moves on, the panel marks itself **Outdated** and offers a refresh rather than silently changing. Click a result to open it, Ctrl/Cmd click for a new tab.
 
+## Editing tags
+
+> **This part writes to your notes.** Everything above only reads them. Obsidian's undo is per-file and does not cover a bulk edit, so keep a backup or version control before renaming across a large vault. Every bulk action shows you exactly which notes it will change before it changes them.
+
+**Rename a tag** across the whole vault. The dialog previews as you type — how many occurrences in how many notes, whether the target name already exists (in which case the two tags merge), and whether to carry nested children along (`#a/b` → `#new/b`).
+
+**Assign a tag** to notes — existing or brand new. The picker searches your tags, and typing a name that doesn't exist yet offers to create it, so adding a new tag and reusing an old one are the same gesture. New tags go to frontmatter by default, or to the end of the note body.
+
+**Remove a tag** from notes, scoped to the whole vault or to just the notes currently in the notes panel.
+
+Five ways in, because renaming while you explore and renaming as a cleanup chore are different activities:
+
+| Where | What |
+| --- | --- |
+| **Inline** (cloud, tree) | Turn on **edit mode** (toolbar pencil); each tag gets a rename control that edits the name in place |
+| **Context menu** (all views) | Rename tag…, Add another tag to these notes…, Remove this tag from all notes |
+| **Details panel** | An "Edit tags" group acting on the current selection |
+| **Notes panel** | Add or remove a tag across exactly the notes frozen in the list |
+| **Commands** | Rename a tag · Add a tag to the active note · Remove a tag from the active note |
+
+Under the hood, edits use the tag positions Obsidian's own parser recorded, so code blocks, `https://…#fragment` URLs and `# Heading` lines are never mistaken for tags; frontmatter is re-serialised by Obsidian rather than patched by hand, preserving whether you wrote a list or a string and whether entries carry a `#`. Renaming a tag also updates the plugin's own manual connections to match.
+
 ## Everywhere
 - **Details panel** (right side, toggleable) — note and relation counts, the related-tag list with strength bars, and removable chips for a multi-tag selection. Its **Search** action searches the whole selection, joined with `AND` or `OR` to match the current mode.
 - **Double-click** any tag in any view to search your notes for it.
@@ -65,6 +87,8 @@ The list is a **snapshot**, not a live query. It fills only when you press the b
 - Open tag relations / Open tag relations in sidebar
 - Focus a tag (fuzzy picker showing note and relation counts)
 - Connect two tags
+- Rename a tag
+- Add a tag to the active note / Remove a tag from the active note
 - Rescan vault for tags
 
 ## Settings worth knowing
@@ -76,6 +100,9 @@ The list is a **snapshot**, not a live query. It fills only when you press the b
 - **Sticky multi-select** — make every plain click additive, so you never need a modifier key.
 - **Match notes against** — the default All/Any mode for the notes panel.
 - **Notes panel height / maximum notes listed** — how tall the results panel is and how many rows it renders (the header always reports the true total).
+- **Write new tags to** — frontmatter (default) or the end of the note body.
+- **Confirm bulk edits** — show the affected notes before writing to more than one. Removals always ask regardless.
+- **Edit mode** — show inline rename controls on tags; also on the view's toolbar.
 
 ## Install
 
@@ -103,28 +130,32 @@ For development, `npm run dev` starts esbuild in watch mode — point the output
 
 ## Data
 
-Manual connections and view preferences live in `data.json` inside the plugin folder. Nothing is written to your notes — the plugin only reads Obsidian's metadata cache, so it never modifies your vault.
+Manual connections and view preferences live in `data.json` inside the plugin folder — they are never written into your notes.
+
+Your notes are modified only by the tag-editing actions described above (rename, assign, remove), and only when you explicitly invoke one. Exploring, selecting, connecting tags and listing notes are all read-only. All writes originate from a single module, [src/edit.ts](src/edit.ts), if you want to audit them.
 
 ## Project layout
 
 ```
 src/
-  main.ts      plugin entry: settings, commands, graph rebuild scheduling
-  graph.ts     the tag graph — co-occurrence, metrics, pruning, traversal
-  view.ts      the view shell: toolbar, mode switching, details panel
-  cloud.ts     tag cloud renderer with FLIP re-grouping
-  map.ts       force-directed canvas mind-map
-  tree.ts      expandable relation tree
-  settings.ts  settings tab and defaults
-  modals.ts    fuzzy tag picker
-  host.ts      the interface renderers see
+  main.ts        plugin entry: settings, commands, graph rebuild scheduling
+  graph.ts       the tag graph — co-occurrence, metrics, pruning, traversal
+  edit.ts        the only module that writes to notes: plan + apply tag edits
+  view.ts        the view shell: toolbar, mode switching, details/notes panels
+  cloud.ts       tag cloud renderer with FLIP re-grouping
+  map.ts         force-directed canvas mind-map
+  tree.ts        expandable relation tree
+  settings.ts    settings tab and defaults
+  modals.ts      fuzzy tag picker
+  editModals.ts  rename dialog, tag picker with create-new, edit confirmation
+  host.ts        the interface renderers see
 ```
 
 The graph rebuilds on vault changes, debounced by ~1s so bursts of edits cost one rebuild.
 
 ## Design decisions
 
-The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, and why the notes panel is a snapshot rather than a live query — is recorded in [docs/adr/](docs/adr/).
+The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
 
 ## Changelog
 

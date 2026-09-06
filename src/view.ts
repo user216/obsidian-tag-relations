@@ -57,6 +57,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private modeButtons = new Map<ViewMode, HTMLElement>();
 	private searchInput!: HTMLInputElement;
 	private stickyButton!: HTMLElement;
+	private editButton!: HTMLElement;
 	private matchSelect!: HTMLSelectElement;
 
 	private snapshot: NotesSnapshot | null = null;
@@ -78,6 +79,18 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	get sort(): SortMode {
 		return this.plugin.settings.sort;
+	}
+
+	get editMode(): boolean {
+		return this.plugin.settings.editMode;
+	}
+
+	promptRename(tag: string): void {
+		this.plugin.promptRenameTag(tag);
+	}
+
+	renameInline(tag: string, next: string): void {
+		this.plugin.requestRename(tag, next);
 	}
 
 	getViewType(): string {
@@ -260,6 +273,37 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		menu.addSeparator();
 		menu.addItem((item) =>
 			item
+				.setTitle("Rename tag…")
+				.setIcon("pencil")
+				.onClick(() => this.plugin.promptRenameTag(tag))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Add another tag to these notes…")
+				.setIcon("tag")
+				.onClick(() =>
+					this.plugin.promptAssignTag(
+						this.plugin.notesWithTag(tag),
+						`notes tagged ${tagLabel(tag)}`
+					)
+				)
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Remove this tag from all notes")
+				.setIcon("trash-2")
+				.onClick(() =>
+					this.plugin.promptUnassignTag(
+						tag,
+						this.plugin.notesWithTag(tag),
+						"the whole vault"
+					)
+				)
+		);
+
+		menu.addSeparator();
+		menu.addItem((item) =>
+			item
 				.setTitle("Connect to another tag…")
 				.setIcon("link")
 				.onClick(() => this.promptConnect(tag))
@@ -385,6 +429,39 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		}
 
 		const actions = header.createDiv({ cls: "tr-notes-actions" });
+
+		// Bulk edits act on exactly the notes listed below, which is the whole
+		// point of freezing the list first.
+		if (total > 0) {
+			const paths = snapshot.matches.map((match) => match.path);
+			const scope = `these ${total} note${total === 1 ? "" : "s"}`;
+			const addButton = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(addButton, "tag");
+			setTooltip(addButton, `Add a tag to ${scope}`, { placement: "top" });
+			addButton.addEventListener("click", () =>
+				this.plugin.promptAssignTag(paths, scope)
+			);
+
+			const removeButton = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(removeButton, "eraser");
+			setTooltip(removeButton, `Remove a tag from ${scope}`, {
+				placement: "top",
+			});
+			removeButton.addEventListener("click", () => {
+				const candidates = this.tagsAcross(paths);
+				if (candidates.length === 0) {
+					new Notice("These notes have no tags to remove.");
+					return;
+				}
+				new TagSuggestModal(
+					this.app,
+					candidates,
+					`Remove which tag from ${scope}?`,
+					(tag) => this.plugin.promptUnassignTag(tag, paths, scope)
+				).open();
+			});
+		}
+
 		const refresh = actions.createDiv({ cls: "tr-icon-button" });
 		setIcon(refresh, "refresh-cw");
 		setTooltip(refresh, "Rebuild from the current selection", {
@@ -506,6 +583,21 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.renderActiveMode();
 		});
 
+		this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });
+		setIcon(this.editButton, "pencil");
+		setTooltip(
+			this.editButton,
+			"Edit mode — show inline rename controls on tags",
+			{ placement: "bottom" }
+		);
+		this.editButton.addEventListener("click", () => {
+			this.settings.editMode = !this.settings.editMode;
+			void this.plugin.saveSettings();
+			this.syncToolbar();
+			this.renderActiveMode();
+			this.renderInspector();
+		});
+
 		this.stickyButton = toolbar.createDiv({ cls: "tr-icon-button" });
 		setIcon(this.stickyButton, "list-checks");
 		setTooltip(
@@ -581,6 +673,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			"is-active",
 			this.settings.stickyMultiSelect
 		);
+		this.editButton?.toggleClass("is-active", this.settings.editMode);
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
 	}
 
@@ -736,6 +829,59 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			);
 		}
 		this.actionButton(actions, "x-circle", "Clear", () => this.clearSelection());
+
+		// Editing is grouped separately and labelled, because unlike everything
+		// else in this panel these actions rewrite notes.
+		el.createDiv({ cls: "tr-inspector-section", text: "Edit tags" });
+		const edits = el.createDiv({ cls: "tr-inspector-actions" });
+		if (this.selection.length === 1) {
+			const tag = this.selection[0];
+			this.actionButton(edits, "pencil", "Rename…", () =>
+				this.plugin.promptRenameTag(tag)
+			);
+		}
+		this.actionButton(edits, "tag", "Add tag…", () =>
+			this.plugin.promptAssignTag(
+				this.notesForCurrentSelection(),
+				this.selectionScopeLabel()
+			)
+		);
+		if (this.selection.length === 1) {
+			const tag = this.selection[0];
+			this.actionButton(edits, "trash-2", "Remove tag…", () =>
+				this.plugin.promptUnassignTag(
+					tag,
+					this.plugin.notesWithTag(tag),
+					"the whole vault"
+				)
+			);
+		}
+	}
+
+	/** Every tag appearing on any of `paths`, for the "remove which tag?" picker. */
+	private tagsAcross(paths: string[]): string[] {
+		const found = new Set<string>();
+		for (const path of paths) {
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) {
+				for (const tag of this.plugin.tagsOnFile(file)) found.add(tag);
+			}
+		}
+		return Array.from(found).sort((a, b) => a.localeCompare(b));
+	}
+
+	/** The notes the current selection resolves to, under the active match mode. */
+	private notesForCurrentSelection(): string[] {
+		return this.graph
+			.matchNotes(this.selection, this.settings.noteMatchMode)
+			.map((match) => match.path);
+	}
+
+	private selectionScopeLabel(): string {
+		const names = this.selection.map(tagLabel).join(" + ");
+		return this.selection.length === 1
+			? `notes tagged ${names}`
+			: `notes matching ${this.settings.noteMatchMode === "all" ? "all" : "any"} of ${names}`;
 	}
 
 	private renderVaultSummary(el: HTMLElement): void {

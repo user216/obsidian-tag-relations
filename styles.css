@@ -250,6 +250,148 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* ------------------------------------------------------ inline editing */
+
+.tr-pill-edit,
+.tr-tree-edit {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	cursor: pointer;
+	opacity: 0.6;
+}
+
+.tr-pill-edit:hover,
+.tr-tree-edit:hover {
+	opacity: 1;
+	color: var(--text-accent);
+}
+
+.tr-pill-edit .svg-icon,
+.tr-tree-edit .svg-icon {
+	width: 0.62em;
+	height: 0.62em;
+}
+
+.tr-tree-edit .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+.tr-pill.is-renaming {
+	padding: 1px 4px;
+}
+
+.tr-pill-input,
+.tr-inline-input {
+	font-size: inherit;
+	font-family: inherit;
+	padding: 1px 5px;
+	min-width: 6em;
+	max-width: 16em;
+	border: 1px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+}
+
+/* ---------------------------------------------------------- edit modals */
+
+.tr-modal h3 {
+	margin-top: 0;
+}
+
+.tr-modal-preview {
+	margin: 8px 0;
+}
+
+.tr-modal-summary {
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	margin-bottom: 6px;
+}
+
+.tr-modal-note {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.tr-modal-error {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-error);
+}
+
+.tr-modal-warning {
+	margin: 6px 0;
+	padding: 6px 9px;
+	border-radius: var(--radius-s);
+	border-left: 3px solid var(--text-warning, var(--interactive-accent));
+	background-color: var(--background-modifier-hover);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.tr-modal-files {
+	max-height: 220px;
+	overflow-y: auto;
+	margin: 8px 0;
+	padding: 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-secondary);
+}
+
+.tr-modal-file {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 2px 4px;
+	font-size: var(--font-ui-smaller);
+}
+
+.tr-modal-file-path {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-normal);
+}
+
+.tr-modal-file-meta {
+	flex: 0 0 auto;
+	color: var(--text-faint);
+}
+
+.tr-modal-file-more {
+	padding: 2px 4px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.tr-choice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.tr-choice-icon {
+	display: flex;
+	color: var(--text-accent);
+}
+
+.tr-choice-icon .svg-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.tr-choice-sub {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
 /* -------------------------------------------------------------- chips */
 
 .tr-chips {

@@ -35,6 +35,13 @@ export interface ViewHost {
 	selectFromEvent(tag: string, event: MouseEvent | PointerEvent): void;
 	clearSelection(): void;
 
+	/** True when edit mode is on — renderers show inline rename affordances. */
+	editMode: boolean;
+	/** Open the full rename dialog, with its preview of what will change. */
+	promptRename(tag: string): void;
+	/** Commit an inline rename typed directly into a view. */
+	renameInline(tag: string, next: string): void;
+
 	/** Open the tag context menu at the given mouse position. */
 	openContextMenu(tag: string, event: MouseEvent): void;
 	openTagSearch(tag: string): void;

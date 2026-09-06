@@ -16,6 +16,8 @@ export class TreeRenderer implements ModeRenderer {
 	private expanded = new Set<string>();
 	/** Which root set the current expansion state belongs to. */
 	private lastRootsKey: string | null = null;
+	/** Path key of the row being renamed in place, if any. */
+	private renaming: string | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -107,6 +109,22 @@ export class TreeRenderer implements ModeRenderer {
 		return children;
 	}
 
+	private renderRenameInput(container: HTMLElement, tag: string): void {
+		attachRenameInput(
+			container,
+			tag,
+			(next) => {
+				this.renaming = null;
+				this.render();
+				this.host.renameInline(tag, next);
+			},
+			() => {
+				this.renaming = null;
+				this.render();
+			}
+		);
+	}
+
 	private renderNode(parent: HTMLElement, path: string[], depth: number): void {
 		const { host } = this;
 		const tag = path[path.length - 1];
@@ -138,11 +156,25 @@ export class TreeRenderer implements ModeRenderer {
 				: undefined;
 
 		const label = row.createSpan({ cls: "tr-tree-label" });
+		if (this.renaming === key) {
+			this.renderRenameInput(label, tag);
+			return;
+		}
 		label.createSpan({ cls: "tr-tree-name", text: tagLabel(tag) });
 		label.createSpan({
 			cls: "tr-tree-count",
 			text: String(host.graph.countOf(tag)),
 		});
+		if (host.editMode) {
+			const edit = label.createSpan({ cls: "tr-tree-edit" });
+			setIcon(edit, "pencil");
+			setTooltip(edit, `Rename ${tagLabel(tag)}`, { placement: "top" });
+			edit.addEventListener("click", (event) => {
+				event.stopPropagation();
+				this.renaming = key;
+				this.render();
+			});
+		}
 		if (edge) {
 			const bar = label.createSpan({ cls: "tr-strength-bar" });
 			bar.style.setProperty("--tr-strength", edge.weight.toFixed(3));
@@ -185,4 +217,49 @@ export class TreeRenderer implements ModeRenderer {
 
 function pathKey(path: string[]): string {
 	return path.join(" > ");
+}
+
+/** Shared inline-rename field, mirroring the cloud's behaviour. */
+function attachRenameInput(
+	container: HTMLElement,
+	tag: string,
+	onCommit: (next: string) => void,
+	onCancel: () => void
+): void {
+	const input = container.createEl("input", {
+		cls: "tr-inline-input",
+		type: "text",
+	});
+	input.value = tagLabel(tag);
+
+	let settled = false;
+	const cancel = () => {
+		if (settled) return;
+		settled = true;
+		onCancel();
+	};
+	const commit = () => {
+		if (settled) return;
+		settled = true;
+		const next = input.value.trim();
+		if (next.length > 0 && next !== tagLabel(tag)) onCommit(next);
+		else onCancel();
+	};
+
+	input.addEventListener("click", (event) => event.stopPropagation());
+	input.addEventListener("keydown", (event) => {
+		event.stopPropagation();
+		if (event.key === "Enter") {
+			event.preventDefault();
+			commit();
+		} else if (event.key === "Escape") {
+			event.preventDefault();
+			cancel();
+		}
+	});
+	input.addEventListener("blur", cancel);
+	window.setTimeout(() => {
+		input.focus();
+		input.select();
+	}, 0);
 }

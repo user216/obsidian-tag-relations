@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type TagRelationsPlugin from "./main";
+import { AddLocation } from "./edit";
 import {
 	ManualLink,
 	NoteMatchMode,
@@ -25,6 +26,11 @@ export interface TagRelationsSettings {
 	mode: ViewMode;
 	sort: SortMode;
 	showInspector: boolean;
+
+	// Editing
+	addTagLocation: AddLocation;
+	confirmBulkEdits: boolean;
+	editMode: boolean;
 
 	// Selection and the notes panel
 	stickyMultiSelect: boolean;
@@ -64,6 +70,10 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	mode: "cloud",
 	sort: "name-asc",
 	showInspector: true,
+
+	addTagLocation: "frontmatter",
+	confirmBulkEdits: true,
+	editMode: false,
 
 	stickyMultiSelect: false,
 	noteMatchMode: "all",
@@ -220,6 +230,58 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 
 		this.displayManualLinks(containerEl);
+
+		new Setting(containerEl).setName("Editing").setHeading();
+
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Renaming and assigning tags rewrites your notes. Obsidian's undo does not cover bulk edits, so keep a backup or version control before large changes.",
+		});
+
+		new Setting(containerEl)
+			.setName("Write new tags to")
+			.setDesc(
+				"Where a tag goes when you assign it to a note that does not have it yet."
+			)
+			.addDropdown((dd) =>
+				dd
+					.addOption("frontmatter", "Frontmatter (tags: …)")
+					.addOption("inline", "End of the note body")
+					.setValue(this.plugin.settings.addTagLocation)
+					.onChange(async (value) => {
+						this.plugin.settings.addTagLocation = value as AddLocation;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Confirm bulk edits")
+			.setDesc(
+				"Show the list of affected notes before writing to more than one note. Removals always ask, regardless of this setting."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.confirmBulkEdits)
+					.onChange(async (value) => {
+						this.plugin.settings.confirmBulkEdits = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Edit mode")
+			.setDesc(
+				"Show inline rename controls on tags in the cloud and tree views. Also toggleable from the view's toolbar."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.editMode)
+					.onChange(async (value) => {
+						this.plugin.settings.editMode = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
 
 		new Setting(containerEl).setName("Selection and notes").setHeading();
 

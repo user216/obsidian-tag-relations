@@ -1,4 +1,4 @@
-import { setTooltip } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost, scaleByCount } from "./host";
 import { tagLabel } from "./graph";
 
@@ -17,6 +17,8 @@ export class CloudRenderer implements ModeRenderer {
 	private container: HTMLElement;
 	private host: ViewHost;
 	private pills = new Map<string, HTMLElement>();
+	/** Tag currently being renamed in place, if any. */
+	private renaming: string | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -132,8 +134,22 @@ export class CloudRenderer implements ModeRenderer {
 			) + "px";
 
 		pill.empty();
+		if (this.renaming === tag) {
+			this.renderRenameInput(pill, tag);
+			return pill;
+		}
 		pill.createSpan({ cls: "tr-pill-name", text: tagLabel(tag) });
 		pill.createSpan({ cls: "tr-pill-count", text: String(count) });
+		if (host.editMode) {
+			const edit = pill.createSpan({ cls: "tr-pill-edit" });
+			setIcon(edit, "pencil");
+			setTooltip(edit, `Rename ${tagLabel(tag)}`, { placement: "top" });
+			edit.addEventListener("click", (event) => {
+				event.stopPropagation();
+				this.renaming = tag;
+				this.render();
+			});
+		}
 
 		const isSelected = host.isSelected(tag);
 		const hasSelection = host.selection.length > 0;
@@ -197,6 +213,54 @@ export class CloudRenderer implements ModeRenderer {
 			lines.push(`${degree} relation${degree === 1 ? "" : "s"}`);
 		}
 		return lines.join("\n");
+	}
+
+	/**
+	 * Turn the pill into a text field. Enter commits through the host (which
+	 * still previews and confirms the rewrite); Escape or blur cancels.
+	 */
+	private renderRenameInput(pill: HTMLElement, tag: string): void {
+		pill.addClass("is-renaming");
+		const input = pill.createEl("input", {
+			cls: "tr-pill-input",
+			type: "text",
+		});
+		input.value = tagLabel(tag);
+
+		let settled = false;
+		const cancel = () => {
+			if (settled) return;
+			settled = true;
+			this.renaming = null;
+			this.render();
+		};
+		const commit = () => {
+			if (settled) return;
+			settled = true;
+			const next = input.value.trim();
+			this.renaming = null;
+			this.render();
+			if (next.length > 0 && next !== tagLabel(tag)) {
+				this.host.renameInline(tag, next);
+			}
+		};
+
+		input.addEventListener("click", (event) => event.stopPropagation());
+		input.addEventListener("keydown", (event) => {
+			event.stopPropagation();
+			if (event.key === "Enter") {
+				event.preventDefault();
+				commit();
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				cancel();
+			}
+		});
+		input.addEventListener("blur", cancel);
+		window.setTimeout(() => {
+			input.focus();
+			input.select();
+		}, 0);
 	}
 
 	private measure(): Map<string, PillRect> {

@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-06
+
+Tag editing. **The plugin now writes to your notes** — until this release it only ever read them. Bulk edits are not covered by Obsidian's undo, so keep a backup or version control.
+
+### Added
+
+- **Rename a tag across the vault.** The rename dialog recomputes its preview as you type, showing how many occurrences in how many notes will change, warning when the target already exists (the two tags merge), and offering to carry nested children along (`#a/b` → `#new/b`).
+- **Assign existing or new tags to notes.** The tag picker searches your existing tags and, when you type a name that doesn't exist yet, offers to create it — one gesture for both. New tags go to frontmatter by default, or to the end of the note body.
+- **Remove a tag from notes**, scoped either to the whole vault or to just the notes currently listed in the notes panel.
+- Five ways to reach these, because renaming while exploring and renaming as a cleanup chore are different activities:
+  - **Inline rename** in the cloud and tree — turn on **edit mode** (toolbar pencil) and each tag gets a rename control that edits the name in place.
+  - **Context menu** in all three views: Rename tag…, Add another tag to these notes…, Remove this tag from all notes.
+  - **Details panel** — an "Edit tags" group acting on the current selection.
+  - **Notes panel** — add or remove a tag across exactly the notes frozen in the list.
+  - **Commands**: Rename a tag, Add a tag to the active note, Remove a tag from the active note.
+- New settings: where new tags are written (frontmatter or note body), whether bulk edits are confirmed, and an edit-mode toggle.
+
+### Changed
+
+- `minAppVersion` raised to **1.4.4**, where `fileManager.processFrontMatter` became available.
+- Renaming a tag now updates the plugin's own manual connections to match, collapsing duplicates and dropping links a rename would turn into a self-link.
+
+### Safety notes
+
+- Writes go through `vault.process` (atomic) using the tag positions Obsidian's own parser recorded, so code blocks, `#fragment` URLs and `# Heading` lines are never mistaken for tags. Frontmatter goes through `processFrontMatter`, so YAML is re-serialised rather than patched.
+- Cached tag positions are verified against the live text before being touched; a stale cache costs a missed rename rather than a corrupted note.
+- Frontmatter shape is preserved — a list stays a list, a string stays a string, and entries keep their original `#` prefix or lack of one.
+
 ## [0.2.0] - 2026-09-06
 
 ### Added
@@ -55,6 +83,7 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/user216/obsidian-tag-relations/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/user216/obsidian-tag-relations/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/user216/obsidian-tag-relations/releases/tag/0.1.0

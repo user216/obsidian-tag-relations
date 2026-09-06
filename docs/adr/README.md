@@ -11,3 +11,4 @@ An ADR is written when a decision is hard to reverse, affects more than one part
 | [0003](0003-three-complementary-views-on-one-graph.md) | Three complementary views sharing one graph model | Accepted |
 | [0004](0004-hand-rolled-canvas-force-layout.md) | Hand-rolled canvas force layout instead of a graph library | Accepted |
 | [0005](0005-multi-select-and-a-frozen-notes-panel.md) | Multi-tag selection and a frozen notes panel | Accepted |
+| [0006](0006-writing-tag-edits-back-to-notes.md) | Writing tag edits back to notes | Accepted (amends 0001) |

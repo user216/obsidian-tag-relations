@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. The read-only consequence recorded below was later amended by
+[ADR 0006](0006-writing-tag-edits-back-to-notes.md), which introduced tag
+editing; the flat-tags decision itself still stands.
 
 ## Context
 
@@ -29,3 +31,4 @@ Where a vault already contains nested tags (migration is gradual, not everyone w
 - A tag can be related to any number of other tags with no "primary parent" constraint.
 - The plugin cannot infer structure Obsidian doesn't expose. It has no notion of a tag's "true" category — only what notes and manual connections say. Two tags that should obviously be related but never co-occur and were never manually connected will show as unrelated. This is expected: it's a prompt to add the manual connection, not a bug.
 - Because relations live in the plugin's own data (`data.json`) rather than in note content, they are not visible to other tools that only read the vault's Markdown (e.g., other tag plugins, or Obsidian's own core Tags pane). This plugin is additive, not a replacement for the core tag system.
+- Reorganizing relations still never touches note content. Renaming or assigning a *tag* now does — see ADR 0006, which added tag editing on the grounds that a flat vocabulary is only workable if mis-named tags are cheap to fix.
