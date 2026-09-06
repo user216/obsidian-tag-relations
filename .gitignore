@@ -1,0 +1,10 @@
+node_modules/
+main.js
+*.js.map
+data.json
+.DS_Store
+dist/
+
+# Local editor/tooling config, not project-shared settings.
+.vscode/
+.claude/settings.local.json
