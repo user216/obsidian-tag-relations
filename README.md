@@ -149,9 +149,24 @@ src/
   modals.ts      fuzzy tag picker
   editModals.ts  rename dialog, tag picker with create-new, edit confirmation
   host.ts        the interface renderers see
+  selection.ts   selection, filtering, sorting, snapshot staleness
+  links.ts       manual-link remapping across renames
+tests/           node:test suites, run with `npm test`
 ```
 
 The graph rebuilds on vault changes, debounced by ~1s so bursts of edits cost one rebuild.
+
+## Tests
+
+```bash
+npm test
+```
+
+163 tests across 31 suites, run on Node's built-in test runner. The suite bundles each test with esbuild exactly as the plugin itself is built, so a test never passes against code the bundler would reject.
+
+Covered: the graph engine (metrics, pruning, traversal, note matching), tag editing end to end against an in-memory vault, selection and sorting rules, tree branching, mind-map node collection and anchoring, manual-link remapping, and settings invariants.
+
+Not covered: DOM rendering and canvas drawing. Those are exercised by using the plugin, not by the suite — the logic behind them was extracted into plain modules precisely so the untested surface is thin.
 
 ## Design decisions
 
@@ -159,7 +174,7 @@ The reasoning behind the bigger architectural choices — flat tags plus a relat
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+See [CHANGELOG.md](CHANGELOG.md), and [FEATURES.md](FEATURES.md) for a brief list of everything implemented.
 
 ## License
 

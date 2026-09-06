@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-06
+
+### Added
+
+- **Test suite** — 163 tests across 31 suites, run with `npm test`. Covers the graph engine, tag editing (including an in-memory vault exercising rename/assign/remove end to end), selection and sorting rules, tree branching, mind-map node collection and anchoring, manual-link remapping, and settings invariants.
+- [FEATURES.md](FEATURES.md) — a brief list of every implemented feature.
+- [ADR 0007](docs/adr/0007-nested-tags-are-out-of-scope.md) — nested tags are explicitly out of scope. Nested-tag support may be avoided, skipped, ignored, or mocked rather than implemented; existing nested handling is frozen legacy compatibility and is not extended.
+
+### Changed
+
+- Pure logic extracted from the DOM-bound renderers so it can be tested directly: `src/selection.ts` (selection, filtering, sorting, snapshot staleness), `src/links.ts` (manual-link remapping), plus `branchChildren` from the tree and `collectMapNodes` / `anchorPositions` from the mind-map. Behaviour is unchanged.
+
+### Fixed
+
+- Tree branching returned one child when the per-node cap was 0 — the cap was checked after appending rather than before. Not reachable through the settings UI, whose minimum is 3.
+
 ## [0.3.0] - 2026-09-06
 
 Tag editing. **The plugin now writes to your notes** — until this release it only ever read them. Bulk edits are not covered by Obsidian's undo, so keep a backup or version control.
@@ -83,7 +99,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...HEAD
+[0.3.1]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/user216/obsidian-tag-relations/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/user216/obsidian-tag-relations/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/user216/obsidian-tag-relations/releases/tag/0.1.0

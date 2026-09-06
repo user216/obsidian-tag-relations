@@ -8,6 +8,7 @@ import {
 import { TagGraph, normalizeTag, tagLabel } from "./graph";
 import { TagRelationsView, VIEW_TYPE_TAG_RELATIONS } from "./view";
 import { TagSuggestModal } from "./modals";
+import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
 import {
 	ConfirmEditModal,
@@ -425,31 +426,13 @@ export default class TagRelationsPlugin extends Plugin {
 		to: string,
 		includeNested: boolean
 	): void {
-		const fold = (tag: string) =>
-			this.settings.caseSensitive ? tag : tag.toLowerCase();
-		const remap = (tag: string): string => {
-			const folded = fold(tag);
-			const target = fold(from);
-			if (folded === target) return to;
-			if (includeNested && folded.startsWith(target + "/")) {
-				return to + tag.slice(from.length);
-			}
-			return tag;
-		};
-
-		const seen = new Set<string>();
-		const next: typeof this.settings.manualLinks = [];
-		for (const link of this.settings.manualLinks) {
-			const a = remap(link.a);
-			const b = remap(link.b);
-			// A rename can collapse a link onto itself, or duplicate another.
-			if (fold(a) === fold(b)) continue;
-			const key = [fold(a), fold(b)].sort().join(" ");
-			if (seen.has(key)) continue;
-			seen.add(key);
-			next.push({ ...link, a, b });
-		}
-		this.settings.manualLinks = next;
+		this.settings.manualLinks = remapManualLinks(
+			this.settings.manualLinks,
+			from,
+			to,
+			includeNested,
+			this.settings.caseSensitive
+		);
 	}
 
 	async activateView(sidebar = false): Promise<void> {

@@ -12,3 +12,6 @@ dist/
 # Screen recordings and other local scratch media.
 *.mp4
 *.mov
+
+# Compiled test bundles.
+.test-build/

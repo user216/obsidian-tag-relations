@@ -1,6 +1,6 @@
 import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost } from "./host";
-import { tagLabel } from "./graph";
+import { TagGraph, tagLabel } from "./graph";
 
 /**
  * A relation tree, the way TheBrain unfolds a thought: the selected tag is the
@@ -96,17 +96,11 @@ export class TreeRenderer implements ModeRenderer {
 	}
 
 	private childrenOf(path: string[]): string[] {
-		const { host } = this;
-		const tag = path[path.length - 1];
-		const ancestors = new Set(path);
-		const children: string[] = [];
-		for (const edge of host.graph.neighbors(tag)) {
-			const other = edge.a === tag ? edge.b : edge.a;
-			if (ancestors.has(other)) continue;
-			children.push(other);
-			if (children.length >= host.settings.treeMaxChildren) break;
-		}
-		return children;
+		return branchChildren(
+			this.host.graph,
+			path,
+			this.host.settings.treeMaxChildren
+		);
 	}
 
 	private renderRenameInput(container: HTMLElement, tag: string): void {
@@ -213,6 +207,29 @@ export class TreeRenderer implements ModeRenderer {
 			}
 		}
 	}
+}
+
+/**
+ * The next hop out from the end of `path`: that tag's strongest relations,
+ * capped, excluding anything already in the path so a branch always moves
+ * outward instead of bouncing between two tags.
+ */
+export function branchChildren(
+	graph: TagGraph,
+	path: string[],
+	maxChildren: number
+): string[] {
+	const tag = path[path.length - 1];
+	const ancestors = new Set(path);
+	const children: string[] = [];
+	for (const edge of graph.neighbors(tag)) {
+		// Checked before pushing, so a cap of 0 yields nothing.
+		if (children.length >= maxChildren) break;
+		const other = edge.a === tag ? edge.b : edge.a;
+		if (ancestors.has(other)) continue;
+		children.push(other);
+	}
+	return children;
 }
 
 function pathKey(path: string[]): string {

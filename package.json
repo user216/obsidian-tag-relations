@@ -1,13 +1,14 @@
 {
 	"name": "obsidian-tag-relations",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Explore relations between tags as a tag cloud, mind-map and tree.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"typecheck": "tsc -noEmit -skipLibCheck",
-		"package": "npm run build && node scripts/package.mjs"
+		"package": "npm run build && node scripts/package.mjs",
+		"test": "node tests/run.mjs"
 	},
 	"keywords": [
 		"obsidian",

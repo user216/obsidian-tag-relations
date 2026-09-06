@@ -16,6 +16,12 @@ import { MapRenderer } from "./map";
 import { TreeRenderer } from "./tree";
 import { TagSuggestModal } from "./modals";
 import {
+	applySelection,
+	filterTags,
+	isSnapshotStale,
+	sortTags,
+} from "./selection";
+import {
 	MATCH_LABELS,
 	NoteMatchMode,
 	SORT_LABELS,
@@ -139,16 +145,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	select(tag: string, mode: SelectMode): void {
 		if (!this.graph.nodes.has(tag)) return;
-		if (mode === "toggle") {
-			const index = this.selection.indexOf(tag);
-			if (index >= 0) this.selection.splice(index, 1);
-			else this.selection.push(tag);
-		} else {
-			// A plain click on the only selected tag clears the selection.
-			const isOnlySelection =
-				this.selection.length === 1 && this.selection[0] === tag;
-			this.selection = isOnlySelection ? [] : [tag];
-		}
+		this.selection = applySelection(this.selection, tag, mode);
 		this.afterSelectionChange();
 	}
 
@@ -174,49 +171,15 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	visibleTags(): string[] {
 		const graph = this.graph;
-		const filter = this.filter;
-		let tags = graph.tagList;
-		if (filter) {
-			// Selected tags stay visible even when they don't match the filter,
-			// so filtering never silently hides what you are working with.
-			tags = tags.filter(
-				(tag) => tag.toLowerCase().includes(filter) || this.isSelected(tag)
-			);
-		}
-		const sorted = tags.slice();
-		switch (this.sort) {
-			case "name-desc":
-				sorted.sort((a, b) => b.localeCompare(a));
-				break;
-			case "count-desc":
-				sorted.sort(
-					(a, b) => graph.countOf(b) - graph.countOf(a) || a.localeCompare(b)
-				);
-				break;
-			case "count-asc":
-				sorted.sort(
-					(a, b) => graph.countOf(a) - graph.countOf(b) || a.localeCompare(b)
-				);
-				break;
-			case "relatedness":
-				if (this.selection.length > 0) {
-					sorted.sort((a, b) => {
-						const aSel = this.isSelected(a);
-						const bSel = this.isSelected(b);
-						if (aSel !== bSel) return aSel ? -1 : 1;
-						return (
-							this.selectionStrength(b) - this.selectionStrength(a) ||
-							a.localeCompare(b)
-						);
-					});
-				} else {
-					sorted.sort((a, b) => a.localeCompare(b));
-				}
-				break;
-			default:
-				sorted.sort((a, b) => a.localeCompare(b));
-		}
-		return sorted;
+		const filtered = filterTags(graph.tagList, this.filter, (tag) =>
+			this.isSelected(tag)
+		);
+		return sortTags(filtered, this.sort, {
+			countOf: (tag) => graph.countOf(tag),
+			strengthTo: (tag) => this.selectionStrength(tag),
+			isSelected: (tag) => this.isSelected(tag),
+			hasSelection: this.selection.length > 0,
+		});
 	}
 
 	requestRender(): void {
@@ -384,13 +347,12 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	/** True when the panel no longer reflects the selection, mode, or vault. */
 	private isSnapshotStale(): boolean {
-		if (!this.snapshot) return false;
-		if (this.snapshotDirty) return true;
-		if (this.snapshot.mode !== this.settings.noteMatchMode) return true;
-		if (this.snapshot.tags.length !== this.selection.length) return true;
-		const current = this.selection.slice().sort();
-		const taken = this.snapshot.tags.slice().sort();
-		return current.some((tag, index) => tag !== taken[index]);
+		return isSnapshotStale(
+			this.snapshot,
+			this.selection,
+			this.settings.noteMatchMode,
+			this.snapshotDirty
+		);
 	}
 
 	private renderNotesPanel(): void {

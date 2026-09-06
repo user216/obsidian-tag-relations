@@ -1,6 +1,6 @@
 import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost, scaleByCount } from "./host";
-import { TagEdge, tagLabel } from "./graph";
+import { TagEdge, TagGraph, tagLabel } from "./graph";
 
 interface Particle {
 	tag: string;
@@ -119,32 +119,13 @@ export class MapRenderer implements ModeRenderer {
 		const settings = host.settings;
 		const pool = new Set(host.visibleTags());
 		const selection = host.selection.filter((tag) => host.graph.nodes.has(tag));
-
-		let ordered: Array<{ tag: string; hop: number }>;
-		if (selection.length > 0) {
-			const reach = host.graph.neighborhood(selection, settings.mapDepth);
-			ordered = [];
-			for (const [tag, hop] of reach) {
-				if (hop === 0 || pool.has(tag)) ordered.push({ tag, hop });
-			}
-			ordered.sort(
-				(a, b) =>
-					a.hop - b.hop ||
-					host.graph.countOf(b.tag) - host.graph.countOf(a.tag) ||
-					a.tag.localeCompare(b.tag)
-			);
-		} else {
-			ordered = Array.from(pool)
-				.sort(
-					(a, b) =>
-						host.graph.countOf(b) - host.graph.countOf(a) || a.localeCompare(b)
-				)
-				.map((tag) => ({ tag, hop: 1 }));
-		}
-
-		if (ordered.length > settings.mapMaxNodes) {
-			ordered = ordered.slice(0, settings.mapMaxNodes);
-		}
+		const ordered = collectMapNodes(
+			host.graph,
+			pool,
+			selection,
+			settings.mapDepth,
+			settings.mapMaxNodes
+		);
 
 		const live = new Set(ordered.map((entry) => entry.tag));
 		for (const tag of Array.from(this.particles.keys())) {
@@ -153,23 +134,8 @@ export class MapRenderer implements ModeRenderer {
 
 		this.neighborsOfSelected = new Set(host.graph.relatedToSelection(selection));
 
-		// Selected tags are held still so the map re-forms around them. A single
-		// selection sits at the origin; several share a small ring, which keeps
-		// the focus cluster centred and their neighbours outside it.
-		const anchors = new Map<string, { x: number; y: number }>();
-		if (selection.length === 1) {
-			anchors.set(selection[0], { x: 0, y: 0 });
-		} else if (selection.length > 1) {
-			const radius =
-				settings.mapLinkDistance * 0.45 * Math.sqrt(selection.length);
-			selection.forEach((tag, index) => {
-				const angle = (index / selection.length) * Math.PI * 2 - Math.PI / 2;
-				anchors.set(tag, {
-					x: Math.cos(angle) * radius,
-					y: Math.sin(angle) * radius,
-				});
-			});
-		}
+		// Selected tags are held still so the map re-forms around them.
+		const anchors = anchorPositions(selection, settings.mapLinkDistance);
 
 		this.active = [];
 		for (const { tag, hop } of ordered) {
@@ -659,3 +625,73 @@ export class MapRenderer implements ModeRenderer {
 
 const FONT_STACK =
 	'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+
+export interface MapNodeRef {
+	tag: string;
+	/** Hops from the selection; 0 for a selected tag, 1 when nothing is selected. */
+	hop: number;
+}
+
+/**
+ * Which tags the map draws, and how far each sits from the selection.
+ *
+ * With a selection, this is the neighbourhood within `depth` hops, filtered to
+ * the visible pool (selected tags always survive), nearest first. With no
+ * selection it is the most-used tags. Either way the result is capped, so a
+ * big vault degrades to its most relevant slice rather than a hairball.
+ */
+export function collectMapNodes(
+	graph: TagGraph,
+	pool: Set<string>,
+	selection: string[],
+	depth: number,
+	maxNodes: number
+): MapNodeRef[] {
+	let ordered: MapNodeRef[];
+	if (selection.length > 0) {
+		const reach = graph.neighborhood(selection, depth);
+		ordered = [];
+		for (const [tag, hop] of reach) {
+			if (hop === 0 || pool.has(tag)) ordered.push({ tag, hop });
+		}
+		ordered.sort(
+			(a, b) =>
+				a.hop - b.hop ||
+				graph.countOf(b.tag) - graph.countOf(a.tag) ||
+				a.tag.localeCompare(b.tag)
+		);
+	} else {
+		ordered = Array.from(pool)
+			.sort(
+				(a, b) => graph.countOf(b) - graph.countOf(a) || a.localeCompare(b)
+			)
+			.map((tag) => ({ tag, hop: 1 }));
+	}
+	return ordered.length > maxNodes ? ordered.slice(0, maxNodes) : ordered;
+}
+
+/**
+ * Where selected tags are pinned. One sits at the origin; several share a ring
+ * whose radius grows with the count, keeping the focus cluster centred while
+ * leaving room for their neighbours outside it.
+ */
+export function anchorPositions(
+	selection: string[],
+	linkDistance: number
+): Map<string, { x: number; y: number }> {
+	const anchors = new Map<string, { x: number; y: number }>();
+	if (selection.length === 1) {
+		anchors.set(selection[0], { x: 0, y: 0 });
+	} else if (selection.length > 1) {
+		const radius = linkDistance * 0.45 * Math.sqrt(selection.length);
+		selection.forEach((tag, index) => {
+			const angle = (index / selection.length) * Math.PI * 2 - Math.PI / 2;
+			anchors.set(tag, {
+				x: Math.cos(angle) * radius,
+				y: Math.sin(angle) * radius,
+			});
+		});
+	}
+	return anchors;
+}
