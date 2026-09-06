@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — full technical documentation: module map and dependency direction, the graph data model and six-phase build pipeline, the `ViewHost` contract, per-renderer internals (FLIP re-grouping, the mind-map's force equations, camera and hit-testing math, tree path-keyed expansion), the editing subsystem's four safety invariants, settings persistence, build and test architecture, performance characteristics, known limitations, and extension points.
+
 ## [0.3.1] - 2026-09-06
 
 ### Added

@@ -168,6 +168,10 @@ Covered: the graph engine (metrics, pruning, traversal, note matching), tag edit
 
 Not covered: DOM rendering and canvas drawing. Those are exercised by using the plugin, not by the suite — the logic behind them was extracted into plain modules precisely so the untested surface is thin.
 
+## Architecture
+
+[ARCHITECTURE.md](ARCHITECTURE.md) documents how the plugin is built: the graph model and construction pipeline, the `ViewHost` contract, each renderer's internals (including the mind-map's force equations), the editing subsystem's safety invariants, performance characteristics, known limitations, and extension points.
+
 ## Design decisions
 
 The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
