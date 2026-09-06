@@ -33,11 +33,33 @@ Pan by dragging the background, zoom with the wheel (zooms toward the cursor), d
 ### Tree
 The relation graph unfolded as an expandable outline, rooted at the selected tag. Each branch is that tag's strongest relations, and expanding walks one hop further out. A tag never repeats within its own ancestor path, so the walk always moves outward. With nothing selected it lists your most-connected tags as entry points.
 
+## Selecting tags
+
+Selection works the same way in all three views:
+
+| Action | Result |
+| --- | --- |
+| Click | Select just that tag (clicking the only selected tag clears it) |
+| Ctrl/Cmd click, Shift click | Add or remove that tag from the selection |
+| Sticky multi-select (toolbar toggle) | Every plain click adds or removes — no modifier needed |
+| Click empty background | Clear the selection |
+
+With several tags selected, a tag counts as *related* if it relates to **any** of them, and its highlight strength is its **strongest single tie** — tooltips name which selected tag that tie is to. The mind-map pins one selection at the centre or arranges several on a small central ring; the tree grows one root per selected tag.
+
+## Showing notes
+
+Press **Show notes** to list the notes carrying your selected tags. **Match mode** decides what counts:
+
+- **All tags** — only notes carrying every selected tag (narrowing)
+- **Any tag** — notes carrying at least one, each labelled with how many it carries, most matches first (gathering)
+
+The list is a **snapshot**, not a live query. It fills only when you press the button, so you can keep clicking around the graph to investigate results without the list shifting under you. When the selection, match mode, or vault moves on, the panel marks itself **Outdated** and offers a refresh rather than silently changing. Click a result to open it, Ctrl/Cmd click for a new tab.
+
 ## Everywhere
-- **Details panel** (right side, toggleable) — note count, relation count, the full related-tag list with strength bars, and the notes carrying the tag. Click a note to open it.
+- **Details panel** (right side, toggleable) — note and relation counts, the related-tag list with strength bars, and removable chips for a multi-tag selection. Its **Search** action searches the whole selection, joined with `AND` or `OR` to match the current mode.
 - **Double-click** any tag in any view to search your notes for it.
-- **Right-click** any tag for: focus, search, connect to another tag, remove a connection, copy.
-- **Filter box** narrows every view live.
+- **Right-click** any tag for: select, add/remove from selection, search, connect to another tag, remove a connection, copy.
+- **Filter box** narrows every view live. Selected tags stay visible even when they don't match.
 
 ## Commands
 - Open tag relations / Open tag relations in sidebar
@@ -51,6 +73,9 @@ The relation graph unfolded as an expandable outline, rooted at the selected tag
 - **Case-sensitive tags** — off by default, so `#Project` and `#project` are one tag.
 - **Relate nested tags to their parent** — if you still have nested tags, `#a/b` gets a relation to `#a` so old hierarchies stay navigable while you migrate away from them.
 - **Excluded tags / folders** — keep `#todo`, templates, archives out of the graph. Excluding a tag also excludes anything nested under it.
+- **Sticky multi-select** — make every plain click additive, so you never need a modifier key.
+- **Match notes against** — the default All/Any mode for the notes panel.
+- **Notes panel height / maximum notes listed** — how tall the results panel is and how many rows it renders (the header always reports the true total).
 
 ## Install
 
@@ -64,10 +89,9 @@ npm run package
 `npm run package` builds the plugin and writes everything you need under `dist/`:
 
 - `dist/tag-relations/` — a ready-to-copy plugin folder
-- `dist/tag-relations-<version>.zip` — the same folder, zipped, for sharing as one file
 - `dist/main.js`, `dist/manifest.json`, `dist/styles.css` — flat copies, for attaching as individual assets to a GitHub release (the layout [BRAT](https://github.com/TfTHacker/obsidian42-brat) and Obsidian's plugin installer expect)
 
-Copy `dist/tag-relations/` (or extract the zip) into your vault:
+Copy `dist/tag-relations/` into your vault:
 
 ```
 <your vault>/.obsidian/plugins/tag-relations/
@@ -100,7 +124,7 @@ The graph rebuilds on vault changes, debounced by ~1s so bursts of edits cost on
 
 ## Design decisions
 
-The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, and hand-rolling the mind-map's force layout instead of pulling in a graph library — is recorded in [docs/adr/](docs/adr/).
+The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, and why the notes panel is a snapshot rather than a live query — is recorded in [docs/adr/](docs/adr/).
 
 ## Changelog
 

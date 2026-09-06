@@ -24,3 +24,21 @@ export interface ManualLink {
 	b: string;
 	label?: string;
 }
+
+/**
+ * Whether a note must carry every selected tag or just one of them to appear
+ * in the notes panel.
+ */
+export type NoteMatchMode = "all" | "any";
+
+export const MATCH_LABELS: Record<NoteMatchMode, string> = {
+	all: "All tags",
+	any: "Any tag",
+};
+
+/**
+ * How a click changes the selection. "replace" is a plain click (select just
+ * this tag, or deselect it if it was the only one); "toggle" is a
+ * modifier-click or a click in sticky multi-select mode (add/remove).
+ */
+export type SelectMode = "replace" | "toggle";

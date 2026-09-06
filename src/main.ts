@@ -196,7 +196,7 @@ export default class TagRelationsPlugin extends Plugin {
 			"Focus a tag",
 			(tag) => {
 				void this.activateView().then(() => {
-					for (const view of this.views()) view.select(tag);
+					for (const view of this.views()) view.select(tag, "replace");
 				});
 			},
 			subtitles

@@ -1,6 +1,12 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type TagRelationsPlugin from "./main";
-import { ManualLink, SortMode, ViewMode, WeightMetric } from "./types";
+import {
+	ManualLink,
+	NoteMatchMode,
+	SortMode,
+	ViewMode,
+	WeightMetric,
+} from "./types";
 import { tagLabel } from "./graph";
 import { TagSuggestModal } from "./modals";
 
@@ -19,6 +25,12 @@ export interface TagRelationsSettings {
 	mode: ViewMode;
 	sort: SortMode;
 	showInspector: boolean;
+
+	// Selection and the notes panel
+	stickyMultiSelect: boolean;
+	noteMatchMode: NoteMatchMode;
+	notesPanelHeight: number;
+	notesMaxResults: number;
 
 	// Cloud
 	cloudMinFontSize: number;
@@ -52,6 +64,11 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	mode: "cloud",
 	sort: "name-asc",
 	showInspector: true,
+
+	stickyMultiSelect: false,
+	noteMatchMode: "all",
+	notesPanelHeight: 240,
+	notesMaxResults: 500,
 
 	cloudMinFontSize: 11,
 	cloudMaxFontSize: 30,
@@ -203,6 +220,72 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 
 		this.displayManualLinks(containerEl);
+
+		new Setting(containerEl).setName("Selection and notes").setHeading();
+
+		new Setting(containerEl)
+			.setName("Sticky multi-select")
+			.setDesc(
+				"On: every click adds or removes a tag from the selection. Off: a plain click selects one tag, and Ctrl/Cmd or Shift click adds to the selection."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.stickyMultiSelect)
+					.onChange(async (value) => {
+						this.plugin.settings.stickyMultiSelect = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Match notes against")
+			.setDesc(
+				"Which notes “Show notes” collects when several tags are selected: notes carrying every selected tag, or notes carrying at least one."
+			)
+			.addDropdown((dd) =>
+				dd
+					.addOption("all", "All tags (intersection)")
+					.addOption("any", "Any tag (union)")
+					.setValue(this.plugin.settings.noteMatchMode)
+					.onChange(async (value) => {
+						this.plugin.settings.noteMatchMode = value as NoteMatchMode;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Notes panel height")
+			.setDesc("How tall the results panel is, in pixels.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(120, 600, 10)
+					.setValue(this.plugin.settings.notesPanelHeight)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.notesPanelHeight = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Maximum notes listed")
+			.setDesc(
+				"Cap on how many results the panel renders at once. The header always reports the true total."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(50, 2000, 50)
+					.setValue(this.plugin.settings.notesMaxResults)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.notesMaxResults = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
 
 		new Setting(containerEl).setName("Tag cloud").setHeading();
 

@@ -118,11 +118,11 @@ export class MapRenderer implements ModeRenderer {
 		const { host } = this;
 		const settings = host.settings;
 		const pool = new Set(host.visibleTags());
-		const selected = host.selected;
+		const selection = host.selection.filter((tag) => host.graph.nodes.has(tag));
 
 		let ordered: Array<{ tag: string; hop: number }>;
-		if (selected && host.graph.node(selected)) {
-			const reach = host.graph.neighborhood([selected], settings.mapDepth);
+		if (selection.length > 0) {
+			const reach = host.graph.neighborhood(selection, settings.mapDepth);
 			ordered = [];
 			for (const [tag, hop] of reach) {
 				if (hop === 0 || pool.has(tag)) ordered.push({ tag, hop });
@@ -151,9 +151,25 @@ export class MapRenderer implements ModeRenderer {
 			if (!live.has(tag)) this.particles.delete(tag);
 		}
 
-		this.neighborsOfSelected = new Set(
-			selected ? host.graph.relatedTags(selected) : []
-		);
+		this.neighborsOfSelected = new Set(host.graph.relatedToSelection(selection));
+
+		// Selected tags are held still so the map re-forms around them. A single
+		// selection sits at the origin; several share a small ring, which keeps
+		// the focus cluster centred and their neighbours outside it.
+		const anchors = new Map<string, { x: number; y: number }>();
+		if (selection.length === 1) {
+			anchors.set(selection[0], { x: 0, y: 0 });
+		} else if (selection.length > 1) {
+			const radius =
+				settings.mapLinkDistance * 0.45 * Math.sqrt(selection.length);
+			selection.forEach((tag, index) => {
+				const angle = (index / selection.length) * Math.PI * 2 - Math.PI / 2;
+				anchors.set(tag, {
+					x: Math.cos(angle) * radius,
+					y: Math.sin(angle) * radius,
+				});
+			});
+		}
 
 		this.active = [];
 		for (const { tag, hop } of ordered) {
@@ -184,10 +200,11 @@ export class MapRenderer implements ModeRenderer {
 			particle.hop = hop;
 			// Hubs resist being flung around by their many neighbours.
 			particle.mass = 1 + degree * 0.12;
-			particle.pinned = hop === 0;
-			if (particle.pinned) {
-				particle.x = 0;
-				particle.y = 0;
+			const anchor = anchors.get(tag);
+			particle.pinned = anchor !== undefined;
+			if (anchor) {
+				particle.x = anchor.x;
+				particle.y = anchor.y;
 				particle.vx = 0;
 				particle.vy = 0;
 			}
@@ -199,7 +216,7 @@ export class MapRenderer implements ModeRenderer {
 			if (live.has(edge.a) && live.has(edge.b)) this.edges.push(edge);
 		}
 
-		if (selected) this.cam.x = this.cam.y = 0;
+		if (selection.length > 0) this.cam.x = this.cam.y = 0;
 	}
 
 	private resize(): void {
@@ -325,7 +342,7 @@ export class MapRenderer implements ModeRenderer {
 		if (!ctx) return;
 		const dpr = window.devicePixelRatio || 1;
 		const palette = this.readPalette();
-		const selected = this.host.selected;
+		const hasSelection = this.host.selection.length > 0;
 
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, this.width, this.height);
@@ -350,21 +367,23 @@ export class MapRenderer implements ModeRenderer {
 		const originY = this.height / 2 - this.cam.y * scale;
 		ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * originX, dpr * originY);
 
-		const highlightTag = this.hovered?.tag ?? selected;
+		// Hovering focuses that one tag; otherwise the whole selection is the focus.
+		const focusTags = this.hovered
+			? new Set([this.hovered.tag])
+			: new Set(this.host.selection);
+		const hasFocus = focusTags.size > 0;
 
 		for (const edge of this.edges) {
 			const a = this.particles.get(edge.a);
 			const b = this.particles.get(edge.b);
 			if (!a || !b) continue;
-			const touchesFocus =
-				highlightTag !== null &&
-				(edge.a === highlightTag || edge.b === highlightTag);
+			const touchesFocus = focusTags.has(edge.a) || focusTags.has(edge.b);
 
 			ctx.beginPath();
 			ctx.moveTo(a.x, a.y);
 			ctx.lineTo(b.x, b.y);
 			ctx.lineWidth = (0.6 + edge.weight * 2.2) / scale + (touchesFocus ? 1 / scale : 0);
-			ctx.globalAlpha = highlightTag
+			ctx.globalAlpha = hasFocus
 				? touchesFocus
 					? 0.35 + edge.weight * 0.65
 					: 0.08
@@ -382,10 +401,10 @@ export class MapRenderer implements ModeRenderer {
 		ctx.globalAlpha = 1;
 
 		for (const p of this.active) {
-			const isSelected = p.tag === selected;
+			const isSelected = this.host.isSelected(p.tag);
 			const isNeighbor = this.neighborsOfSelected.has(p.tag);
 			const isHovered = this.hovered === p;
-			const dimmed = selected !== null && !isSelected && !isNeighbor;
+			const dimmed = hasSelection && !isSelected && !isNeighbor;
 
 			ctx.globalAlpha = dimmed ? 0.3 : 1;
 			ctx.beginPath();
@@ -408,7 +427,7 @@ export class MapRenderer implements ModeRenderer {
 		ctx.textAlign = "center";
 		ctx.textBaseline = "top";
 		for (const p of this.active) {
-			const isSelected = p.tag === selected;
+			const isSelected = this.host.isSelected(p.tag);
 			const isNeighbor = this.neighborsOfSelected.has(p.tag);
 			const isHovered = this.hovered === p;
 			const showLabel =
@@ -422,7 +441,7 @@ export class MapRenderer implements ModeRenderer {
 
 			const size = (isSelected ? 14 : 12) / scale;
 			ctx.font = `${isSelected ? "600 " : ""}${size}px ${FONT_STACK}`;
-			ctx.globalAlpha = selected !== null && !isSelected && !isNeighbor ? 0.35 : 1;
+			ctx.globalAlpha = hasSelection && !isSelected && !isNeighbor ? 0.35 : 1;
 			// A contrasting halo keeps labels readable over edges.
 			ctx.lineWidth = 3 / scale;
 			ctx.strokeStyle = palette.background;
@@ -529,14 +548,21 @@ export class MapRenderer implements ModeRenderer {
 				degree === 1 ? "" : "s"
 			}`,
 		];
-		const selected = this.host.selected;
-		if (selected && selected !== p.tag) {
-			const edge = this.host.graph.edgeBetween(selected, p.tag);
+		if (this.host.isSelected(p.tag)) {
+			lines.push("Selected");
+		} else if (this.host.isRelatedToSelection(p.tag)) {
+			const strength = this.host.selectionStrength(p.tag);
+			const closest = this.host.selection.find(
+				(other) => this.host.graph.strength(other, p.tag) === strength
+			);
+			const edge = closest
+				? this.host.graph.edgeBetween(closest, p.tag)
+				: undefined;
 			if (edge) {
 				lines.push(
 					edge.manual
-						? `Manually connected to ${selected}`
-						: `${Math.round(edge.weight * 100)}% related to ${selected}`
+						? `Manually connected to ${closest}`
+						: `${Math.round(strength * 100)}% related to ${closest}`
 				);
 			}
 		}
@@ -553,8 +579,8 @@ export class MapRenderer implements ModeRenderer {
 		}
 		if (moved) return;
 		// A press without movement is a click: select the node, or clear.
-		if (wasDragging) this.host.select(wasDragging.tag);
-		else if (this.host.selected) this.host.select(null);
+		if (wasDragging) this.host.selectFromEvent(wasDragging.tag, event);
+		else if (this.host.selection.length > 0) this.host.clearSelection();
 	};
 
 	private onPointerLeave = (): void => {

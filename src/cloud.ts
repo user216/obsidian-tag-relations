@@ -22,7 +22,8 @@ export class CloudRenderer implements ModeRenderer {
 		this.host = host;
 		this.container = container.createDiv({ cls: "tr-cloud" });
 		this.container.addEventListener("click", (event) => {
-			if (event.target === this.container) this.host.select(null);
+			// A click on the empty background clears the whole selection.
+			if (event.target === this.container) this.host.clearSelection();
 		});
 	}
 
@@ -36,9 +37,9 @@ export class CloudRenderer implements ModeRenderer {
 		const before = host.settings.animateRegroup ? this.measure() : null;
 
 		const tags = host.visibleTags();
-		const selected = host.selected;
+		const selection = host.selection;
 		const grouped =
-			selected !== null && host.settings.regroupOnSelect && tags.length > 1;
+			selection.length > 0 && host.settings.regroupOnSelect && tags.length > 1;
 
 		this.pruneRemovedPills(tags);
 		this.container.empty();
@@ -53,22 +54,27 @@ export class CloudRenderer implements ModeRenderer {
 			return;
 		}
 
-		if (grouped && selected) {
+		if (grouped) {
+			const selected: string[] = [];
 			const related: string[] = [];
 			const unrelated: string[] = [];
 			for (const tag of tags) {
-				if (tag === selected) continue;
-				(host.graph.isRelated(selected, tag) ? related : unrelated).push(tag);
+				if (host.isSelected(tag)) selected.push(tag);
+				else if (host.isRelatedToSelection(tag)) related.push(tag);
+				else unrelated.push(tag);
 			}
 			// Inside the related group, strongest relations come first regardless
 			// of the global sort — that ordering is the whole point of grouping.
 			related.sort(
 				(a, b) =>
-					host.graph.strength(selected, b) - host.graph.strength(selected, a) ||
+					host.selectionStrength(b) - host.selectionStrength(a) ||
 					a.localeCompare(b)
 			);
 
-			this.appendGroup("Selected", [selected]);
+			this.appendGroup(
+				selected.length > 1 ? `Selected (${selected.length})` : "Selected",
+				selected
+			);
 			this.appendGroup(`Related (${related.length})`, related);
 			if (unrelated.length > 0) {
 				this.appendGroup(`Unrelated (${unrelated.length})`, unrelated);
@@ -102,7 +108,7 @@ export class CloudRenderer implements ModeRenderer {
 			pill.dataset.tag = tag;
 			pill.addEventListener("click", (event) => {
 				event.stopPropagation();
-				host.select(host.selected === tag ? null : tag);
+				host.selectFromEvent(tag, event);
 			});
 			pill.addEventListener("dblclick", (event) => {
 				event.stopPropagation();
@@ -129,26 +135,24 @@ export class CloudRenderer implements ModeRenderer {
 		pill.createSpan({ cls: "tr-pill-name", text: tagLabel(tag) });
 		pill.createSpan({ cls: "tr-pill-count", text: String(count) });
 
-		const selected = host.selected;
-		pill.toggleClass("is-selected", selected === tag);
-		let related = false;
-		let strength = 0;
-		if (selected && selected !== tag) {
-			const edge = host.graph.edgeBetween(selected, tag);
-			if (edge) {
-				related = true;
-				strength = edge.weight;
-				pill.toggleClass("is-manual", edge.manual);
-			} else {
-				pill.removeClass("is-manual");
-			}
-		} else {
-			pill.removeClass("is-manual");
-		}
+		const isSelected = host.isSelected(tag);
+		const hasSelection = host.selection.length > 0;
+		const related = !isSelected && host.isRelatedToSelection(tag);
+		const strength = related ? host.selectionStrength(tag) : 0;
+
+		pill.toggleClass("is-selected", isSelected);
 		pill.toggleClass("is-related", related);
+		// A manual connection to any selected tag is worth calling out.
+		pill.toggleClass(
+			"is-manual",
+			related &&
+				host.selection.some(
+					(other) => host.graph.edgeBetween(other, tag)?.manual === true
+				)
+		);
 		pill.toggleClass(
 			"is-dim",
-			host.settings.dimUnrelated && selected !== null && !related && selected !== tag
+			host.settings.dimUnrelated && hasSelection && !related && !isSelected
 		);
 		// Drives border/background intensity in CSS.
 		pill.style.setProperty("--tr-strength", strength.toFixed(3));
@@ -166,19 +170,26 @@ export class CloudRenderer implements ModeRenderer {
 		strength: number
 	): string {
 		const lines = [`${tag} — ${count} note${count === 1 ? "" : "s"}`];
-		const selected = this.host.selected;
-		if (related && selected) {
-			const edge = this.host.graph.edgeBetween(selected, tag);
-			const pct = Math.round(strength * 100);
+		if (related) {
+			// With several tags selected, name the one this tag ties to most
+			// strongly — that is what the strength shading is showing.
+			let closest: string | null = null;
+			for (const other of this.host.selection) {
+				if (other !== tag && this.host.graph.strength(other, tag) === strength) {
+					closest = other;
+					break;
+				}
+			}
+			const edge = closest ? this.host.graph.edgeBetween(closest, tag) : undefined;
 			if (edge?.manual) {
 				lines.push(
-					`Connected to ${selected} manually${edge.label ? ` — ${edge.label}` : ""}`
+					`Connected to ${closest} manually${edge.label ? ` — ${edge.label}` : ""}`
 				);
-			} else {
+			} else if (closest && edge) {
 				lines.push(
-					`${pct}% related to ${selected} · ${edge?.cooccur ?? 0} shared note${
-						edge?.cooccur === 1 ? "" : "s"
-					}`
+					`${Math.round(strength * 100)}% related to ${closest} · ${
+						edge.cooccur
+					} shared note${edge.cooccur === 1 ? "" : "s"}`
 				);
 			}
 		} else {

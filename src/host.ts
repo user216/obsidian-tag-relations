@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
-import { SortMode } from "./types";
+import { SelectMode, SortMode } from "./types";
 
 /**
  * What each mode renderer is allowed to see and do. Keeping this narrow lets
@@ -11,15 +11,30 @@ export interface ViewHost {
 	app: App;
 	graph: TagGraph;
 	settings: TagRelationsSettings;
-	/** Currently focused tag, or null when nothing is selected. */
-	selected: string | null;
+	/** Currently selected tags, in the order they were picked. Empty when nothing is selected. */
+	selection: string[];
 	/** Text typed into the filter box, lower-cased. */
 	filter: string;
 	sort: SortMode;
 
 	/** Tags passing the current text filter, in the current sort order. */
 	visibleTags(): string[];
-	select(tag: string | null): void;
+
+	isSelected(tag: string): boolean;
+	/** True when `tag` is related to at least one selected tag. */
+	isRelatedToSelection(tag: string): boolean;
+	/** Strongest relation from `tag` to the selection; 0 when unrelated. */
+	selectionStrength(tag: string): number;
+
+	select(tag: string, mode: SelectMode): void;
+	/**
+	 * Apply a click to the selection, reading modifier keys (and the sticky
+	 * multi-select setting) to decide between replace and toggle. Renderers
+	 * use this rather than deciding the modifier convention themselves.
+	 */
+	selectFromEvent(tag: string, event: MouseEvent | PointerEvent): void;
+	clearSelection(): void;
+
 	/** Open the tag context menu at the given mouse position. */
 	openContextMenu(tag: string, event: MouseEvent): void;
 	openTagSearch(tag: string): void;
@@ -36,4 +51,9 @@ export interface ModeRenderer {
 export function scaleByCount(count: number, maxCount: number): number {
 	if (maxCount <= 1) return count > 0 ? 1 : 0;
 	return Math.log(count + 1) / Math.log(maxCount + 1);
+}
+
+/** A modifier-click always means "add/remove", regardless of sticky mode. */
+export function hasToggleModifier(event: MouseEvent | PointerEvent): boolean {
+	return event.ctrlKey || event.metaKey || event.shiftKey;
 }

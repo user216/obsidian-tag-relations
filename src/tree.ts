@@ -14,7 +14,8 @@ export class TreeRenderer implements ModeRenderer {
 	/** Expansion is keyed by full path, so the same tag can be open in one
 	 *  branch and closed in another. */
 	private expanded = new Set<string>();
-	private lastRoot: string | null = null;
+	/** Which root set the current expansion state belongs to. */
+	private lastRootsKey: string | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -40,14 +41,20 @@ export class TreeRenderer implements ModeRenderer {
 			return;
 		}
 
-		const root = host.selected;
-		if (root !== this.lastRoot) {
-			this.lastRoot = root;
+		// Re-seed expansion whenever the root set changes, so a new selection
+		// opens at the configured depth instead of inheriting stale branches.
+		const rootsKey = roots.join(" | ");
+		if (rootsKey !== this.lastRootsKey) {
+			this.lastRootsKey = rootsKey;
 			this.expanded.clear();
-			if (root) this.autoExpand([root], host.settings.treeAutoExpandDepth);
+			if (host.selection.length > 0) {
+				for (const root of roots) {
+					this.autoExpand([root], host.settings.treeAutoExpandDepth);
+				}
+			}
 		}
 
-		if (!root) {
+		if (host.selection.length === 0) {
 			this.container.createDiv({
 				cls: "tr-tree-hint",
 				text: "Pick a tag to grow the tree from it. Showing the most connected tags:",
@@ -62,7 +69,9 @@ export class TreeRenderer implements ModeRenderer {
 
 	private roots(): string[] {
 		const { host } = this;
-		if (host.selected) return [host.selected];
+		// Every selected tag becomes its own root, so a multi-tag selection
+		// grows one tree per tag rather than merging into an arbitrary root.
+		if (host.selection.length > 0) return host.selection.slice();
 		const visible = host.visibleTags();
 		// No selection yet: offer the best entry points — the most connected tags.
 		return visible
@@ -150,11 +159,11 @@ export class TreeRenderer implements ModeRenderer {
 		}
 
 		row.toggleClass("is-root", depth === 0);
-		row.toggleClass("is-selected", tag === host.selected && depth === 0);
+		row.toggleClass("is-selected", host.isSelected(tag));
 
 		label.addEventListener("click", (event) => {
 			event.stopPropagation();
-			host.select(tag);
+			host.selectFromEvent(tag, event);
 		});
 		row.addEventListener("dblclick", (event) => {
 			event.preventDefault();
