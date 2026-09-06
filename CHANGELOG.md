@@ -30,9 +30,5 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-<!--
-This repo has no remote configured yet. Once it does, replace this comment
-with version-comparison links, e.g.:
-[Unreleased]: https://github.com/<owner>/<repo>/compare/0.1.0...HEAD
-[0.1.0]: https://github.com/<owner>/<repo>/releases/tag/0.1.0
--->
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/user216/obsidian-tag-relations/releases/tag/0.1.0
