@@ -14,6 +14,9 @@ import { ModeRenderer, ViewHost, hasToggleModifier } from "./host";
 import { CloudRenderer } from "./cloud";
 import { MapRenderer } from "./map";
 import { TreeRenderer } from "./tree";
+import { GroupsRenderer } from "./groupsView";
+import { TagGroups } from "./groups";
+import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import { TagSuggestModal } from "./modals";
 import {
 	applySelection,
@@ -25,8 +28,14 @@ import {
 	MATCH_LABELS,
 	NoteMatchMode,
 	SORT_LABELS,
+	CLOUD_LAYOUT_LABELS,
+	CloudLayout,
+	LEVEL_FILTER_LABELS,
+	LevelFilter,
+	LevelStyles,
 	SelectMode,
 	SortMode,
+	TagLevel,
 	ViewMode,
 } from "./types";
 
@@ -36,6 +45,7 @@ const MODE_META: Array<{ mode: ViewMode; icon: string; label: string }> = [
 	{ mode: "cloud", icon: "hash", label: "Cloud" },
 	{ mode: "map", icon: "git-fork", label: "Mind-map" },
 	{ mode: "tree", icon: "list-tree", label: "Tree" },
+	{ mode: "groups", icon: "folder-tree", label: "Groups" },
 ];
 
 /**
@@ -90,6 +100,58 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	get editMode(): boolean {
 		return this.plugin.settings.editMode;
+	}
+
+	get groups(): TagGroups {
+		return this.graph.groups;
+	}
+
+	levelOf(tag: string): TagLevel {
+		return this.graph.groups.levelOf(tag);
+	}
+
+	get levelStyles(): LevelStyles {
+		return resolveLevelStyles(
+			this.settings.levelStylePreset,
+			this.settings.levelStyles
+		);
+	}
+
+	isPinned(tag: string): boolean {
+		return this.settings.pinnedTags.includes(tag);
+	}
+
+	togglePin(tag: string): void {
+		void this.plugin.togglePinnedTag(tag);
+	}
+
+	isGroupCollapsed(tag: string): boolean {
+		return this.settings.collapsedGroups.includes(tag);
+	}
+
+	toggleGroupCollapsed(tag: string): void {
+		const collapsed = this.settings.collapsedGroups;
+		const index = collapsed.indexOf(tag);
+		if (index >= 0) collapsed.splice(index, 1);
+		else collapsed.push(tag);
+		void this.plugin.saveSettings();
+		this.renderActiveMode();
+	}
+
+	promptAddToGroup(parent: string): void {
+		this.plugin.promptAddToGroup(parent);
+	}
+
+	removeFromGroup(parent: string, child: string): void {
+		void this.plugin.removeFromGroup(parent, child);
+	}
+
+	onZoomChanged(scale: number): void {
+		// Persisted so the view reopens at the zoom you left it at; not saved
+		// on every wheel tick, only when the value actually settles differently.
+		if (Math.abs(this.settings.cloudZoom - scale) < 0.001) return;
+		this.settings.cloudZoom = scale;
+		void this.plugin.saveSettings();
 	}
 
 	promptRename(tag: string): void {
@@ -235,6 +297,53 @@ export class TagRelationsView extends ItemView implements ViewHost {
 				.setIcon("search")
 				.onClick(() => this.openTagSearch(tag))
 		);
+		menu.addSeparator();
+		const level = this.levelOf(tag);
+		menu.addItem((item) =>
+			item
+				.setTitle(
+					this.groups.isGroup(tag)
+						? "Put another tag inside this one…"
+						: "Put a tag inside this one…"
+				)
+				.setIcon("folder-plus")
+				.onClick(() => this.plugin.promptAddToGroup(tag))
+		);
+
+		const parents = this.groups.parentsOf(tag);
+		if (parents.length > 0) {
+			menu.addItem((item) => {
+				item.setTitle("Take out of group").setIcon("folder-minus");
+				const withSubmenu = item as unknown as { setSubmenu?: () => Menu };
+				if (typeof withSubmenu.setSubmenu === "function") {
+					const submenu = withSubmenu.setSubmenu();
+					for (const parent of parents) {
+						submenu.addItem((sub) =>
+							sub
+								.setTitle(tagLabel(parent))
+								.onClick(() => void this.plugin.removeFromGroup(parent, tag))
+						);
+					}
+				} else {
+					item.onClick(() =>
+						new TagSuggestModal(
+							this.app,
+							parents,
+							`Take ${tagLabel(tag)} out of…`,
+							(parent) => void this.plugin.removeFromGroup(parent, tag)
+						).open()
+					);
+				}
+			});
+		}
+
+		menu.addItem((item) =>
+			item
+				.setTitle(this.isPinned(tag) ? "Unpin" : "Pin to the top")
+				.setIcon(this.isPinned(tag) ? "pin-off" : "pin")
+				.onClick(() => this.togglePin(tag))
+		);
+
 		menu.addSeparator();
 		menu.addItem((item) =>
 			item
@@ -613,6 +722,13 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		});
 		showNotes.addEventListener("click", () => this.showNotes());
 
+		const optionsButton = toolbar.createDiv({ cls: "tr-icon-button" });
+		setIcon(optionsButton, "sliders-horizontal");
+		setTooltip(optionsButton, "View options", { placement: "bottom" });
+		optionsButton.addEventListener("click", (event) =>
+			this.openViewOptions(event)
+		);
+
 		const actions = toolbar.createDiv({ cls: "tr-actions" });
 		const clearButton = actions.createDiv({ cls: "tr-icon-button" });
 		setIcon(clearButton, "x-circle");
@@ -633,6 +749,91 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		setIcon(refreshButton, "refresh-cw");
 		setTooltip(refreshButton, "Rescan vault", { placement: "bottom" });
 		refreshButton.addEventListener("click", () => this.plugin.rebuildGraph());
+	}
+
+	/**
+	 * Per-mode display switches. They live in a menu rather than the toolbar
+	 * because most only apply to one view, and a toolbar that changes shape as
+	 * you switch modes is harder to learn than a stable one.
+	 */
+	private openViewOptions(event: MouseEvent): void {
+		const menu = new Menu();
+		const mode = this.settings.mode;
+
+		if (mode === "cloud") {
+			menu.addItem((item) => item.setTitle("Layout").setIsLabel(true));
+			for (const layout of Object.keys(CLOUD_LAYOUT_LABELS) as CloudLayout[]) {
+				menu.addItem((item) =>
+					item
+						.setTitle(CLOUD_LAYOUT_LABELS[layout])
+						.setChecked(this.settings.cloudLayout === layout)
+						.onClick(async () => {
+							this.settings.cloudLayout = layout;
+							await this.plugin.saveSettings();
+							this.renderActiveMode();
+						})
+				);
+			}
+			menu.addSeparator();
+		}
+
+		if (mode === "groups") {
+			menu.addItem((item) => item.setTitle("Groups layout").setIsLabel(true));
+			for (const layout of ["clouds", "tree"] as const) {
+				menu.addItem((item) =>
+					item
+						.setTitle(layout === "clouds" ? "Collapsible clouds" : "Tree")
+						.setChecked(this.settings.groupsLayout === layout)
+						.onClick(async () => {
+							this.settings.groupsLayout = layout;
+							await this.plugin.saveSettings();
+							this.renderActiveMode();
+						})
+				);
+			}
+			menu.addItem((item) =>
+				item
+					.setTitle("Show sub-groups as top-level too")
+					.setChecked(this.settings.showSubGroupsStandalone)
+					.onClick(async () => {
+						this.settings.showSubGroupsStandalone =
+							!this.settings.showSubGroupsStandalone;
+						await this.plugin.saveSettings();
+						this.renderActiveMode();
+					})
+			);
+			menu.addSeparator();
+		}
+
+		if (mode === "map") {
+			menu.addItem((item) =>
+				item
+					.setTitle("Show the whole vault at once")
+					.setChecked(this.settings.mapWholeVault)
+					.onClick(async () => {
+						this.settings.mapWholeVault = !this.settings.mapWholeVault;
+						await this.plugin.saveSettings();
+						this.renderActiveMode();
+					})
+			);
+			menu.addSeparator();
+		}
+
+		menu.addItem((item) => item.setTitle("Levels shown").setIsLabel(true));
+		for (const filter of Object.keys(LEVEL_FILTER_LABELS) as LevelFilter[]) {
+			menu.addItem((item) =>
+				item
+					.setTitle(LEVEL_FILTER_LABELS[filter])
+					.setChecked(this.settings.levelFilter === filter)
+					.onClick(async () => {
+						this.settings.levelFilter = filter;
+						await this.plugin.saveSettings();
+						this.renderActiveMode();
+					})
+			);
+		}
+
+		menu.showAtMouseEvent(event);
 	}
 
 	private syncToolbar(): void {
@@ -686,6 +887,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 					? new MapRenderer(this.mainEl, this)
 					: mode === "tree"
 					? new TreeRenderer(this.mainEl, this)
+					: mode === "groups"
+					? new GroupsRenderer(this.mainEl, this)
 					: new CloudRenderer(this.mainEl, this);
 			this.rendererMode = mode;
 		}

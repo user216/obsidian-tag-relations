@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-07
+
+Tag groups — the containment that nested tags provided, without what made them bad.
+
+### Added
+
+- **Tag groups.** A group is simply a tag that holds other tags, so groups inherit note counts, renaming, relations and the context menu for free. Structure goes three levels deep — **group → sub-group → tag** — and is enforced by one invariant, `ancestorDepth(parent) + 1 + descendantDepth(child) ≤ 2`, from which every rule follows: a sub-group holds only plain tags, and a group can be demoted into a sub-group only when it holds no sub-groups itself. Refusals name the specific rule they hit.
+  - **A tag can belong to many groups at once** — membership is a DAG, not a tree. This is what nested tags could never express.
+  - Nothing is written to your notes: grouping lives entirely in plugin data, so reorganising is free.
+- **Groups view** with two layouts: **collapsible clouds** (every group a foldable section on one page) and **tree** (an indented outline). Sub-groups can optionally also appear as top-level sections.
+- **Group membership as connections.** Containment becomes a third source of graph edges alongside co-occurrence and manual links — always full strength, never pruned, recording which end is the parent — and is drawn in its own colour per level pairing (group→sub-group, group→tag, sub→tag). Switchable off for organisation-only groups.
+- **Level styling.** The three tag levels are told apart by font scale, shadow depth and colour, via **subtle / balanced / bold** presets or fully custom per-level values.
+- **Level filters**: plain tags only, tags + groups, all levels separated into bands, or all levels together in one field.
+- **Pinned tags** — up to 10 held at the top of the cloud, pinned from any tag's context menu.
+- **Cloud layouts**, in the manner of a file browser: **icons** (the weighted cloud), **list** (one per line) and **details** (a sortable table showing kind, notes, relations and group membership).
+- **Pan and zoom** for the cloud and groups views: drag empty space to pan, Ctrl/Cmd+wheel to zoom about the cursor. Plain scrolling still scrolls. Zoom is remembered between sessions.
+- **Whole-vault mind-map** — an option to draw every tag and every connection at once rather than only the selection's neighbourhood, with a notice when the node cap truncates.
+- A **view options** menu in the toolbar holding the per-mode switches, so the toolbar keeps a stable shape as you change views.
+- [ADR 0008](docs/adr/0008-tag-groups-are-tags.md) on why a group is a tag rather than a separate object, and [ADR 0009](docs/adr/0009-three-or-three-plus-one.md) recording the "three options, or three plus an escape hatch" heuristic — including where it deliberately does not apply.
+- 32 tests for the group model and level styling, covering every depth-rule case, multi-parent membership, cycle resistance, rename propagation and pin capping.
+
+### Changed
+
+- Renaming a tag now also follows through group membership and pinned tags, merging duplicates and dropping links a rename would collapse onto itself.
+
 ## [0.4.0] - 2026-09-07
 
 ### Added
@@ -117,7 +142,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/user216/obsidian-tag-relations/compare/0.2.0...0.3.0

@@ -1,6 +1,9 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost, scaleByCount } from "./host";
+import { ModeRenderer, ViewHost, applyLevelStyle, scaleByCount } from "./host";
 import { tagLabel } from "./graph";
+import { PanZoom } from "./panzoom";
+import { orderedLevels, separatesLevels, visibleLevels } from "./levels";
+import { LEVEL_LABELS, TagLevel } from "./types";
 
 interface PillRect {
 	left: number;
@@ -8,13 +11,17 @@ interface PillRect {
 }
 
 /**
- * The tag cloud. Tag size encodes note count; selecting a tag highlights every
- * related tag by relation strength, dims the rest, and (optionally) re-groups
- * the cloud so related tags move to the front — animated with a FLIP pass so
- * the regrouping reads as movement rather than a redraw.
+ * The tag cloud, in three layouts borrowed from a file browser: icons (the
+ * classic weighted cloud), list (one per line) and details (a table).
+ *
+ * Whatever the layout, the same behaviour applies: pinned tags are held at the
+ * top, selecting a tag highlights what it relates to, and in the icons layout
+ * the cloud re-groups with a FLIP animation so tags visibly travel to their
+ * new position rather than the layout snapping.
  */
 export class CloudRenderer implements ModeRenderer {
 	private container: HTMLElement;
+	private panzoom: PanZoom;
 	private host: ViewHost;
 	private pills = new Map<string, HTMLElement>();
 	/** Tag currently being renamed in place, if any. */
@@ -22,32 +29,39 @@ export class CloudRenderer implements ModeRenderer {
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
-		this.container = container.createDiv({ cls: "tr-cloud" });
-		this.container.addEventListener("click", (event) => {
-			// A click on the empty background clears the whole selection.
-			if (event.target === this.container) this.host.clearSelection();
+		this.container = container.createDiv({ cls: "tr-cloud-root" });
+		this.panzoom = new PanZoom(this.container, {
+			onChange: (state) => host.onZoomChanged(state.scale),
+		});
+		this.panzoom.restoreScale(host.settings.cloudZoom);
+
+		this.panzoom.content.addEventListener("click", (event) => {
+			// A click on empty space clears, unless it ended a pan gesture.
+			if (this.panzoom.didPan) return;
+			if (event.target === this.panzoom.content) this.host.clearSelection();
 		});
 	}
 
 	destroy(): void {
 		this.pills.clear();
+		this.panzoom.destroy();
 		this.container.remove();
 	}
 
 	render(): void {
 		const { host } = this;
-		const before = host.settings.animateRegroup ? this.measure() : null;
+		const layout = host.settings.cloudLayout;
+		const animate = host.settings.animateRegroup && layout === "icons";
+		const before = animate ? this.measure() : null;
 
-		const tags = host.visibleTags();
-		const selection = host.selection;
-		const grouped =
-			selection.length > 0 && host.settings.regroupOnSelect && tags.length > 1;
-
+		const tags = this.visible();
+		const body = this.panzoom.content;
 		this.pruneRemovedPills(tags);
-		this.container.empty();
+		body.empty();
+		body.dataset.layout = layout;
 
 		if (tags.length === 0) {
-			this.container.createDiv({
+			body.createDiv({
 				cls: "tr-empty",
 				text: host.filter
 					? "No tags match this filter."
@@ -56,43 +70,180 @@ export class CloudRenderer implements ModeRenderer {
 			return;
 		}
 
-		if (grouped) {
-			const selected: string[] = [];
-			const related: string[] = [];
-			const unrelated: string[] = [];
-			for (const tag of tags) {
-				if (host.isSelected(tag)) selected.push(tag);
-				else if (host.isRelatedToSelection(tag)) related.push(tag);
-				else unrelated.push(tag);
-			}
-			// Inside the related group, strongest relations come first regardless
-			// of the global sort — that ordering is the whole point of grouping.
-			related.sort(
-				(a, b) =>
-					host.selectionStrength(b) - host.selectionStrength(a) ||
-					a.localeCompare(b)
-			);
+		const pinned = tags.filter((tag) => host.isPinned(tag));
+		const rest = tags.filter((tag) => !host.isPinned(tag));
 
-			this.appendGroup(
-				selected.length > 1 ? `Selected (${selected.length})` : "Selected",
-				selected
-			);
-			this.appendGroup(`Related (${related.length})`, related);
-			if (unrelated.length > 0) {
-				this.appendGroup(`Unrelated (${unrelated.length})`, unrelated);
-			}
+		if (layout === "details") {
+			this.renderDetails(body, pinned, rest);
 		} else {
-			for (const tag of tags) this.container.appendChild(this.pillFor(tag));
+			this.renderFlow(body, pinned, rest, layout === "list");
 		}
 
 		if (before) this.flip(before);
 	}
 
-	private appendGroup(label: string, tags: string[]): void {
-		if (tags.length === 0) return;
-		this.container.createDiv({ cls: "tr-cloud-group", text: label });
-		for (const tag of tags) this.container.appendChild(this.pillFor(tag));
+	/** Tags passing the filter, the sort, and the level filter. */
+	private visible(): string[] {
+		const levels = visibleLevels(this.host.settings.levelFilter);
+		return this.host
+			.visibleTags()
+			.filter((tag) => levels.has(this.host.levelOf(tag)));
 	}
+
+	// --- Icons and list layouts ------------------------------------------
+
+	private renderFlow(
+		body: HTMLElement,
+		pinned: string[],
+		rest: string[],
+		compact: boolean
+	): void {
+		const { host } = this;
+		const field = body.createDiv({
+			cls: compact ? "tr-cloud tr-cloud-list" : "tr-cloud",
+		});
+
+		if (pinned.length > 0) {
+			this.appendGroup(field, `Pinned (${pinned.length})`, pinned);
+		}
+
+		const selection = host.selection;
+		const grouped =
+			selection.length > 0 && host.settings.regroupOnSelect && rest.length > 1;
+
+		if (grouped) {
+			const selected: string[] = [];
+			const related: string[] = [];
+			const unrelated: string[] = [];
+			for (const tag of rest) {
+				if (host.isSelected(tag)) selected.push(tag);
+				else if (host.isRelatedToSelection(tag)) related.push(tag);
+				else unrelated.push(tag);
+			}
+			related.sort(
+				(a, b) =>
+					host.selectionStrength(b) - host.selectionStrength(a) ||
+					a.localeCompare(b)
+			);
+			this.appendGroup(
+				field,
+				selected.length > 1 ? `Selected (${selected.length})` : "Selected",
+				selected
+			);
+			this.appendGroup(field, `Related (${related.length})`, related);
+			if (unrelated.length > 0) {
+				this.appendGroup(field, `Unrelated (${unrelated.length})`, unrelated);
+			}
+			return;
+		}
+
+		if (separatesLevels(host.settings.levelFilter)) {
+			// Each level gets its own band, so kinds read apart at a glance.
+			for (const level of orderedLevels(host.settings.levelFilter)) {
+				const band = rest.filter((tag) => host.levelOf(tag) === level);
+				if (band.length > 0) {
+					this.appendGroup(
+						field,
+						`${LEVEL_LABELS[level]}s (${band.length})`,
+						band
+					);
+				}
+			}
+			return;
+		}
+
+		for (const tag of rest) field.appendChild(this.pillFor(tag));
+	}
+
+	private appendGroup(
+		field: HTMLElement,
+		label: string,
+		tags: string[]
+	): void {
+		if (tags.length === 0) return;
+		field.createDiv({ cls: "tr-cloud-group", text: label });
+		for (const tag of tags) field.appendChild(this.pillFor(tag));
+	}
+
+	// --- Details layout ---------------------------------------------------
+
+	private renderDetails(
+		body: HTMLElement,
+		pinned: string[],
+		rest: string[]
+	): void {
+		const { host } = this;
+		const table = body.createEl("table", { cls: "tr-details" });
+		const head = table.createEl("thead").createEl("tr");
+		for (const column of ["Tag", "Kind", "Notes", "Relations", "In groups"]) {
+			head.createEl("th", { text: column });
+		}
+		const tbody = table.createEl("tbody");
+
+		const section = (label: string, tags: string[]) => {
+			if (tags.length === 0) return;
+			if (label) {
+				const row = tbody.createEl("tr", { cls: "tr-details-section" });
+				row.createEl("td", { text: label, attr: { colspan: "5" } });
+			}
+			for (const tag of tags) this.renderDetailRow(tbody, tag);
+		};
+
+		section(pinned.length > 0 ? `Pinned (${pinned.length})` : "", pinned);
+		section(pinned.length > 0 ? "All tags" : "", rest);
+	}
+
+	private renderDetailRow(tbody: HTMLElement, tag: string): void {
+		const { host } = this;
+		const level = host.levelOf(tag);
+		const row = tbody.createEl("tr", { cls: "tr-details-row" });
+		row.toggleClass("is-selected", host.isSelected(tag));
+		row.toggleClass(
+			"is-related",
+			!host.isSelected(tag) && host.isRelatedToSelection(tag)
+		);
+
+		const nameCell = row.createEl("td");
+		const name = nameCell.createSpan({
+			cls: "tr-details-name",
+			text: tagLabel(tag),
+		});
+		applyLevelStyle(name, level, host.levelStyles);
+		if (host.isPinned(tag)) {
+			const pin = nameCell.createSpan({ cls: "tr-details-pin" });
+			setIcon(pin, "pin");
+		}
+
+		row.createEl("td", {
+			cls: "tr-details-kind",
+			text: LEVEL_LABELS[level],
+		});
+		row.createEl("td", {
+			cls: "tr-details-number",
+			text: String(host.graph.countOf(tag)),
+		});
+		row.createEl("td", {
+			cls: "tr-details-number",
+			text: String(host.graph.neighbors(tag).length),
+		});
+		const parents = host.groups.parentsOf(tag);
+		row.createEl("td", {
+			cls: "tr-details-groups",
+			text: parents.length > 0 ? parents.map(tagLabel).join(", ") : "—",
+		});
+
+		row.addEventListener("click", (event) => host.selectFromEvent(tag, event));
+		row.addEventListener("dblclick", (event) => {
+			event.preventDefault();
+			host.openTagSearch(tag);
+		});
+		row.addEventListener("contextmenu", (event) => {
+			event.preventDefault();
+			host.openContextMenu(tag, event);
+		});
+	}
+
+	// --- Pills ------------------------------------------------------------
 
 	private pruneRemovedPills(tags: string[]): void {
 		const live = new Set(tags);
@@ -126,17 +277,27 @@ export class CloudRenderer implements ModeRenderer {
 
 		const node = host.graph.node(tag);
 		const count = node?.count ?? 0;
+		const level = host.levelOf(tag);
 		const size = scaleByCount(count, host.graph.maxCount);
 		const { cloudMinFontSize, cloudMaxFontSize } = host.settings;
 		pill.style.fontSize =
 			(cloudMinFontSize + (cloudMaxFontSize - cloudMinFontSize) * size).toFixed(
 				1
 			) + "px";
+		applyLevelStyle(pill, level, host.levelStyles);
 
 		pill.empty();
 		if (this.renaming === tag) {
 			this.renderRenameInput(pill, tag);
 			return pill;
+		}
+		if (host.isPinned(tag)) {
+			const pin = pill.createSpan({ cls: "tr-pill-pin" });
+			setIcon(pin, "pin");
+		}
+		if (host.groups.isGroup(tag)) {
+			const badge = pill.createSpan({ cls: "tr-pill-group" });
+			setIcon(badge, level === "main" ? "folder" : "folder-open");
 		}
 		pill.createSpan({ cls: "tr-pill-name", text: tagLabel(tag) });
 		pill.createSpan({ cls: "tr-pill-count", text: String(count) });
@@ -158,7 +319,7 @@ export class CloudRenderer implements ModeRenderer {
 
 		pill.toggleClass("is-selected", isSelected);
 		pill.toggleClass("is-related", related);
-		// A manual connection to any selected tag is worth calling out.
+		pill.toggleClass("is-pinned", host.isPinned(tag));
 		pill.toggleClass(
 			"is-manual",
 			related &&
@@ -170,10 +331,9 @@ export class CloudRenderer implements ModeRenderer {
 			"is-dim",
 			host.settings.dimUnrelated && hasSelection && !related && !isSelected
 		);
-		// Drives border/background intensity in CSS.
 		pill.style.setProperty("--tr-strength", strength.toFixed(3));
 
-		setTooltip(pill, this.tooltipFor(tag, count, related, strength), {
+		setTooltip(pill, this.tooltipFor(tag, count, related, strength, level), {
 			placement: "top",
 		});
 		return pill;
@@ -183,12 +343,17 @@ export class CloudRenderer implements ModeRenderer {
 		tag: string,
 		count: number,
 		related: boolean,
-		strength: number
+		strength: number,
+		level: TagLevel
 	): string {
 		const lines = [`${tag} — ${count} note${count === 1 ? "" : "s"}`];
+		if (level !== "simple") {
+			const members = this.host.groups.childrenOf(tag).length;
+			lines.push(
+				`${LEVEL_LABELS[level]} · ${members} member${members === 1 ? "" : "s"}`
+			);
+		}
 		if (related) {
-			// With several tags selected, name the one this tag ties to most
-			// strongly — that is what the strength shading is showing.
 			let closest: string | null = null;
 			for (const other of this.host.selection) {
 				if (other !== tag && this.host.graph.strength(other, tag) === strength) {
@@ -197,10 +362,14 @@ export class CloudRenderer implements ModeRenderer {
 				}
 			}
 			const edge = closest ? this.host.graph.edgeBetween(closest, tag) : undefined;
-			if (edge?.manual) {
+			if (edge?.parent) {
 				lines.push(
-					`Connected to ${closest} manually${edge.label ? ` — ${edge.label}` : ""}`
+					edge.parent === tag
+						? `Contains ${tagLabel(closest ?? "")}`
+						: `Inside ${tagLabel(closest ?? "")}`
 				);
+			} else if (edge?.manual) {
+				lines.push(`Connected to ${closest} manually`);
 			} else if (closest && edge) {
 				lines.push(
 					`${Math.round(strength * 100)}% related to ${closest} · ${
@@ -208,23 +377,13 @@ export class CloudRenderer implements ModeRenderer {
 					} shared note${edge.cooccur === 1 ? "" : "s"}`
 				);
 			}
-		} else {
-			const degree = this.host.graph.neighbors(tag).length;
-			lines.push(`${degree} relation${degree === 1 ? "" : "s"}`);
 		}
 		return lines.join("\n");
 	}
 
-	/**
-	 * Turn the pill into a text field. Enter commits through the host (which
-	 * still previews and confirms the rewrite); Escape or blur cancels.
-	 */
 	private renderRenameInput(pill: HTMLElement, tag: string): void {
 		pill.addClass("is-renaming");
-		const input = pill.createEl("input", {
-			cls: "tr-pill-input",
-			type: "text",
-		});
+		const input = pill.createEl("input", { cls: "tr-pill-input", type: "text" });
 		input.value = tagLabel(tag);
 
 		let settled = false;
@@ -263,6 +422,8 @@ export class CloudRenderer implements ModeRenderer {
 		}, 0);
 	}
 
+	// --- FLIP -------------------------------------------------------------
+
 	private measure(): Map<string, PillRect> {
 		const rects = new Map<string, PillRect>();
 		for (const [tag, pill] of this.pills) {
@@ -274,33 +435,32 @@ export class CloudRenderer implements ModeRenderer {
 	}
 
 	/**
-	 * First-Last-Invert-Play: pills are already at their new position, so we
-	 * offset them back to where they were and let a transition carry them home.
+	 * First-Last-Invert-Play. Measurements are screen pixels, but the pill's
+	 * own transform lives inside the zoomed layer, so the delta is divided by
+	 * the current scale to land in the right coordinate space.
 	 */
 	private flip(before: Map<string, PillRect>): void {
+		const scale = this.panzoom.scale || 1;
 		const moved: HTMLElement[] = [];
 		for (const [tag, pill] of this.pills) {
 			const previous = before.get(tag);
 			if (!previous || !pill.isConnected) continue;
 			const box = pill.getBoundingClientRect();
-			const dx = previous.left - box.left;
-			const dy = previous.top - box.top;
+			const dx = (previous.left - box.left) / scale;
+			const dy = (previous.top - box.top) / scale;
 			if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
 			pill.style.transition = "none";
 			pill.style.transform = `translate(${dx}px, ${dy}px)`;
 			moved.push(pill);
 		}
 		if (moved.length === 0) return;
-		// Force a reflow so the inverted position is committed before we animate.
 		void this.container.offsetHeight;
 		for (const pill of moved) {
 			pill.style.transition = "transform 260ms cubic-bezier(0.2, 0, 0.2, 1)";
 			pill.style.transform = "";
 		}
 		window.setTimeout(() => {
-			for (const pill of moved) {
-				pill.style.transition = "";
-			}
+			for (const pill of moved) pill.style.transition = "";
 		}, 300);
 	}
 }

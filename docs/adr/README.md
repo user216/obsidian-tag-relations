@@ -13,3 +13,5 @@ An ADR is written when a decision is hard to reverse, affects more than one part
 | [0005](0005-multi-select-and-a-frozen-notes-panel.md) | Multi-tag selection and a frozen notes panel | Accepted |
 | [0006](0006-writing-tag-edits-back-to-notes.md) | Writing tag edits back to notes | Accepted (amends 0001) |
 | [0007](0007-nested-tags-are-out-of-scope.md) | Nested tags are out of scope | Accepted (constrains 0001, 0006) |
+| [0008](0008-tag-groups-are-tags.md) | Tag groups are themselves tags | Accepted (builds on 0001, 0007) |
+| [0009](0009-three-or-three-plus-one.md) | Prefer three options, or three plus an escape hatch | Accepted (heuristic) |

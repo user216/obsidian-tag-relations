@@ -33,6 +33,39 @@ Pan by dragging the background, zoom with the wheel (zooms toward the cursor), d
 ### Tree
 The relation graph unfolded as an expandable outline, rooted at the selected tag. Each branch is that tag's strongest relations, and expanding walks one hop further out. A tag never repeats within its own ancestor path, so the walk always moves outward. With nothing selected it lists your most-connected tags as entry points.
 
+## Tag groups
+
+A **group is just a tag that holds other tags** — there is no separate kind of object to manage. Right-click any tag and choose *Put a tag inside this one*.
+
+Two things make this different from the nested tags it replaces:
+
+- **A tag can belong to many groups at once.** `#running` can sit in both `#health` and `#hobby` without duplication or picking a winner.
+- **Nothing is written to your notes.** Grouping lives in plugin data, so reorganising the whole structure costs nothing and never rewrites a file.
+
+Structure goes three levels deep — **group → sub-group → tag** — enforced by one rule: a sub-group holds only plain tags, and a group can become a sub-group only if it doesn't already hold sub-groups. When a grouping isn't allowed, the plugin says which rule you hit.
+
+The **Groups** view shows all of this two ways: **collapsible clouds** (every group a foldable section on one page) or a **tree** outline. Sub-groups can optionally also appear as top-level sections.
+
+Group membership also draws as **coloured connections** in the cloud and mind-map — a different colour per level pairing — so structure stays visible inside the relation graph. Turn it off in settings if you'd rather groups were organisation only.
+
+The three levels are told apart by size, shadow and colour, via **subtle / balanced / bold** presets or custom per-level values.
+
+## Cloud layouts, pinning and zoom
+
+The cloud has three layouts, like a file browser:
+
+| Layout | Shows |
+| --- | --- |
+| **Icons** | The classic weighted cloud — size tracks note count |
+| **List** | One tag per line, compact |
+| **Details** | A table: kind, note count, relation count, group membership |
+
+**Pin up to 10 tags** from any context menu; they're held at the top in every layout.
+
+**Pan and zoom**: drag empty space to pan, Ctrl/Cmd+wheel to zoom about the cursor. Plain scrolling still scrolls, and the zoom level is remembered. The mind-map keeps its own camera, and gains a **whole-vault** option that draws every tag and connection at once rather than just the selection's neighbourhood.
+
+Per-view switches live in the toolbar's **view options** menu, so the toolbar keeps a stable shape as you change views.
+
 ## Selecting tags
 
 Selection works the same way in all three views:
@@ -169,6 +202,10 @@ src/
   links.ts       manual-link remapping across renames
   datetime.ts    timezone-aware date formatting and filename sanitising
   newNote.ts     timestamped note creation
+  groups.ts      the group DAG and its three-level invariant (pure)
+  groupsView.ts  collapsible-clouds and tree layouts for groups
+  levels.ts      level styling, level filters, pinning (pure)
+  panzoom.ts     pan/zoom layer for the DOM-based views
 tests/           node:test suites, run with `npm test`
 ```
 

@@ -1,4 +1,4 @@
-export type ViewMode = "cloud" | "map" | "tree";
+export type ViewMode = "cloud" | "map" | "tree" | "groups";
 
 export type SortMode =
 	| "name-asc"
@@ -42,3 +42,118 @@ export const MATCH_LABELS: Record<NoteMatchMode, string> = {
  * modifier-click or a click in sticky multi-select mode (add/remove).
  */
 export type SelectMode = "replace" | "toggle";
+
+/**
+ * A containment link: `parent` is a tag acting as a group, `child` is a tag
+ * inside it. Membership is a DAG — a tag may sit in several groups at once.
+ */
+export interface GroupLink {
+	parent: string;
+	child: string;
+}
+
+/**
+ * The three kinds of tag, derived from the group structure rather than stored:
+ * a tag with members is a group, and it is a sub-group when something contains
+ * it in turn.
+ */
+export type TagLevel = "main" | "sub" | "simple";
+
+/** Deepest allowed chain of containers, so there are MAX + 1 = 3 levels. */
+export const MAX_GROUP_DEPTH = 2;
+
+export const LEVEL_LABELS: Record<TagLevel, string> = {
+	main: "Group",
+	sub: "Sub-group",
+	simple: "Tag",
+};
+
+export const LEVEL_ORDER: TagLevel[] = ["main", "sub", "simple"];
+
+/** Which tag levels a view draws. */
+export type LevelFilter = "tags" | "groups" | "all" | "merged";
+
+export const LEVEL_FILTER_LABELS: Record<LevelFilter, string> = {
+	tags: "Plain tags only",
+	groups: "Tags + groups",
+	all: "All levels, separated",
+	merged: "All levels, together",
+};
+
+/** How the tag cloud lays its tags out, in the manner of a file browser. */
+export type CloudLayout = "icons" | "list" | "details";
+
+export const CLOUD_LAYOUT_LABELS: Record<CloudLayout, string> = {
+	icons: "Icons",
+	list: "List",
+	details: "Details",
+};
+
+/** How strongly the three levels are told apart visually. */
+export type LevelStylePreset = "subtle" | "balanced" | "bold" | "custom";
+
+export const LEVEL_STYLE_LABELS: Record<LevelStylePreset, string> = {
+	subtle: "Subtle",
+	balanced: "Balanced",
+	bold: "Bold",
+	custom: "Custom",
+};
+
+export interface LevelStyle {
+	/** Multiplier applied to the tag's computed font size. */
+	scale: number;
+	/** Shadow strength, 0 (flat) to 1 (pronounced). */
+	shadow: number;
+	/** CSS colour, or empty to inherit the theme's normal text colour. */
+	color: string;
+}
+
+export type LevelStyles = Record<TagLevel, LevelStyle>;
+
+export const LEVEL_STYLE_PRESETS: Record<
+	Exclude<LevelStylePreset, "custom">,
+	LevelStyles
+> = {
+	subtle: {
+		main: { scale: 1.15, shadow: 0.2, color: "" },
+		sub: { scale: 1.05, shadow: 0.1, color: "" },
+		simple: { scale: 1, shadow: 0, color: "" },
+	},
+	balanced: {
+		main: { scale: 1.4, shadow: 0.5, color: "#e0803c" },
+		sub: { scale: 1.18, shadow: 0.28, color: "#3c9ee0" },
+		simple: { scale: 1, shadow: 0, color: "" },
+	},
+	bold: {
+		main: { scale: 1.8, shadow: 0.85, color: "#e0603c" },
+		sub: { scale: 1.35, shadow: 0.5, color: "#3c7de0" },
+		simple: { scale: 1, shadow: 0, color: "" },
+	},
+};
+
+/**
+ * Which pair of levels a relation joins. Group membership is drawn in its own
+ * colour per pairing, so the structure is readable at a glance.
+ */
+export type ConnectionKind =
+	| "cooccurrence"
+	| "manual"
+	| "main-sub"
+	| "main-simple"
+	| "sub-simple";
+
+export const CONNECTION_LABELS: Record<ConnectionKind, string> = {
+	cooccurrence: "Shared notes",
+	manual: "Manual connection",
+	"main-sub": "Group → sub-group",
+	"main-simple": "Group → tag",
+	"sub-simple": "Sub-group → tag",
+};
+
+export const DEFAULT_CONNECTION_COLORS: Record<ConnectionKind, string> = {
+	cooccurrence: "",
+	manual: "",
+	"main-sub": "#e0803c",
+	"main-simple": "#c86ad0",
+	"sub-simple": "#3c9ee0",
+};

@@ -59,6 +59,8 @@ export class MapRenderer implements ModeRenderer {
 	private pointerMoved = false;
 	private lastPointer = { x: 0, y: 0 };
 	private palette: Palette | null = null;
+	/** Tags left out by the node cap in whole-vault mode, for the notice. */
+	private truncated = 0;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -119,13 +121,18 @@ export class MapRenderer implements ModeRenderer {
 		const settings = host.settings;
 		const pool = new Set(host.visibleTags());
 		const selection = host.selection.filter((tag) => host.graph.nodes.has(tag));
+		// Whole-vault mode ignores the selection when choosing what to draw, so
+		// the map shows every tag and every connection at once. The selection is
+		// still anchored and highlighted — it just no longer limits the view.
+		const whole = settings.mapWholeVault;
 		const ordered = collectMapNodes(
 			host.graph,
 			pool,
-			selection,
+			whole ? [] : selection,
 			settings.mapDepth,
-			settings.mapMaxNodes
+			whole ? Math.max(settings.mapMaxNodes, Math.min(pool.size, 600)) : settings.mapMaxNodes
 		);
+		this.truncated = whole ? Math.max(0, pool.size - ordered.length) : 0;
 
 		const live = new Set(ordered.map((entry) => entry.tag));
 		for (const tag of Array.from(this.particles.keys())) {
@@ -354,12 +361,19 @@ export class MapRenderer implements ModeRenderer {
 					? 0.35 + edge.weight * 0.65
 					: 0.08
 				: 0.18 + edge.weight * 0.5;
-			if (edge.manual) {
+			// Containment edges carry their own colour per level pairing, so the
+			// group structure is legible inside the relation graph.
+			const custom = this.host.settings.connectionColors[edge.kind];
+			if (edge.parent) {
+				ctx.setLineDash([]);
+				ctx.strokeStyle = custom || palette.accent;
+				ctx.lineWidth += 0.8 / scale;
+			} else if (edge.manual) {
 				ctx.setLineDash([6 / scale, 4 / scale]);
-				ctx.strokeStyle = palette.accent;
+				ctx.strokeStyle = custom || palette.accent;
 			} else {
 				ctx.setLineDash([]);
-				ctx.strokeStyle = touchesFocus ? palette.lineStrong : palette.line;
+				ctx.strokeStyle = custom || (touchesFocus ? palette.lineStrong : palette.line);
 			}
 			ctx.stroke();
 		}
@@ -420,6 +434,18 @@ export class MapRenderer implements ModeRenderer {
 		}
 
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+		if (this.truncated > 0) {
+			ctx.fillStyle = palette.textMuted;
+			ctx.font = "12px " + FONT_STACK;
+			ctx.textAlign = "left";
+			ctx.textBaseline = "bottom";
+			ctx.fillText(
+				`Showing ${this.active.length} of ${this.active.length + this.truncated} tags — raise the node cap in settings to see more.`,
+				10,
+				this.height - 8
+			);
+		}
 	}
 
 	private screenToWorld(sx: number, sy: number): { x: number; y: number } {

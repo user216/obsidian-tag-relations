@@ -11,6 +11,8 @@ import { TagSuggestModal } from "./modals";
 import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
 import { NoteCreator } from "./newNote";
+import { TagGroups } from "./groups";
+import { MAX_PINNED, togglePinned } from "./levels";
 import {
 	ConfirmEditModal,
 	RenameTagModal,
@@ -157,6 +159,11 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, stored ?? {});
 		// Guard against a hand-edited or partially written data.json.
 		if (!Array.isArray(this.settings.manualLinks)) this.settings.manualLinks = [];
+		if (!Array.isArray(this.settings.groupLinks)) this.settings.groupLinks = [];
+		if (!Array.isArray(this.settings.pinnedTags)) this.settings.pinnedTags = [];
+		if (!Array.isArray(this.settings.collapsedGroups)) {
+			this.settings.collapsedGroups = [];
+		}
 	}
 
 	async saveSettings(): Promise<void> {
@@ -173,6 +180,8 @@ export default class TagRelationsPlugin extends Plugin {
 			excludedTags: splitList(this.settings.excludedTags),
 			excludedFolders: splitList(this.settings.excludedFolders),
 			manualLinks: this.settings.manualLinks,
+			groupLinks: this.settings.groupLinks,
+			showGroupConnections: this.settings.showGroupConnections,
 		});
 		for (const view of this.views()) view.onGraphChanged();
 	}
@@ -229,6 +238,74 @@ export default class TagRelationsPlugin extends Plugin {
 		await this.saveSettings();
 		this.rebuildGraph();
 		new Notice(`Disconnected ${tagLabel(a)} ↔ ${tagLabel(b)}`);
+	}
+
+	// --- Groups -----------------------------------------------------------
+
+	/**
+	 * Put `child` inside `parent`. The depth rule lives in TagGroups; this
+	 * reports its refusal rather than silently dropping the request.
+	 */
+	async addToGroup(parent: string, child: string): Promise<void> {
+		const groups = new TagGroups(this.settings.groupLinks);
+		const result = groups.add(parent, child);
+		if (!result.ok) {
+			new Notice(result.reason ?? "That grouping is not allowed.");
+			return;
+		}
+		this.settings.groupLinks = groups.all;
+		await this.saveSettings();
+		this.rebuildGraph();
+		new Notice(`${tagLabel(child)} is now inside ${tagLabel(parent)}.`);
+	}
+
+	async removeFromGroup(parent: string, child: string): Promise<void> {
+		const groups = new TagGroups(this.settings.groupLinks);
+		if (!groups.remove(parent, child)) return;
+		this.settings.groupLinks = groups.all;
+		await this.saveSettings();
+		this.rebuildGraph();
+		new Notice(`${tagLabel(child)} removed from ${tagLabel(parent)}.`);
+	}
+
+	/** Pick a tag — existing or new — to place inside `parent`. */
+	promptAddToGroup(parent: string): void {
+		const groups = new TagGroups(this.settings.groupLinks);
+		const candidates = this.allKnownTags().filter(
+			(tag) => groups.canAdd(parent, tag).ok
+		);
+		if (candidates.length === 0) {
+			new Notice(`Nothing can be added to ${tagLabel(parent)} right now.`);
+			return;
+		}
+		const subtitles = new Map<string, string>();
+		for (const tag of candidates) {
+			const level = groups.levelOf(tag);
+			if (level !== "simple") subtitles.set(tag, `brings its own members`);
+		}
+		new TagChoiceModal(
+			this.app,
+			candidates,
+			`Put which tag inside ${tagLabel(parent)}?`,
+			(tag) => void this.addToGroup(parent, tag),
+			{ subtitles }
+		).open();
+	}
+
+	/** Turn a plain tag into a group by giving it its first member. */
+	promptMakeGroup(tag: string): void {
+		this.promptAddToGroup(tag);
+	}
+
+	async togglePinnedTag(tag: string): Promise<void> {
+		const result = togglePinned(this.settings.pinnedTags, tag);
+		if (!result.changed) {
+			new Notice(result.reason ?? `Only ${MAX_PINNED} tags can be pinned.`);
+			return;
+		}
+		this.settings.pinnedTags = result.pinned;
+		await this.saveSettings();
+		this.refreshViews();
 	}
 
 	// --- Editing ----------------------------------------------------------
@@ -293,6 +370,7 @@ export default class TagRelationsPlugin extends Plugin {
 	): Promise<void> {
 		const outcome = await this.editor.applyRename(from, to, includeNested);
 		this.remapManualLinks(from, to, includeNested);
+		this.remapGroupsAndPins(from, to);
 		await this.saveSettings();
 		this.report(
 			outcome,
@@ -461,6 +539,19 @@ export default class TagRelationsPlugin extends Plugin {
 				outcome.filesChanged === 1 ? "" : "s"
 			}.`
 		);
+	}
+
+	/** Group membership and pins follow a rename, like manual links do. */
+	private remapGroupsAndPins(from: string, to: string): void {
+		const groups = new TagGroups(this.settings.groupLinks);
+		if (groups.renameTag(from, to)) this.settings.groupLinks = groups.all;
+
+		const pins = this.settings.pinnedTags;
+		if (pins.includes(from)) {
+			const renamed = pins.map((tag) => (tag === from ? to : tag));
+			// A rename can merge two pins into one.
+			this.settings.pinnedTags = Array.from(new Set(renamed));
+		}
 	}
 
 	/** Keep manual connections pointing at a tag that was just renamed. */

@@ -9,7 +9,22 @@ import {
 	systemTimeZone,
 } from "./datetime";
 import { titleFor } from "./newNote";
+import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import {
+	CONNECTION_LABELS,
+	LEVEL_LABELS,
+	LEVEL_ORDER,
+	LEVEL_STYLE_LABELS,
+	LEVEL_FILTER_LABELS,
+	CloudLayout,
+	ConnectionKind,
+	DEFAULT_CONNECTION_COLORS,
+	GroupLink,
+	LEVEL_STYLE_PRESETS,
+	LevelFilter,
+	LevelStylePreset,
+	LevelStyles,
+	TagLevel,
 	ManualLink,
 	NoteMatchMode,
 	SortMode,
@@ -34,6 +49,26 @@ export interface TagRelationsSettings {
 	mode: ViewMode;
 	sort: SortMode;
 	showInspector: boolean;
+
+	// Tag groups ("tags for tags")
+	groupLinks: GroupLink[];
+	collapsedGroups: string[];
+	/** Draw sub-groups as top-level sections too, not only nested. */
+	showSubGroupsStandalone: boolean;
+	groupsLayout: "clouds" | "tree";
+	levelFilter: LevelFilter;
+	levelStylePreset: LevelStylePreset;
+	levelStyles: LevelStyles;
+	showGroupConnections: boolean;
+	connectionColors: Record<ConnectionKind, string>;
+
+	// Cloud presentation
+	cloudLayout: CloudLayout;
+	cloudZoom: number;
+	pinnedTags: string[];
+
+	// Map
+	mapWholeVault: boolean;
 
 	// New note
 	newNoteEnabled: boolean;
@@ -86,6 +121,22 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	mode: "cloud",
 	sort: "name-asc",
 	showInspector: true,
+
+	groupLinks: [],
+	collapsedGroups: [],
+	showSubGroupsStandalone: false,
+	groupsLayout: "clouds",
+	levelFilter: "merged",
+	levelStylePreset: "balanced",
+	levelStyles: LEVEL_STYLE_PRESETS.balanced,
+	showGroupConnections: true,
+	connectionColors: { ...DEFAULT_CONNECTION_COLORS },
+
+	cloudLayout: "icons",
+	cloudZoom: 1,
+	pinnedTags: [],
+
+	mapWholeVault: false,
 
 	newNoteEnabled: true,
 	newNoteTitleFormat: DEFAULT_TITLE_FORMAT,
@@ -253,6 +304,8 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 
 		this.displayManualLinks(containerEl);
+
+		this.displayGroups(containerEl);
 
 		this.displayNewNote(containerEl);
 
@@ -559,6 +612,170 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 	}
 
+	private displayGroups(containerEl: HTMLElement): void {
+		const settings = this.plugin.settings;
+		new Setting(containerEl).setName("Tag groups").setHeading();
+
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "A group is a tag that holds other tags. A tag can belong to as many groups as you like, and the structure goes three levels deep: group → sub-group → tag. Nothing is written to your notes — grouping lives in this plugin's data only.",
+		});
+
+		new Setting(containerEl)
+			.setName("Draw group membership as connections")
+			.setDesc(
+				"Show containment in the cloud and mind-map as coloured links. Off, groups still organise the Groups view but leave the relation graph untouched."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.showGroupConnections)
+					.onChange(async (value) => {
+						settings.showGroupConnections = value;
+						await this.plugin.saveSettings();
+						this.plugin.rebuildGraph();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Levels shown by default")
+			.setDesc(
+				"Also switchable per view from the toolbar's view options. “Separated” gives each level its own band; “together” mixes them in one field."
+			)
+			.addDropdown((dd) => {
+				for (const key of Object.keys(LEVEL_FILTER_LABELS) as LevelFilter[]) {
+					dd.addOption(key, LEVEL_FILTER_LABELS[key]);
+				}
+				dd.setValue(settings.levelFilter).onChange(async (value) => {
+					settings.levelFilter = value as LevelFilter;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName("How strongly levels differ")
+			.setDesc(
+				"Subtle, balanced and bold set the size, shadow and colour of each level together. Custom exposes the three individually."
+			)
+			.addDropdown((dd) => {
+				for (const key of Object.keys(LEVEL_STYLE_LABELS) as LevelStylePreset[]) {
+					dd.addOption(key, LEVEL_STYLE_LABELS[key]);
+				}
+				dd.setValue(settings.levelStylePreset).onChange(async (value) => {
+					const preset = value as LevelStylePreset;
+					settings.levelStylePreset = preset;
+					// Seed the custom values from whatever was on screen, so
+					// switching to Custom starts from what you were just looking at.
+					if (preset === "custom") {
+						settings.levelStyles = cloneStyles(
+							resolveLevelStyles(settings.levelStylePreset, settings.levelStyles)
+						);
+					}
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+					this.display();
+				});
+			});
+
+		if (settings.levelStylePreset === "custom") {
+			for (const level of LEVEL_ORDER) {
+				const style = settings.levelStyles[level];
+				new Setting(containerEl)
+					.setName(LEVEL_LABELS[level])
+					.setDesc("Size multiplier, shadow strength and colour.")
+					.addSlider((slider) =>
+						slider
+							.setLimits(0.6, 3, 0.05)
+							.setValue(style.scale)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								style.scale = value;
+								await this.plugin.saveSettings();
+								this.plugin.refreshViews();
+							})
+					)
+					.addSlider((slider) =>
+						slider
+							.setLimits(0, 1, 0.05)
+							.setValue(style.shadow)
+							.setDynamicTooltip()
+							.onChange(async (value) => {
+								style.shadow = value;
+								await this.plugin.saveSettings();
+								this.plugin.refreshViews();
+							})
+					)
+					.addColorPicker((picker) =>
+						picker
+							.setValue(style.color || "#888888")
+							.onChange(async (value) => {
+								style.color = value;
+								await this.plugin.saveSettings();
+								this.plugin.refreshViews();
+							})
+					);
+			}
+		}
+
+		new Setting(containerEl).setName("Connection colours").setHeading();
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "What each kind of link looks like on the mind-map. Leave the relation colours unset to follow your theme.",
+		});
+		for (const kind of Object.keys(CONNECTION_LABELS) as ConnectionKind[]) {
+			new Setting(containerEl)
+				.setName(CONNECTION_LABELS[kind])
+				.addColorPicker((picker) =>
+					picker
+						.setValue(
+							settings.connectionColors[kind] ||
+								DEFAULT_CONNECTION_COLORS[kind] ||
+								"#888888"
+						)
+						.onChange(async (value) => {
+							settings.connectionColors[kind] = value;
+							await this.plugin.saveSettings();
+							this.plugin.refreshViews();
+						})
+				)
+				.addExtraButton((button) =>
+					button
+						.setIcon("rotate-ccw")
+						.setTooltip("Back to the default")
+						.onClick(async () => {
+							settings.connectionColors[kind] = DEFAULT_CONNECTION_COLORS[kind];
+							await this.plugin.saveSettings();
+							this.plugin.refreshViews();
+							this.display();
+						})
+				);
+		}
+
+		const pinned = settings.pinnedTags;
+		new Setting(containerEl)
+			.setName("Pinned tags")
+			.setDesc(
+				`Held at the top of the cloud. ${pinned.length} of ${MAX_PINNED} used. Pin from a tag's right-click menu.`
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Unpin all")
+					.setDisabled(pinned.length === 0)
+					.onClick(async () => {
+						settings.pinnedTags = [];
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+						this.display();
+					})
+			);
+		if (pinned.length > 0) {
+			containerEl.createEl("p", {
+				cls: "tr-settings-empty",
+				text: pinned.map(tagLabel).join(", "),
+			});
+		}
+	}
+
 	private displayNewNote(containerEl: HTMLElement): void {
 		const settings = this.plugin.settings;
 
@@ -788,4 +1005,11 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			this.display();
 		});
 	}
+}
+
+/** A detached copy, so editing custom styles never mutates a preset. */
+function cloneStyles(styles: LevelStyles): LevelStyles {
+	const out = {} as LevelStyles;
+	for (const level of LEVEL_ORDER) out[level] = { ...styles[level] };
+	return out;
 }

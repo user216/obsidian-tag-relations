@@ -48,6 +48,10 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/host.ts` | 66 | The `ViewHost` contract renderers see |
 | `src/types.ts` | 44 | Shared enums and labels |
 | `src/links.ts` | 42 | Manual-link remapping across renames (pure) |
+| `src/groups.ts` | 261 | The group DAG and its three-level invariant (pure) |
+| `src/groupsView.ts` | 320 | Collapsible-clouds and tree layouts for groups |
+| `src/levels.ts` | 118 | Level styling, level filters, pin capping (pure) |
+| `src/panzoom.ts` | 175 | Pan/zoom layer for the DOM-based views |
 | `src/datetime.ts` | 214 | Timezone-aware formatting and filename sanitising (pure) |
 | `src/newNote.ts` | 137 | Timestamped note creation |
 | `src/modals.ts` | 43 | Fuzzy tag picker |
@@ -70,7 +74,7 @@ datetime.ts
 
 `view.ts` and `settings.ts` each `import type TagRelationsPlugin from "./main"`. These are **type-only** imports, erased at build time, so there is no runtime cycle.
 
-Three modules — `selection.ts`, `links.ts` and `datetime.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
+Five modules — `selection.ts`, `links.ts`, `datetime.ts`, `groups.ts` and `levels.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
 
 ---
 
@@ -331,6 +335,30 @@ Three details worth knowing:
 
 Sanitising replaces path separators rather than honouring them, so a format containing `/` yields one note instead of silently creating a folder tree.
 
+## 8c. Tag groups
+
+`TagGroups` (`src/groups.ts`) holds containment as a flat list of `{ parent, child }` links and derives everything else from it. A group is a tag with members; a group something else contains is a sub-group. Because level is derived rather than stored, promotion and demotion are just adding or removing a parent link, and a stored level can never disagree with the structure.
+
+Membership is a **DAG, not a tree** — a tag may sit in several groups — so views must expect the same tag to appear more than once, and every traversal carries a visited set (cycles cannot be made through the UI, but a hand-edited `data.json` could contain one).
+
+Depth is capped at three levels by one invariant checked on insertion:
+
+```
+ancestorDepth(parent) + 1 + descendantDepth(child) <= MAX_GROUP_DEPTH   // 2
+```
+
+Every rule the cap implies is a case of that arithmetic rather than a separate branch — see [ADR 0008](docs/adr/0008-tag-groups-are-tags.md) for the table. Refusals return the specific rule hit, because the constraint is not self-evident from outside.
+
+Containment is also a **third edge source** in the graph, after co-occurrence and manual links. Group edges score full strength, skip pruning, and carry a `parent` field so views know the direction of an otherwise undirected edge. Their `kind` names the level pairing, which is what the mind-map colours by.
+
+## 8d. Pan and zoom
+
+The mind-map draws to canvas and owns its own camera. The cloud, groups and tree views are real DOM — they need inline renaming, text selection and the FLIP animation — so rather than rewriting them onto canvas, `PanZoom` (`src/panzoom.ts`) wraps their content in a CSS-transformed layer. The browser still lays tags out normally; the transform moves and scales the result.
+
+`transform-origin: 0 0` keeps the algebra trivial: a content point maps to `point * scale + offset`, so holding the point under the cursor still during a wheel zoom is two lines. Panning starts only from empty space, so clicking a tag still selects it, and a gesture that moved more than a couple of pixels suppresses the click that would otherwise follow.
+
+One interaction worth noting: FLIP measures `getBoundingClientRect`, which is in screen pixels, but the pill's own transform lives *inside* the scaled layer — so the measured delta is divided by the current scale before being applied.
+
 ## 9. Settings and persistence
 
 One flat `TagRelationsSettings` interface, persisted to `data.json` via Obsidian's `loadData`/`saveData`. Loading merges stored values over `DEFAULT_SETTINGS`, so a settings file written by an older version gains new keys with their defaults rather than leaving them `undefined`. `manualLinks` is additionally guarded against a hand-edited file that made it a non-array.
@@ -354,7 +382,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-205 tests across 40 suites:
+274 tests across 53 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -363,6 +391,8 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `editor.test.ts` | `TagEditor` end to end against an in-memory vault — rename, assign, remove, and that code blocks / URL fragments / headings survive |
 | `selection.test.ts` | Selection transitions, filtering, all five sort orders, snapshot staleness |
 | `views.test.ts` | Tree branching, map node collection and anchoring, `scaleByCount`, modifier detection, manual-link remapping, settings invariants |
+| `groups.test.ts` | Every depth-rule case, multi-parent membership, promotion/demotion, cycle resistance, rename propagation |
+| `levels.test.ts` | Level style resolution and CSS, level filters, pin capping, zoom clamping |
 | `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |
 
 `tests/helpers/vault.ts` is an in-memory vault: it stores note text, derives a metadata cache from it (inline tag offsets plus parsed frontmatter), and implements `vault.process` and `processFrontMatter`. Its tag scanner approximates Obsidian's parser — skipping fenced blocks and headings — and a dedicated suite tests *the fixture itself*, since the editor's safety depends on those exclusions being real.

@@ -27,6 +27,8 @@ function opts(overrides: Partial<GraphBuildOptions> = {}): GraphBuildOptions {
 		excludedTags: [],
 		excludedFolders: [],
 		manualLinks: [],
+		groupLinks: [],
+		showGroupConnections: true,
 		...overrides,
 	};
 }
@@ -368,5 +370,71 @@ describe("matching notes to a tag selection", () => {
 			"notes/note2.md",
 			"notes/note5.md",
 		]);
+	});
+});
+
+describe("group membership as edges", () => {
+	const groupOpts = {
+		groupLinks: [
+			{ parent: "#health", child: "#fitness" },
+			{ parent: "#fitness", child: "#running" },
+		],
+	};
+
+	test("containment creates edges at full strength", () => {
+		const g = built(groupOpts);
+		assert.equal(g.isRelated("#health", "#fitness"), true);
+		assert.equal(g.strength("#health", "#fitness"), 1);
+	});
+
+	test("the edge records which tag is the container", () => {
+		const g = built(groupOpts);
+		assert.equal(g.edgeBetween("#health", "#fitness")?.parent, "#health");
+	});
+
+	test("edge kind reflects the levels it joins", () => {
+		const g = built(groupOpts);
+		// #fitness is a sub-group, so health -> fitness is main-sub
+		assert.equal(g.edgeBetween("#health", "#fitness")?.kind, "main-sub");
+		// #running is plain, under a sub-group
+		assert.equal(g.edgeBetween("#fitness", "#running")?.kind, "sub-simple");
+	});
+
+	test("a plain tag directly under a main group is main-simple", () => {
+		const g = built({ groupLinks: [{ parent: "#health", child: "#sleep" }] });
+		assert.equal(g.edgeBetween("#health", "#sleep")?.kind, "main-simple");
+	});
+
+	test("group members exist as nodes even with no notes", () => {
+		const g = built({ groupLinks: [{ parent: "#empty", child: "#alsoempty" }] });
+		assert.equal(g.nodes.has("#empty"), true);
+		assert.equal(g.countOf("#alsoempty"), 0);
+	});
+
+	test("group edges survive pruning that would drop a weak relation", () => {
+		const g = built({ ...groupOpts, minCooccurrence: 9, minWeight: 0.9 });
+		assert.equal(g.isRelated("#health", "#fitness"), true);
+	});
+
+	test("containment outranks a co-occurrence between the same tags", () => {
+		// #project and #work share notes; declaring containment relabels it.
+		const g = built({ groupLinks: [{ parent: "#project", child: "#work" }] });
+		const edge = g.edgeBetween("#project", "#work");
+		assert.equal(edge?.parent, "#project");
+		assert.equal(edge?.kind, "main-simple");
+		assert.equal(edge?.weight, 1);
+	});
+
+	test("showGroupConnections off keeps the nodes but draws no edges", () => {
+		const g = built({ ...groupOpts, showGroupConnections: false });
+		assert.equal(g.nodes.has("#fitness"), true);
+		assert.equal(g.isRelated("#health", "#fitness"), false);
+	});
+
+	test("the graph exposes the group structure it was built with", () => {
+		const g = built(groupOpts);
+		assert.equal(g.groups.levelOf("#health"), "main");
+		assert.equal(g.groups.levelOf("#fitness"), "sub");
+		assert.equal(g.groups.levelOf("#running"), "simple");
 	});
 });

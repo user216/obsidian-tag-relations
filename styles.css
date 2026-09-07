@@ -913,3 +913,295 @@
 	font-size: var(--font-ui-smaller);
 	color: var(--text-error);
 }
+
+/* ------------------------------------------------------- pan/zoom layer */
+
+.tr-panzoom {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+	cursor: default;
+}
+
+.tr-panzoom.is-panning {
+	cursor: grabbing;
+	user-select: none;
+}
+
+.tr-panzoom-content {
+	transform-origin: 0 0;
+	will-change: transform;
+	min-height: 100%;
+}
+
+.tr-cloud-root,
+.tr-groups {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Levels scale relative to the size the note count already gave them. */
+.tr-pill[data-level],
+.tr-details-name[data-level],
+.tr-group-name[data-level] {
+	font-size: calc(1em * var(--tr-level-scale, 1));
+}
+
+.tr-pill[data-level="main"],
+.tr-pill[data-level="sub"] {
+	font-weight: 600;
+}
+
+.tr-pill-pin,
+.tr-pill-group {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-faint);
+}
+
+.tr-pill-pin .svg-icon,
+.tr-pill-group .svg-icon {
+	width: 0.7em;
+	height: 0.7em;
+}
+
+.tr-pill.is-pinned {
+	border-color: var(--text-accent);
+}
+
+/* ------------------------------------------------------------ list view */
+
+.tr-cloud-list {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 1px;
+}
+
+.tr-cloud-list .tr-pill {
+	border: none;
+	border-radius: var(--radius-s);
+	justify-content: flex-start;
+	padding: 3px 8px;
+	background-color: transparent;
+}
+
+.tr-cloud-list .tr-pill:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-cloud-list .tr-pill-count {
+	margin-left: auto;
+}
+
+/* --------------------------------------------------------- details view */
+
+.tr-details {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--font-ui-small);
+}
+
+.tr-details th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	text-align: left;
+	padding: 6px 10px;
+	background-color: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.tr-details td {
+	padding: 4px 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tr-details-row {
+	cursor: pointer;
+}
+
+.tr-details-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-details-row.is-selected {
+	background-color: var(--background-modifier-active-hover);
+}
+
+.tr-details-row.is-related .tr-details-name {
+	color: var(--text-accent);
+}
+
+.tr-details-section td {
+	padding-top: 10px;
+	font-size: var(--font-ui-smaller);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--text-faint);
+	border-bottom: none;
+}
+
+.tr-details-number {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.tr-details-kind,
+.tr-details-groups {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.tr-details-pin {
+	display: inline-flex;
+	margin-left: 5px;
+	color: var(--text-accent);
+}
+
+.tr-details-pin .svg-icon {
+	width: 12px;
+	height: 12px;
+}
+
+/* ---------------------------------------------------------- groups view */
+
+.tr-groups .tr-panzoom-content {
+	padding: 12px 16px;
+}
+
+.tr-group-section {
+	margin-bottom: 10px;
+	padding-left: calc(var(--tr-depth, 0) * 14px);
+}
+
+.tr-group-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 6px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.tr-group-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-group-name {
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.tr-group-name.is-selected {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.tr-group-add {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+}
+
+.tr-group-header:hover .tr-group-add {
+	opacity: 1;
+}
+
+.tr-group-add:hover {
+	color: var(--text-accent);
+}
+
+.tr-group-add .svg-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.tr-group-body {
+	padding: 4px 0 4px 20px;
+	border-left: 1px solid var(--background-modifier-border);
+	margin-left: 9px;
+}
+
+.tr-group-members {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+}
+
+.tr-group-empty {
+	padding: 3px 0;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.tr-groups-hint {
+	margin-top: 16px;
+	padding: 12px;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	color: var(--text-muted);
+}
+
+.tr-groups-hint-detail {
+	margin-top: 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+/* The tree layout is the same markup, laid out tighter and vertically. */
+.tr-groups-tree .tr-group-members {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0;
+}
+
+.tr-groups-tree .tr-pill {
+	border: none;
+	background-color: transparent;
+	padding: 2px 6px;
+}
+
+.tr-groups-tree .tr-pill:hover {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+}
+
+.tr-groups-tree .tr-group-section {
+	margin-bottom: 2px;
+}
+
+/* --------------------------------------------------------- level lanes */
+
+.tr-level-lane {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 3px 0;
+}
+
+.tr-level-lane-label {
+	flex: 0 0 74px;
+	padding-top: 4px;
+	font-size: var(--font-ui-smaller);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--text-faint);
+	text-align: right;
+}
+
+.tr-level-lane .tr-group-members {
+	flex: 1 1 auto;
+	min-width: 0;
+}

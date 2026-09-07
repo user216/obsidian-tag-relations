@@ -1,7 +1,9 @@
 import { App } from "obsidian";
 import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
-import { SelectMode, SortMode } from "./types";
+import { TagGroups } from "./groups";
+import { levelCss } from "./levels";
+import { LevelStyles, SelectMode, SortMode, TagLevel } from "./types";
 
 /**
  * What each mode renderer is allowed to see and do. Keeping this narrow lets
@@ -37,6 +39,20 @@ export interface ViewHost {
 
 	/** True when edit mode is on — renderers show inline rename affordances. */
 	editMode: boolean;
+
+	/** Group membership, and the visual treatment of the three tag levels. */
+	groups: TagGroups;
+	levelOf(tag: string): TagLevel;
+	levelStyles: LevelStyles;
+
+	isPinned(tag: string): boolean;
+	togglePin(tag: string): void;
+
+	isGroupCollapsed(tag: string): boolean;
+	toggleGroupCollapsed(tag: string): void;
+	/** Ask the user which tag to put inside `parent`. */
+	promptAddToGroup(parent: string): void;
+	removeFromGroup(parent: string, child: string): void;
 	/** Open the full rename dialog, with its preview of what will change. */
 	promptRename(tag: string): void;
 	/** Commit an inline rename typed directly into a view. */
@@ -47,6 +63,8 @@ export interface ViewHost {
 	openTagSearch(tag: string): void;
 	/** Ask the shell to re-render the active mode plus the inspector. */
 	requestRender(): void;
+	/** Report a pan-zoom scale change so it can be persisted. */
+	onZoomChanged(scale: number): void;
 }
 
 export interface ModeRenderer {
@@ -63,4 +81,19 @@ export function scaleByCount(count: number, maxCount: number): number {
 /** A modifier-click always means "add/remove", regardless of sticky mode. */
 export function hasToggleModifier(event: MouseEvent | PointerEvent): boolean {
 	return event.ctrlKey || event.metaKey || event.shiftKey;
+}
+
+/** Apply a level's font scale, shadow and colour to a rendered tag. */
+export function applyLevelStyle(
+	el: HTMLElement,
+	level: TagLevel,
+	styles: LevelStyles
+): void {
+	const css = levelCss(styles[level]);
+	el.style.setProperty("--tr-level-scale", String(css.fontScale));
+	el.style.textShadow = css.textShadow;
+	// An empty colour means "inherit the theme", which is the default for
+	// plain tags so they keep looking like the rest of Obsidian.
+	el.style.color = css.color;
+	el.dataset.level = level;
 }

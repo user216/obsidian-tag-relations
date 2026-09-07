@@ -15,6 +15,21 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Debounced rebuild on vault change, delete, and rename
 - Nested tags relate to their parent — legacy compatibility only, see [ADR 0007](docs/adr/0007-nested-tags-are-out-of-scope.md)
 
+## Tag groups
+
+- A group is a tag that holds other tags — no separate object, no second vocabulary
+- A tag can belong to many groups at once (membership is a DAG, not a tree)
+- Three levels: group → sub-group → tag, enforced by one depth invariant
+- A sub-group holds only plain tags; a group demotes only if it holds no sub-groups
+- Refusals name the specific rule they hit
+- Groups view: collapsible clouds, or an indented tree
+- Sub-groups can optionally also appear as top-level sections
+- Containment draws as coloured connections, one colour per level pairing
+- Group connections can be switched off entirely (organisation only)
+- Level styling by size, shadow and colour — subtle / balanced / bold, or custom
+- Level filters: plain tags, tags + groups, all levels separated, all levels together
+- Nothing is written to your notes; grouping lives in plugin data
+
 ## Cloud view
 
 - Every tag, sized by note count (logarithmic, so big tags don't dominate)
@@ -24,6 +39,10 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Re-groups into Selected / Related / Unrelated, related strongest-first
 - Animated re-grouping (FLIP), so tags visibly travel to their new position
 - Inline rename control on each tag in edit mode
+- Three layouts: icons (weighted cloud), list, and a details table
+- Up to 10 pinned tags held at the top in every layout
+- Pan by dragging empty space; Ctrl/Cmd+wheel zooms about the cursor
+- Zoom level remembered between sessions
 
 ## Mind-map view
 
@@ -35,6 +54,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Pan, wheel-zoom toward the cursor, drag nodes, click to re-centre
 - Zoom in/out, fit-to-view, and re-run-layout controls
 - Hover highlights a tag's own relations; labels adapt to zoom and density
+- Whole-vault mode draws every tag and connection at once, with a truncation notice
 
 ## Tree view
 
@@ -122,5 +142,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 205 tests across 40 suites (`npm test`)
+- 274 tests across 53 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/)

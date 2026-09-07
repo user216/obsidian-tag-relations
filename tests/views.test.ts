@@ -27,6 +27,8 @@ function graphOf(vault: Record<string, string[]>): TagGraph {
 		excludedTags: [],
 		excludedFolders: [],
 		manualLinks: [],
+		groupLinks: [],
+		showGroupConnections: true,
 	};
 	const graph = new TagGraph();
 	graph.build(app, options);
