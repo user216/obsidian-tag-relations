@@ -105,16 +105,17 @@ Tags are normalised on the way in by `normalizeTag()`: a `#` prefix is added if 
 
 ### Construction pipeline
 
-`TagGraph.build(app, options)` runs six phases in order:
+`TagGraph.build(app, options)` runs seven phases in order:
 
 1. **Scan** every markdown file. Skip excluded folders. Read tags via Obsidian's `getAllTags(cache)`, normalise, dedupe per file. Increment each tag's count and record the path.
 2. **Count co-occurrences.** For each note, every unordered pair of its tags gets `cooccur++`.
 3. **Bridge nested tags** (optional, legacy — ADR 0007): if `#a/b` and `#a` both exist, add a zero-co-occurrence edge between them.
-4. **Apply manual links.** Mark matching edges `manual`, or create them. A manual link may name a tag no note carries — that tag is materialised as a node with `count: 0`.
-5. **Score.** Compute `weight` per edge using the configured metric. Manual edges are forced to `1`.
-6. **Prune, then index.** Drop edges below `minCooccurrence` or `minWeight` — *never* manual ones — then build the sorted adjacency lists.
+4. **Apply manual links** (user-facing name: horizontal links — ADR 0002). Mark matching edges `manual`, or create them. A manual link may name a tag no note carries — that tag is materialised as a node with `count: 0`.
+5. **Apply group links** (ADR 0008). Rebuild `this.groups` from `options.groupLinks`, then, if `showGroupConnections` is on, materialise every group member as a node (even one no note carries, same courtesy as step 4) and add a full-strength edge per containment link, tagged with a `kind` from `groupEdgeKind()` and a `parent` recording which end contains the other. A containment edge that lands on the same pair as an existing co-occurrence edge *relabels* that edge rather than duplicating it — containment outranks an incidental shared note.
+6. **Score.** Compute `weight` per edge using the configured metric. Manual and group edges are both forced to `1`.
+7. **Prune, then index.** Drop edges below `minCooccurrence` or `minWeight` — *never* manual or group ones — then build the sorted adjacency lists.
 
-Phase order matters in two places: scoring must follow manual-link application (so manual edges can be forced to full strength), and pruning must precede adjacency (so pruned edges never appear in a neighbour list).
+Phase order matters in three places: manual links (4) must precede group links (5) so a containment link can relabel an existing manual or co-occurrence edge rather than fight it for the same slot; scoring (6) must follow both link phases (so their edges can be forced to full strength); and pruning must precede adjacency (so pruned edges never appear in a neighbour list).
 
 **Complexity:** O(F × T²) where F is note count and T is tags per note. T is small in practice (single digits), so this is effectively linear in vault size. A full rebuild on a few thousand notes is milliseconds.
 
@@ -337,7 +338,7 @@ Sanitising replaces path separators rather than honouring them, so a format cont
 
 ## 8c. Tag groups
 
-`TagGroups` (`src/groups.ts`) holds containment as a flat list of `{ parent, child }` links and derives everything else from it. A group is a tag with members; a group something else contains is a sub-group. Because level is derived rather than stored, promotion and demotion are just adding or removing a parent link, and a stored level can never disagree with the structure.
+`TagGroups` (`src/groups.ts`) holds containment as a flat list of `{ parent, child }` links and derives everything else from it. A tag with members is a main-tag; a main-tag something else contains is a sub-tag. Because level is derived rather than stored, promotion and demotion are just adding or removing a parent link, and a stored level can never disagree with the structure. Two context-menu flows build the same structure from either end — "Make this a main-tag for…" and "Put this tag inside…" — both calling the same `canAdd`/`add`, so the depth invariant is enforced identically regardless of which tag the user started from.
 
 Membership is a **DAG, not a tree** — a tag may sit in several groups — so views must expect the same tag to appear more than once, and every traversal carries a visited set (cycles cannot be made through the UI, but a hand-edited `data.json` could contain one).
 

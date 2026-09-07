@@ -533,6 +533,16 @@
 	opacity: 1;
 }
 
+/* A group edge (containment) is solid and thicker, distinct from a manual
+   link's dashed border — both force full strength, but they are different
+   structural facts and should not read the same. */
+.tr-pill.is-related.is-group-edge {
+	border-style: solid;
+	border-width: 2px;
+	border-color: var(--text-accent);
+	opacity: 1;
+}
+
 .tr-pill.is-dim {
 	opacity: 0.3;
 }
@@ -715,6 +725,11 @@
 		transparent 4px 7px
 	);
 	background-color: transparent;
+}
+
+.tr-strength-bar.is-group::after {
+	width: 100%;
+	background-color: var(--text-accent);
 }
 
 /* ----------------------------------------------------------- inspector */
@@ -1202,6 +1217,78 @@
 }
 
 .tr-level-lane .tr-group-members {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* --------------------------------------------------- group member remove */
+
+.tr-group-pill-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 2px;
+	border-radius: 50%;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+}
+
+.tr-pill:hover .tr-group-pill-remove {
+	opacity: 0.7;
+}
+
+.tr-group-pill-remove:hover {
+	opacity: 1 !important;
+	color: var(--text-error);
+	background-color: var(--background-modifier-error);
+}
+
+.tr-group-pill-remove .svg-icon {
+	width: 0.65em;
+	height: 0.65em;
+}
+
+/* -------------------------------------------------- sortable details view */
+
+.tr-details th {
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-details th:hover {
+	color: var(--text-accent);
+}
+
+.tr-details-th-arrow {
+	margin-left: 3px;
+	opacity: 0.6;
+}
+
+/* ------------------------------------------------- group header rename */
+
+.tr-group-edit {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+}
+
+.tr-group-header:hover .tr-group-edit {
+	opacity: 1;
+}
+
+.tr-group-edit:hover {
+	color: var(--text-accent);
+}
+
+.tr-group-edit .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+.tr-group-name-input-wrap {
 	flex: 1 1 auto;
 	min-width: 0;
 }

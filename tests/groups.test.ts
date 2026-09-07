@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { TagGroups } from "../src/groups";
+import { visibleGroupChildren } from "../src/groupsView";
 import { GroupLink } from "../src/types";
 
 /** health > fitness > running, plus health > sleep. Three levels exactly. */
@@ -298,5 +299,78 @@ describe("resilience to a hand-edited data.json", () => {
 		assert.equal(g.isEmpty, true);
 		assert.deepEqual(g.mainGroups(), []);
 		assert.deepEqual(g.all, []);
+	});
+});
+
+describe("visibleGroupChildren (level-filter flattening)", () => {
+	// #health > #fitness > #running, plus #health > #sleep.
+	function structure(): TagGroups {
+		return new TagGroups([
+			{ parent: "#health", child: "#fitness" },
+			{ parent: "#fitness", child: "#running" },
+			{ parent: "#health", child: "#sleep" },
+		]);
+	}
+
+	test("all levels visible: sub-tags and plain tags split normally", () => {
+		const result = visibleGroupChildren(
+			structure(),
+			"#health",
+			new Set(["main", "sub", "simple"])
+		);
+		assert.deepEqual(result.subGroups, ["#fitness"]);
+		assert.deepEqual(result.plain, ["#sleep"]);
+	});
+
+	test("sub-tags hidden: a sub-tag's own members surface in the parent instead of vanishing", () => {
+		// This is the bug: without flattening, #running would disappear
+		// entirely when the "tags + main-tags" filter hides #fitness.
+		const result = visibleGroupChildren(
+			structure(),
+			"#health",
+			new Set(["main", "simple"])
+		);
+		assert.deepEqual(result.subGroups, []);
+		assert.deepEqual(result.plain.sort(), ["#running", "#sleep"]);
+	});
+
+	test("plain tags also hidden: nothing is flattened in for nothing to show", () => {
+		const result = visibleGroupChildren(
+			structure(),
+			"#health",
+			new Set(["main"])
+		);
+		assert.deepEqual(result.subGroups, []);
+		assert.deepEqual(result.plain, []);
+	});
+
+	test("a flattened tag is not duplicated if it is also a direct member", () => {
+		const g = new TagGroups([
+			{ parent: "#health", child: "#fitness" },
+			{ parent: "#fitness", child: "#running" },
+			{ parent: "#health", child: "#running" }, // also directly under #health
+		]);
+		const result = visibleGroupChildren(
+			g,
+			"#health",
+			new Set(["main", "simple"])
+		);
+		assert.deepEqual(result.plain, ["#running"]);
+	});
+
+	test("a group with no sub-tags is unaffected by the sub-tag filter", () => {
+		const g = new TagGroups([{ parent: "#health", child: "#sleep" }]);
+		const withSub = visibleGroupChildren(g, "#health", new Set(["main", "sub", "simple"]));
+		const withoutSub = visibleGroupChildren(g, "#health", new Set(["main", "simple"]));
+		assert.deepEqual(withSub, withoutSub);
+	});
+
+	test("an empty group returns two empty lists", () => {
+		const result = visibleGroupChildren(
+			new TagGroups(),
+			"#nothing",
+			new Set(["main", "sub", "simple"])
+		);
+		assert.deepEqual(result, { subGroups: [], plain: [] });
 	});
 });

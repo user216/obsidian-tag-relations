@@ -10,7 +10,12 @@ import {
 } from "obsidian";
 import type TagRelationsPlugin from "./main";
 import { NoteMatch, TagGraph, tagLabel } from "./graph";
-import { ModeRenderer, ViewHost, hasToggleModifier } from "./host";
+import {
+	ModeRenderer,
+	ViewHost,
+	describeRelation,
+	hasToggleModifier,
+} from "./host";
 import { CloudRenderer } from "./cloud";
 import { MapRenderer } from "./map";
 import { TreeRenderer } from "./tree";
@@ -25,6 +30,7 @@ import {
 	sortTags,
 } from "./selection";
 import {
+	LEVEL_LABELS,
 	MATCH_LABELS,
 	NoteMatchMode,
 	SORT_LABELS,
@@ -140,6 +146,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	promptAddToGroup(parent: string): void {
 		this.plugin.promptAddToGroup(parent);
+	}
+
+	promptPutInsideGroup(child: string): void {
+		this.plugin.promptPutInsideGroup(child);
 	}
 
 	removeFromGroup(parent: string, child: string): void {
@@ -299,21 +309,26 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		);
 		menu.addSeparator();
 		const level = this.levelOf(tag);
+
+		// Two directions of the same relation. Which one to reach for depends
+		// on which tag you are looking at: start here-contains, or here-belongs.
 		menu.addItem((item) =>
 			item
-				.setTitle(
-					this.groups.isGroup(tag)
-						? "Put another tag inside this one…"
-						: "Put a tag inside this one…"
-				)
+				.setTitle(`Make this a main-tag for…`)
 				.setIcon("folder-plus")
 				.onClick(() => this.plugin.promptAddToGroup(tag))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle(`Put this ${level === "simple" ? "tag" : LEVEL_LABELS[level].toLowerCase()} inside…`)
+				.setIcon("corner-right-up")
+				.onClick(() => this.plugin.promptPutInsideGroup(tag))
 		);
 
 		const parents = this.groups.parentsOf(tag);
 		if (parents.length > 0) {
 			menu.addItem((item) => {
-				item.setTitle("Take out of group").setIcon("folder-minus");
+				item.setTitle("Take out of a main-tag").setIcon("folder-minus");
 				const withSubmenu = item as unknown as { setSubmenu?: () => Menu };
 				if (typeof withSubmenu.setSubmenu === "function") {
 					const submenu = withSubmenu.setSubmenu();
@@ -378,7 +393,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		menu.addSeparator();
 		menu.addItem((item) =>
 			item
-				.setTitle("Connect to another tag…")
+				.setTitle("Horizontal link to another tag…")
 				.setIcon("link")
 				.onClick(() => this.promptConnect(tag))
 		);
@@ -389,7 +404,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			.map((edge) => (edge.a === tag ? edge.b : edge.a));
 		if (manual.length > 0) {
 			menu.addItem((item) => {
-				item.setTitle("Remove connection").setIcon("unlink");
+				item.setTitle("Remove horizontal link").setIcon("unlink");
 				// Submenus exist at runtime but are not part of the public API,
 				// so fall back to a picker when they are unavailable.
 				const withSubmenu = item as unknown as { setSubmenu?: () => Menu };
@@ -917,7 +932,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		if (related.length === 0) {
 			el.createDiv({
 				cls: "tr-inspector-empty",
-				text: "No relations yet. Use “Connect to…” to link these tags to another one, or add them to the same note.",
+				text: "No relations yet. Use “Horizontal link to…” to link these tags to another one, or add them to the same note.",
 			});
 			return;
 		}
@@ -928,26 +943,26 @@ export class TagRelationsView extends ItemView implements ViewHost {
 				(tag) => this.graph.strength(tag, other) === strength
 			);
 			const edge = closest ? this.graph.edgeBetween(closest, other) : undefined;
+			// Described from `other`'s own point of view — this row is about
+			// `other`, so "contains"/"inside" reads correctly regardless of
+			// which of the two tags the graph happened to store as `.parent`.
+			const description = closest
+				? describeRelation(edge, other, closest, strength)
+				: null;
+			const isGroup =
+				description?.kind === "group-contains" ||
+				description?.kind === "group-inside";
 			const row = list.createDiv({ cls: "tr-related-row" });
 			row.createSpan({ cls: "tr-related-name", text: tagLabel(other) });
 			const bar = row.createSpan({ cls: "tr-strength-bar" });
 			bar.style.setProperty("--tr-strength", strength.toFixed(3));
-			bar.toggleClass("is-manual", edge?.manual === true);
+			bar.toggleClass("is-group", isGroup);
+			bar.toggleClass("is-manual", description?.kind === "manual");
 			row.createSpan({
 				cls: "tr-related-meta",
-				text: edge?.manual
-					? "manual"
-					: `${Math.round(strength * 100)}% · ${edge?.cooccur ?? 0}`,
+				text: description?.short ?? "",
 			});
-			setTooltip(
-				row,
-				edge?.manual
-					? `Manual connection to ${closest}${edge.label ? ` — ${edge.label}` : ""}`
-					: `Closest to ${closest} · ${edge?.cooccur ?? 0} shared note${
-							edge?.cooccur === 1 ? "" : "s"
-					  }`,
-				{ placement: "left" }
-			);
+			setTooltip(row, description?.long ?? "", { placement: "left" });
 			row.addEventListener("click", (event) => this.selectFromEvent(other, event));
 			row.addEventListener("contextmenu", (event) => {
 				event.preventDefault();
@@ -1018,7 +1033,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.openSelectionSearch()
 		);
 		if (this.selection.length === 1) {
-			this.actionButton(actions, "link", "Connect to…", () =>
+			this.actionButton(actions, "link", "Horizontal link to…", () =>
 				this.promptConnect(this.selection[0])
 			);
 		}
@@ -1086,7 +1101,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.statRow(stats, "Tags", String(graph.nodes.size));
 		this.statRow(stats, "Relations", String(graph.edges.size));
 		const manual = Array.from(graph.edges.values()).filter((e) => e.manual);
-		this.statRow(stats, "Manual connections", String(manual.length));
+		this.statRow(stats, "Horizontal links", String(manual.length));
 
 		el.createDiv({ cls: "tr-inspector-section", text: "Most connected" });
 		const list = el.createDiv({ cls: "tr-related-list" });
@@ -1132,7 +1147,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			.allKnownTags()
 			.filter((other) => other !== tag);
 		if (candidates.length === 0) {
-			new Notice("There is no other tag to connect to yet.");
+			new Notice("There is no other tag to link to yet.");
 			return;
 		}
 		const subtitles = new Map<string, string>();
@@ -1146,7 +1161,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		new TagSuggestModal(
 			this.app,
 			candidates,
-			`Connect ${tagLabel(tag)} to…`,
+			`Horizontal link: ${tagLabel(tag)} to…`,
 			(other) => void this.plugin.addManualLink(tag, other),
 			subtitles
 		).open();

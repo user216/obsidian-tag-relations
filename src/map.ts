@@ -1,5 +1,5 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost, scaleByCount } from "./host";
+import { ModeRenderer, ViewHost, describeRelation, scaleByCount } from "./host";
 import { TagEdge, TagGraph, tagLabel } from "./graph";
 
 interface Particle {
@@ -547,15 +547,9 @@ export class MapRenderer implements ModeRenderer {
 			const closest = this.host.selection.find(
 				(other) => this.host.graph.strength(other, p.tag) === strength
 			);
-			const edge = closest
-				? this.host.graph.edgeBetween(closest, p.tag)
-				: undefined;
-			if (edge) {
-				lines.push(
-					edge.manual
-						? `Manually connected to ${closest}`
-						: `${Math.round(strength * 100)}% related to ${closest}`
-				);
+			if (closest) {
+				const edge = this.host.graph.edgeBetween(closest, p.tag);
+				lines.push(describeRelation(edge, p.tag, closest, strength).long);
 			}
 		}
 		return lines.join("\n");

@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-07
+
+Closes the loop on tag groups: a second way to build the structure, matching terminology throughout, and three real display bugs found and fixed while auditing the feature end to end.
+
+### Added
+
+- **"Put this tag inside…"** — the missing direction. Until now the only way to build a group was to right-click the *container* ("Make this a main-tag for…"); this adds the mirror action from any tag's context menu, so you can start from the *member* and pick (or create on the spot) its main-tag. Both accept a name that doesn't exist yet.
+- **Direct remove from a specific group.** In the Groups view, hovering a member now reveals a small ✕ that detaches it from that specific group without opening a menu — useful because a tag can have several parents, and the old path (right-click → "Take out of a main-tag" → pick from a submenu) made you name the one you were already looking at.
+- **Sortable details table.** Clicking a column header in the details cloud layout now actually sorts by it (ascending, click again for descending) — previously the headers were static labels.
+- **Inline rename in the Groups view** — section headers and member pills both gained the same rename-in-place control the cloud and tree already had.
+
+### Changed
+
+- **Terminology now matches what you asked for throughout the UI**: "group" → **main-tag**, "sub-group" → **sub-tag**, and manual connections are now called **horizontal links** everywhere they're shown — reflecting what they actually are: an association between two tags that creates no hierarchy, as opposed to group membership which does.
+- A level filter that hides sub-tags ("Tags + main-tags") no longer drops a sub-tag's own members along with it. By the three-level rule a sub-tag can only hold plain tags, so those tags now surface directly under the main-tag instead of disappearing.
+
+### Fixed
+
+- **Group relationships could be mislabelled as horizontal links, or not labelled at all**, in three places: the mind-map's hover tooltip, the details panel's related-tag list, and the tag cloud's pill tooltip. All three previously checked `edge.manual` without checking containment first, so a group edge that happened to also carry a stale `manual` flag (from a horizontal link made before the grouping) displayed as "Horizontal link to X" instead of "Contains X" / "Inside X" — and a pure group edge with no manual flag fell through to a bare relatedness percentage. Consolidated into one function, `describeRelation`, so the group-beats-manual-beats-percentage priority is decided once and can't drift between renderers again.
+- The tag cloud's pill border now distinguishes a group relationship (solid, accent-coloured) from a horizontal link (dashed) — previously a group-related pill got no special border at all unless it happened to also be manually linked, in which case it wore the horizontal-link's dashed style even though the actual relationship was containment.
+
+### Tests
+
+- 10 new tests directly covering the parent/child direction and the group-beats-manual precedence in `describeRelation`, including a regression test for the exact bug found (an edge carrying both `manual: true` and group containment must report as grouped, not manual).
+- 6 new tests for the level-filter flattening fix.
+
 ## [0.5.0] - 2026-09-07
 
 Tag groups — the containment that nested tags provided, without what made them bad.
@@ -142,7 +168,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...HEAD
+[0.5.1]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...0.3.1

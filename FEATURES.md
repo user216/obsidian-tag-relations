@@ -6,9 +6,9 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Relations inferred from tag co-occurrence — two tags relate when they share a note
 - Relation strength by **Jaccard** (default), **cosine**, or **raw co-occurrence**
-- Manual tag-to-tag connections, declared by hand, always at full strength
-- Manual connections can name a tag no note carries yet
-- Manual connections survive all pruning and render distinctly (dashed)
+- Horizontal links: tag-to-tag connections declared by hand, always at full strength, creating no hierarchy
+- A horizontal link can name a tag no note carries yet
+- Horizontal links survive all pruning and render distinctly (dashed)
 - Prune by minimum shared notes, and by minimum relation strength
 - Case-insensitive tag folding (toggleable)
 - Exclude tags and folders; excluding a tag excludes its nested children
@@ -17,17 +17,20 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 ## Tag groups
 
-- A group is a tag that holds other tags — no separate object, no second vocabulary
+- A main-tag is a tag that holds other tags — no separate object, no second vocabulary
 - A tag can belong to many groups at once (membership is a DAG, not a tree)
-- Three levels: group → sub-group → tag, enforced by one depth invariant
-- A sub-group holds only plain tags; a group demotes only if it holds no sub-groups
+- Three levels: main-tag → sub-tag → tag, enforced by one depth invariant
+- A sub-tag holds only plain tags; a main-tag demotes only if it holds no sub-tags
 - Refusals name the specific rule they hit
+- Two ways to build the structure from any tag's right-click menu: "Make this a main-tag for…" (start from the container) or "Put this tag inside…" (start from the member); either accepts a name that doesn't exist yet
+- In the Groups view, a hover-revealed ✕ on each member removes it from that specific group directly, without a menu
 - Groups view: collapsible clouds, or an indented tree
-- Sub-groups can optionally also appear as top-level sections
-- Containment draws as coloured connections, one colour per level pairing
+- Sub-tags can optionally also appear as top-level sections
+- A level filter that hides sub-tags still surfaces their plain-tag members under the main-tag, rather than losing them
+- Containment draws as coloured connections, one colour per level pairing, distinct from horizontal links
 - Group connections can be switched off entirely (organisation only)
 - Level styling by size, shadow and colour — subtle / balanced / bold, or custom
-- Level filters: plain tags, tags + groups, all levels separated, all levels together
+- Level filters: plain tags, tags + main-tags, all levels side by side, all levels together
 - Nothing is written to your notes; grouping lives in plugin data
 
 ## Cloud view
@@ -39,7 +42,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Re-groups into Selected / Related / Unrelated, related strongest-first
 - Animated re-grouping (FLIP), so tags visibly travel to their new position
 - Inline rename control on each tag in edit mode
-- Three layouts: icons (weighted cloud), list, and a details table
+- Three layouts: icons (weighted cloud), list, and a details table (sortable by clicking a column header)
 - Up to 10 pinned tags held at the top in every layout
 - Pan by dragging empty space; Ctrl/Cmd+wheel zooms about the cursor
 - Zoom level remembered between sessions
@@ -50,7 +53,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - One selected tag pins at the centre; several share a central ring
 - Neighbourhood drawn by hop distance, depth 1–5, capped by node count
 - Stronger relations pull tags closer; edge width and opacity track strength
-- Manual connections drawn dashed and accented
+- Horizontal links drawn dashed and accented
 - Pan, wheel-zoom toward the cursor, drag nodes, click to re-centre
 - Zoom in/out, fit-to-view, and re-run-layout controls
 - Hover highlights a tag's own relations; labels adapt to zoom and density
@@ -108,7 +111,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - New tags written to frontmatter (default) or the end of the note body
 - Remove a tag from notes, scoped to the vault or to the notes panel's list
 - Bulk edits confirm first, listing every affected note
-- Renames update the plugin's own manual connections, dropping self-links and duplicates
+- Renames update the plugin's own horizontal links and group membership, dropping self-links and duplicates
 - Edits use Obsidian's recorded tag positions — code blocks, `#fragment` URLs and `# Headings` are never touched
 - Cached positions verified against live text before writing; a stale cache skips rather than corrupts
 - Frontmatter shape preserved: list stays list, string stays string, `#` prefix per entry

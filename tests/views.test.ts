@@ -4,7 +4,7 @@ import { TagGraph } from "../src/graph";
 import type { GraphBuildOptions } from "../src/graph";
 import { branchChildren } from "../src/tree";
 import { anchorPositions, collectMapNodes } from "../src/map";
-import { scaleByCount, hasToggleModifier } from "../src/host";
+import { scaleByCount, hasToggleModifier, describeRelation } from "../src/host";
 import { remapManualLinks } from "../src/links";
 import { splitList, DEFAULT_SETTINGS } from "../src/settings";
 import { MATCH_LABELS, SORT_LABELS } from "../src/types";
@@ -347,5 +347,112 @@ describe("settings", () => {
 		]) {
 			assert.ok(label.length > 0);
 		}
+	});
+});
+
+describe("describeRelation", () => {
+	function edge(overrides: Partial<Parameters<typeof describeRelation>[0]> & object = {}): NonNullable<Parameters<typeof describeRelation>[0]> {
+		return {
+			a: "#a",
+			b: "#b",
+			cooccur: 0,
+			weight: 1,
+			manual: false,
+			kind: "cooccurrence",
+			...overrides,
+		} as NonNullable<Parameters<typeof describeRelation>[0]>;
+	}
+
+	test("no edge at all falls back to a bare percentage", () => {
+		const d = describeRelation(undefined, "#viewer", "#other", 0.5);
+		assert.equal(d.kind, "relation");
+		assert.equal(d.short, "50%");
+		assert.equal(d.long, "50% related to other");
+	});
+
+	test("plain co-occurrence reports percentage and shared-note count in both forms", () => {
+		const d = describeRelation(
+			edge({ cooccur: 3 }),
+			"#viewer",
+			"#other",
+			0.42
+		);
+		assert.equal(d.kind, "relation");
+		assert.equal(d.short, "42% · 3");
+		assert.equal(d.long, "42% related to other · 3 shared notes");
+	});
+
+	test("singular 'note' when exactly one shared note", () => {
+		const d = describeRelation(edge({ cooccur: 1 }), "#viewer", "#other", 0.5);
+		assert.match(d.long, /1 shared note$/);
+	});
+
+	test("a manual (horizontal) link is reported regardless of strength", () => {
+		const d = describeRelation(edge({ manual: true }), "#viewer", "#other", 1);
+		assert.equal(d.kind, "manual");
+		assert.equal(d.short, "manual");
+		assert.equal(d.long, "Horizontal link to other");
+	});
+
+	test("a manual link's label is appended when present", () => {
+		const d = describeRelation(
+			edge({ manual: true, label: "is a kind of" }),
+			"#viewer",
+			"#other",
+			1
+		);
+		assert.match(d.long, /Horizontal link to other — is a kind of$/);
+	});
+
+	test("group: viewpoint is the parent, so it 'contains' the other tag", () => {
+		const d = describeRelation(
+			edge({ kind: "main-simple", parent: "#viewer" }),
+			"#viewer",
+			"#other",
+			1
+		);
+		assert.equal(d.kind, "group-contains");
+		assert.equal(d.short, "contains");
+		assert.equal(d.long, "Contains other");
+	});
+
+	test("group: the other tag is the parent, so viewpoint is 'inside' it", () => {
+		const d = describeRelation(
+			edge({ kind: "main-simple", parent: "#other" }),
+			"#viewer",
+			"#other",
+			1
+		);
+		assert.equal(d.kind, "group-inside");
+		assert.equal(d.short, "inside");
+		assert.equal(d.long, "Inside other");
+	});
+
+	test("direction depends only on viewpoint, not on which side is `a`/`b`", () => {
+		// The same edge, described from each end, gives opposite answers.
+		const e = edge({ kind: "main-simple", parent: "#x" });
+		const fromParent = describeRelation(e, "#x", "#y", 1);
+		const fromChild = describeRelation(e, "#y", "#x", 1);
+		assert.equal(fromParent.kind, "group-contains");
+		assert.equal(fromChild.kind, "group-inside");
+	});
+
+	test("group precedence: a group edge is reported as group even if it also carries manual:true", () => {
+		// This is the exact bug this function exists to prevent: an edge that
+		// started as a manual link and was later also grouped must not have
+		// the containment masked by the stale manual flag.
+		const d = describeRelation(
+			edge({ kind: "main-simple", parent: "#viewer", manual: true }),
+			"#viewer",
+			"#other",
+			1
+		);
+		assert.equal(d.kind, "group-contains");
+		assert.notEqual(d.short, "manual");
+	});
+
+	test("otherLabel is stripped of its leading hash", () => {
+		const d = describeRelation(edge({ manual: true }), "#viewer", "#tag-name", 1);
+		assert.doesNotMatch(d.long, /#/);
 	});
 });

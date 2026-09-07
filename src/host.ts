@@ -1,4 +1,5 @@
 import { App } from "obsidian";
+import { TagEdge, tagLabel } from "./graph";
 import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
 import { TagGroups } from "./groups";
@@ -52,6 +53,8 @@ export interface ViewHost {
 	toggleGroupCollapsed(tag: string): void;
 	/** Ask the user which tag to put inside `parent`. */
 	promptAddToGroup(parent: string): void;
+	/** Ask the user which main-tag/sub-tag should contain `child`. */
+	promptPutInsideGroup(child: string): void;
 	removeFromGroup(parent: string, child: string): void;
 	/** Open the full rename dialog, with its preview of what will change. */
 	promptRename(tag: string): void;
@@ -83,6 +86,56 @@ export function hasToggleModifier(event: MouseEvent | PointerEvent): boolean {
 	return event.ctrlKey || event.metaKey || event.shiftKey;
 }
 
+/**
+ * Shared inline-rename field: an input that replaces a tag's label in place.
+ * Enter commits (through the host, which still previews and confirms the
+ * rewrite); Escape or losing focus cancels. Used by every view offering
+ * inline rename, so the keyboard and blur behaviour never drifts between them.
+ */
+export function attachRenameInput(
+	container: HTMLElement,
+	tag: string,
+	onCommit: (next: string) => void,
+	onCancel: () => void
+): void {
+	const input = container.createEl("input", {
+		cls: "tr-inline-input",
+		type: "text",
+	});
+	input.value = tagLabel(tag);
+
+	let settled = false;
+	const cancel = () => {
+		if (settled) return;
+		settled = true;
+		onCancel();
+	};
+	const commit = () => {
+		if (settled) return;
+		settled = true;
+		const next = input.value.trim();
+		if (next.length > 0 && next !== tagLabel(tag)) onCommit(next);
+		else onCancel();
+	};
+
+	input.addEventListener("click", (event) => event.stopPropagation());
+	input.addEventListener("keydown", (event) => {
+		event.stopPropagation();
+		if (event.key === "Enter") {
+			event.preventDefault();
+			commit();
+		} else if (event.key === "Escape") {
+			event.preventDefault();
+			cancel();
+		}
+	});
+	input.addEventListener("blur", cancel);
+	window.setTimeout(() => {
+		input.focus();
+		input.select();
+	}, 0);
+}
+
 /** Apply a level's font scale, shadow and colour to a rendered tag. */
 export function applyLevelStyle(
 	el: HTMLElement,
@@ -96,4 +149,63 @@ export function applyLevelStyle(
 	// plain tags so they keep looking like the rest of Obsidian.
 	el.style.color = css.color;
 	el.dataset.level = level;
+}
+
+/**
+ * How to describe an edge to someone looking from `viewpoint` toward `other`
+ * — the single place that decides between "this contains/is inside that",
+ * "horizontally linked", and "N% related", so the priority (group beats
+ * manual beats plain relatedness) can never drift between renderers again.
+ * `strength` is passed in rather than read off the edge because callers
+ * already have it (often the *strongest* tie across a multi-tag selection,
+ * which need not be `edge.weight` when `edge` is just the closest match).
+ */
+export interface RelationDescription {
+	kind: "group-contains" | "group-inside" | "manual" | "relation";
+	/** A short word or two, for a compact label. */
+	short: string;
+	/** A full sentence, for a tooltip. */
+	long: string;
+}
+
+export function describeRelation(
+	edge: TagEdge | undefined,
+	viewpoint: string,
+	other: string,
+	strength: number
+): RelationDescription {
+	const otherLabel = tagLabel(other);
+	if (edge?.parent !== undefined) {
+		if (edge.parent === viewpoint) {
+			return {
+				kind: "group-contains",
+				short: "contains",
+				long: `Contains ${otherLabel}`,
+			};
+		}
+		return {
+			kind: "group-inside",
+			short: "inside",
+			long: `Inside ${otherLabel}`,
+		};
+	}
+	if (edge?.manual) {
+		return {
+			kind: "manual",
+			short: "manual",
+			long: `Horizontal link to ${otherLabel}${edge.label ? ` — ${edge.label}` : ""}`,
+		};
+	}
+	const pct = Math.round(strength * 100);
+	return {
+		kind: "relation",
+		// Compact form still carries the evidence (shared-note count), not
+		// just the percentage — matching what the fuller sentence says.
+		short: edge ? `${pct}% · ${edge.cooccur}` : `${pct}%`,
+		long: edge
+			? `${pct}% related to ${otherLabel} · ${edge.cooccur} shared note${
+					edge.cooccur === 1 ? "" : "s"
+			  }`
+			: `${pct}% related to ${otherLabel}`,
+	};
 }

@@ -1,5 +1,5 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost } from "./host";
+import { ModeRenderer, ViewHost, attachRenameInput } from "./host";
 import { TagGraph, tagLabel } from "./graph";
 
 /**
@@ -176,7 +176,7 @@ export class TreeRenderer implements ModeRenderer {
 			setTooltip(
 				bar,
 				edge.manual
-					? `Manual connection${edge.label ? ` — ${edge.label}` : ""}`
+					? `Horizontal link${edge.label ? ` — ${edge.label}` : ""}`
 					: `${Math.round(edge.weight * 100)}% related · ${edge.cooccur} shared note${
 							edge.cooccur === 1 ? "" : "s"
 					  }`,
@@ -234,49 +234,4 @@ export function branchChildren(
 
 function pathKey(path: string[]): string {
 	return path.join(" > ");
-}
-
-/** Shared inline-rename field, mirroring the cloud's behaviour. */
-function attachRenameInput(
-	container: HTMLElement,
-	tag: string,
-	onCommit: (next: string) => void,
-	onCancel: () => void
-): void {
-	const input = container.createEl("input", {
-		cls: "tr-inline-input",
-		type: "text",
-	});
-	input.value = tagLabel(tag);
-
-	let settled = false;
-	const cancel = () => {
-		if (settled) return;
-		settled = true;
-		onCancel();
-	};
-	const commit = () => {
-		if (settled) return;
-		settled = true;
-		const next = input.value.trim();
-		if (next.length > 0 && next !== tagLabel(tag)) onCommit(next);
-		else onCancel();
-	};
-
-	input.addEventListener("click", (event) => event.stopPropagation());
-	input.addEventListener("keydown", (event) => {
-		event.stopPropagation();
-		if (event.key === "Enter") {
-			event.preventDefault();
-			commit();
-		} else if (event.key === "Escape") {
-			event.preventDefault();
-			cancel();
-		}
-	});
-	input.addEventListener("blur", cancel);
-	window.setTimeout(() => {
-		input.focus();
-		input.select();
-	}, 0);
 }

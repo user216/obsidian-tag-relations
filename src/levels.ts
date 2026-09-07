@@ -1,4 +1,5 @@
 import {
+	LEVEL_ORDER,
 	LEVEL_STYLE_PRESETS,
 	LevelFilter,
 	LevelStyle,
@@ -107,4 +108,58 @@ export function togglePinned(pinned: string[], tag: string): {
 		};
 	}
 	return { pinned: pinned.concat(tag), changed: true };
+}
+
+/** The columns the details layout can be sorted by, in header order. */
+export type DetailsColumn = "name" | "kind" | "notes" | "relations" | "groups";
+
+export const DETAILS_COLUMNS: Array<[DetailsColumn, string]> = [
+	["name", "Tag"],
+	["kind", "Kind"],
+	["notes", "Notes"],
+	["relations", "Relations"],
+	["groups", "In groups"],
+];
+
+export interface DetailsRowContext {
+	nameOf(tag: string): string;
+	levelOf(tag: string): TagLevel;
+	countOf(tag: string): number;
+	relationsOf(tag: string): number;
+	groupsOf(tag: string): number;
+}
+
+/**
+ * Sort tags for the details table by a clicked column header — the
+ * file-browser convention, independent of the toolbar's relation-aware Sort
+ * dropdown. Ties always fall back to the name, so the order is stable
+ * however a column happens to tie.
+ */
+export function sortDetailsRows(
+	tags: string[],
+	column: DetailsColumn,
+	ascending: boolean,
+	ctx: DetailsRowContext
+): string[] {
+	const dir = ascending ? 1 : -1;
+	const value = (tag: string): number | string => {
+		switch (column) {
+			case "kind":
+				return LEVEL_ORDER.indexOf(ctx.levelOf(tag));
+			case "notes":
+				return ctx.countOf(tag);
+			case "relations":
+				return ctx.relationsOf(tag);
+			case "groups":
+				return ctx.groupsOf(tag);
+			default:
+				return ctx.nameOf(tag).toLowerCase();
+		}
+	};
+	return tags.slice().sort((a, b) => {
+		const va = value(a);
+		const vb = value(b);
+		const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+		return cmp !== 0 ? cmp * dir : ctx.nameOf(a).localeCompare(ctx.nameOf(b));
+	});
 }

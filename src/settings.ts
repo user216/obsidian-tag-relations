@@ -212,7 +212,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Minimum shared notes")
 			.setDesc(
-				"Hide a relation unless the two tags appear together on at least this many notes. Manual connections are always kept."
+				"Hide a relation unless the two tags appear together on at least this many notes. Horizontal links are always kept."
 			)
 			.addSlider((slider) =>
 				slider
@@ -349,7 +349,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Edit mode")
 			.setDesc(
-				"Show inline rename controls on tags in the cloud and tree views. Also toggleable from the view's toolbar."
+				"Show inline rename controls on tags in the cloud, tree and groups views. Also toggleable from the view's toolbar."
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -922,14 +922,14 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 
 	private displayManualLinks(containerEl: HTMLElement): void {
 		new Setting(containerEl)
-			.setName("Manual connections")
+			.setName("Horizontal links")
 			.setDesc(
 				`Relations you declared by hand. These always show, even when the two tags never share a note. ${this.plugin.settings.manualLinks.length} defined.`
 			)
 			.setHeading()
 			.addButton((button) =>
 				button
-					.setButtonText("Connect two tags")
+					.setButtonText("Link two tags")
 					.setCta()
 					.onClick(() => this.promptForNewLink())
 			);
@@ -937,7 +937,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.manualLinks.length === 0) {
 			containerEl.createEl("p", {
 				cls: "tr-settings-empty",
-				text: "No manual connections yet. You can also connect tags straight from the Tag Relations view: right-click a tag and choose “Connect to…”.",
+				text: "No horizontal links yet. You can also link tags straight from the Tag Relations view: right-click a tag and choose “Horizontal link to another tag…”.",
 			});
 			return;
 		}
@@ -976,12 +976,12 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		new TagSuggestModal(
 			this.app,
 			tags,
-			"Connect: pick the first tag",
+			"Horizontal link: pick the first tag",
 			(first) => {
 				new TagSuggestModal(
 					this.app,
 					tags.filter((t) => t !== first),
-					`Connect ${tagLabel(first)} to…`,
+					`Horizontal link: ${tagLabel(first)} to…`,
 					async (second) => {
 						await this.plugin.addManualLink(first, second);
 						this.display();

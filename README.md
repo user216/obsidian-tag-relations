@@ -8,7 +8,7 @@ The idea: instead of forcing hierarchy into tag names (`#area/health/running`), 
 
 **Co-occurrence (automatic).** Every time two tags appear on the same note, that's one shared note between them. This needs no setup — your existing vault already defines the graph.
 
-**Manual connections (declared).** Right-click any tag → *Connect to…*. Manual connections always show at full strength, even when the two tags have never shared a note, and are drawn as dashed lines. This is the replacement for nesting: `#running` connects to `#health` because you say it does, not because of how you spelled it.
+**Horizontal links (declared).** Right-click any tag → *Horizontal link to another tag…*. A horizontal link always shows at full strength, even when the two tags have never shared a note, and is drawn as a dashed line. Unlike a group, it creates no hierarchy at all — it just says "these two are related", which is the replacement for nesting when what you want is a plain association: `#running` links to `#health` because you say it does, not because of how you spelled it.
 
 Relation strength uses one of three metrics (Settings → Tag Relations):
 
@@ -26,27 +26,34 @@ Every tag, sized by how many notes carry it. Sort by **name A→Z / Z→A**, not
 Click a tag and the cloud reacts: related tags get an accent tint scaled by relation strength, unrelated tags fade back, and the cloud **re-groups** into `Selected → Related (n) → Unrelated (n)`, with related tags ordered strongest-first. The regrouping is animated (a FLIP transition), so tags visibly travel to their new position instead of the layout snapping.
 
 ### Mind-map
-A force-directed graph on canvas. The selected tag is pinned at the centre and its relations lay out around it, one ring per hop — the TheBrain-style "the map re-forms around whatever I'm looking at" behaviour. Stronger relations pull tags closer together; edge thickness and opacity track strength; manual connections are dashed and accent-coloured.
+A force-directed graph on canvas. The selected tag is pinned at the centre and its relations lay out around it, one ring per hop — the TheBrain-style "the map re-forms around whatever I'm looking at" behaviour. Stronger relations pull tags closer together; edge thickness and opacity track strength; horizontal links are dashed and accent-coloured.
 
-Pan by dragging the background, zoom with the wheel (zooms toward the cursor), drag any tag to reposition it, click to re-centre on it. Corner controls zoom, fit-to-view and re-run the layout. Depth (1–5 hops) and the node cap are configurable.
+Pan by dragging the background, zoom with the wheel (zooms toward the cursor), drag any tag to reposition it, click to re-centre on it. Corner controls zoom, fit-to-view and re-run the layout. Depth (1–5 hops) and the node cap are configurable. Manual, horizontal-link edges are dashed and accent-coloured; group-membership edges are solid and coloured per level pairing.
 
 ### Tree
 The relation graph unfolded as an expandable outline, rooted at the selected tag. Each branch is that tag's strongest relations, and expanding walks one hop further out. A tag never repeats within its own ancestor path, so the walk always moves outward. With nothing selected it lists your most-connected tags as entry points.
 
 ## Tag groups
 
-A **group is just a tag that holds other tags** — there is no separate kind of object to manage. Right-click any tag and choose *Put a tag inside this one*.
+A **main-tag is just a tag that holds other tags** — there is no separate kind of object to manage. There are three levels: **main-tag → sub-tag → tag**, enforced by one rule — a sub-tag holds only plain tags, and a main-tag can become a sub-tag only if it doesn't already hold sub-tags. When a grouping isn't allowed, the plugin says which rule you hit.
 
 Two things make this different from the nested tags it replaces:
 
 - **A tag can belong to many groups at once.** `#running` can sit in both `#health` and `#hobby` without duplication or picking a winner.
 - **Nothing is written to your notes.** Grouping lives in plugin data, so reorganising the whole structure costs nothing and never rewrites a file.
 
-Structure goes three levels deep — **group → sub-group → tag** — enforced by one rule: a sub-group holds only plain tags, and a group can become a sub-group only if it doesn't already hold sub-groups. When a grouping isn't allowed, the plugin says which rule you hit.
+**Two ways to build the structure**, from any tag's right-click menu, because you'll want to start from either end:
 
-The **Groups** view shows all of this two ways: **collapsible clouds** (every group a foldable section on one page) or a **tree** outline. Sub-groups can optionally also appear as top-level sections.
+| Menu item | Use when |
+| --- | --- |
+| **Make this a main-tag for…** | You're looking at the container — pick what goes inside it |
+| **Put this tag inside…** | You're looking at the member — pick (or create) its main-tag |
 
-Group membership also draws as **coloured connections** in the cloud and mind-map — a different colour per level pairing — so structure stays visible inside the relation graph. Turn it off in settings if you'd rather groups were organisation only.
+Both accept a name that doesn't exist yet, so starting a brand-new group needs no separate "create" step. In the Groups view, hovering a member also reveals a small **✕** that removes it from that specific group directly, without opening a menu — useful since a tag can have several parents and the menu would otherwise make you pick which one.
+
+The **Groups** view shows the structure two ways: **collapsible clouds** (every main-tag a foldable section on one page) or a **tree** outline. Sub-tags can optionally also appear as top-level sections.
+
+Group membership also draws as **coloured connections** in the cloud and mind-map — a different colour per level pairing (main→sub, main→tag, sub→tag) — so structure stays visible inside the relation graph, distinct from the dashed horizontal links. Turn it off in settings if you'd rather groups were organisation only.
 
 The three levels are told apart by size, shadow and colour, via **subtle / balanced / bold** presets or custom per-level values.
 
@@ -58,7 +65,7 @@ The cloud has three layouts, like a file browser:
 | --- | --- |
 | **Icons** | The classic weighted cloud — size tracks note count |
 | **List** | One tag per line, compact |
-| **Details** | A table: kind, note count, relation count, group membership |
+| **Details** | A table: kind, note count, relation count, group membership — click a column header to sort by it |
 
 **Pin up to 10 tags** from any context menu; they're held at the top in every layout.
 
@@ -122,7 +129,7 @@ Five ways in, because renaming while you explore and renaming as a cleanup chore
 | **Notes panel** | Add or remove a tag across exactly the notes frozen in the list |
 | **Commands** | Rename a tag · Add a tag to the active note · Remove a tag from the active note |
 
-Under the hood, edits use the tag positions Obsidian's own parser recorded, so code blocks, `https://…#fragment` URLs and `# Heading` lines are never mistaken for tags; frontmatter is re-serialised by Obsidian rather than patched by hand, preserving whether you wrote a list or a string and whether entries carry a `#`. Renaming a tag also updates the plugin's own manual connections to match.
+Under the hood, edits use the tag positions Obsidian's own parser recorded, so code blocks, `https://…#fragment` URLs and `# Heading` lines are never mistaken for tags; frontmatter is re-serialised by Obsidian rather than patched by hand, preserving whether you wrote a list or a string and whether entries carry a `#`. Renaming a tag also updates the plugin's own horizontal links and group membership to match.
 
 ## Everywhere
 - **Details panel** (right side, toggleable) — note and relation counts, the related-tag list with strength bars, and removable chips for a multi-tag selection. Its **Search** action searches the whole selection, joined with `AND` or `OR` to match the current mode.
@@ -141,7 +148,7 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 
 ## Settings worth knowing
 
-- **Minimum shared notes** / **Minimum relation strength** — in a large vault every tag ends up faintly touching every other tag. Raise these to keep only meaningful relations. Manual connections are never pruned.
+- **Minimum shared notes** / **Minimum relation strength** — in a large vault every tag ends up faintly touching every other tag. Raise these to keep only meaningful relations. Horizontal links and group membership are never pruned.
 - **Case-sensitive tags** — off by default, so `#Project` and `#project` are one tag.
 - **Relate nested tags to their parent** — if you still have nested tags, `#a/b` gets a relation to `#a` so old hierarchies stay navigable while you migrate away from them.
 - **Excluded tags / folders** — keep `#todo`, templates, archives out of the graph. Excluding a tag also excludes anything nested under it.
@@ -179,7 +186,7 @@ For development, `npm run dev` starts esbuild in watch mode — point the output
 
 ## Data
 
-Manual connections and view preferences live in `data.json` inside the plugin folder — they are never written into your notes.
+Horizontal links, group membership and view preferences live in `data.json` inside the plugin folder — they are never written into your notes.
 
 Your notes are modified only by the tag-editing actions described above (rename, assign, remove), and only when you explicitly invoke one. Exploring, selecting, connecting tags and listing notes are all read-only. All writes originate from a single module, [src/edit.ts](src/edit.ts), if you want to audit them.
 

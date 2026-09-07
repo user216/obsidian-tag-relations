@@ -1,8 +1,21 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost, applyLevelStyle, scaleByCount } from "./host";
+import {
+	ModeRenderer,
+	ViewHost,
+	applyLevelStyle,
+	describeRelation,
+	scaleByCount,
+} from "./host";
 import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
-import { orderedLevels, separatesLevels, visibleLevels } from "./levels";
+import {
+	DetailsColumn,
+	DETAILS_COLUMNS,
+	orderedLevels,
+	separatesLevels,
+	sortDetailsRows,
+	visibleLevels,
+} from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
 
 interface PillRect {
@@ -26,6 +39,16 @@ export class CloudRenderer implements ModeRenderer {
 	private pills = new Map<string, HTMLElement>();
 	/** Tag currently being renamed in place, if any. */
 	private renaming: string | null = null;
+
+	/**
+	 * Column sort for the details layout, independent of the toolbar's Sort
+	 * dropdown — this is the file-browser convention of clicking a column
+	 * header, not the plugin's relation-aware sort.
+	 */
+	private detailsSort: { column: DetailsColumn; ascending: boolean } = {
+		column: "name",
+		ascending: true,
+	};
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -175,11 +198,26 @@ export class CloudRenderer implements ModeRenderer {
 		const { host } = this;
 		const table = body.createEl("table", { cls: "tr-details" });
 		const head = table.createEl("thead").createEl("tr");
-		for (const column of ["Tag", "Kind", "Notes", "Relations", "In groups"]) {
-			head.createEl("th", { text: column });
+		for (const [column, label] of DETAILS_COLUMNS) {
+			const th = head.createEl("th", { text: label });
+			if (this.detailsSort.column === column) {
+				th.createSpan({
+					cls: "tr-details-th-arrow",
+					text: this.detailsSort.ascending ? "▲" : "▼",
+				});
+			}
+			th.addEventListener("click", () => {
+				if (this.detailsSort.column === column) {
+					this.detailsSort.ascending = !this.detailsSort.ascending;
+				} else {
+					this.detailsSort = { column, ascending: true };
+				}
+				this.render();
+			});
 		}
 		const tbody = table.createEl("tbody");
 
+		const sorted = this.sortByColumn(rest);
 		const section = (label: string, tags: string[]) => {
 			if (tags.length === 0) return;
 			if (label) {
@@ -189,8 +227,27 @@ export class CloudRenderer implements ModeRenderer {
 			for (const tag of tags) this.renderDetailRow(tbody, tag);
 		};
 
-		section(pinned.length > 0 ? `Pinned (${pinned.length})` : "", pinned);
-		section(pinned.length > 0 ? "All tags" : "", rest);
+		// Pinned tags stay pinned-first (that is the point of pinning); the
+		// column sort applies to everything else, matching a file browser
+		// where favourites still sit above a sorted list.
+		section(pinned.length > 0 ? `Pinned (${pinned.length})` : "", this.sortByColumn(pinned));
+		section(pinned.length > 0 ? "All tags" : "", sorted);
+	}
+
+	private sortByColumn(tags: string[]): string[] {
+		const { host } = this;
+		return sortDetailsRows(
+			tags,
+			this.detailsSort.column,
+			this.detailsSort.ascending,
+			{
+				nameOf: tagLabel,
+				levelOf: (tag) => host.levelOf(tag),
+				countOf: (tag) => host.graph.countOf(tag),
+				relationsOf: (tag) => host.graph.neighbors(tag).length,
+				groupsOf: (tag) => host.groups.parentsOf(tag).length,
+			}
+		);
 	}
 
 	private renderDetailRow(tbody: HTMLElement, tag: string): void {
@@ -317,15 +374,25 @@ export class CloudRenderer implements ModeRenderer {
 		const related = !isSelected && host.isRelatedToSelection(tag);
 		const strength = related ? host.selectionStrength(tag) : 0;
 
+		// A group edge and a horizontal link are visually distinct even though
+		// both force full strength — the group check runs first so a pair that
+		// happens to carry both (grouped, and separately linked) still reads
+		// as "grouped", which is the stronger structural fact.
+		const relatedEdges = related
+			? host.selection
+					.map((other) => host.graph.edgeBetween(other, tag))
+					.filter((edge): edge is NonNullable<typeof edge> => edge !== undefined)
+			: [];
 		pill.toggleClass("is-selected", isSelected);
 		pill.toggleClass("is-related", related);
 		pill.toggleClass("is-pinned", host.isPinned(tag));
 		pill.toggleClass(
+			"is-group-edge",
+			relatedEdges.some((edge) => edge.parent !== undefined)
+		);
+		pill.toggleClass(
 			"is-manual",
-			related &&
-				host.selection.some(
-					(other) => host.graph.edgeBetween(other, tag)?.manual === true
-				)
+			relatedEdges.some((edge) => edge.parent === undefined && edge.manual)
 		);
 		pill.toggleClass(
 			"is-dim",
@@ -361,21 +428,9 @@ export class CloudRenderer implements ModeRenderer {
 					break;
 				}
 			}
-			const edge = closest ? this.host.graph.edgeBetween(closest, tag) : undefined;
-			if (edge?.parent) {
-				lines.push(
-					edge.parent === tag
-						? `Contains ${tagLabel(closest ?? "")}`
-						: `Inside ${tagLabel(closest ?? "")}`
-				);
-			} else if (edge?.manual) {
-				lines.push(`Connected to ${closest} manually`);
-			} else if (closest && edge) {
-				lines.push(
-					`${Math.round(strength * 100)}% related to ${closest} · ${
-						edge.cooccur
-					} shared note${edge.cooccur === 1 ? "" : "s"}`
-				);
+			if (closest) {
+				const edge = this.host.graph.edgeBetween(closest, tag);
+				lines.push(describeRelation(edge, tag, closest, strength).long);
 			}
 		}
 		return lines.join("\n");
@@ -464,3 +519,4 @@ export class CloudRenderer implements ModeRenderer {
 		}, 300);
 	}
 }
+

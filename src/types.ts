@@ -63,20 +63,23 @@ export type TagLevel = "main" | "sub" | "simple";
 export const MAX_GROUP_DEPTH = 2;
 
 export const LEVEL_LABELS: Record<TagLevel, string> = {
-	main: "Group",
-	sub: "Sub-group",
+	main: "Main-tag",
+	sub: "Sub-tag",
 	simple: "Tag",
 };
 
 export const LEVEL_ORDER: TagLevel[] = ["main", "sub", "simple"];
 
-/** Which tag levels a view draws. */
+/**
+ * Which tag levels a view draws, and whether it separates them.
+ * "all" places the levels in side-by-side columns; "merged" mixes them.
+ */
 export type LevelFilter = "tags" | "groups" | "all" | "merged";
 
 export const LEVEL_FILTER_LABELS: Record<LevelFilter, string> = {
 	tags: "Plain tags only",
-	groups: "Tags + groups",
-	all: "All levels, separated",
+	groups: "Tags + main-tags",
+	all: "All levels, side by side",
 	merged: "All levels, together",
 };
 
@@ -144,10 +147,10 @@ export type ConnectionKind =
 
 export const CONNECTION_LABELS: Record<ConnectionKind, string> = {
 	cooccurrence: "Shared notes",
-	manual: "Manual connection",
-	"main-sub": "Group → sub-group",
-	"main-simple": "Group → tag",
-	"sub-simple": "Sub-group → tag",
+	manual: "Horizontal link",
+	"main-sub": "Main-tag → sub-tag",
+	"main-simple": "Main-tag → tag",
+	"sub-simple": "Sub-tag → tag",
 };
 
 export const DEFAULT_CONNECTION_COLORS: Record<ConnectionKind, string> = {

@@ -12,6 +12,7 @@ import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
 import { NoteCreator } from "./newNote";
 import { TagGroups } from "./groups";
+import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
 import {
 	ConfirmEditModal,
@@ -70,7 +71,7 @@ export default class TagRelationsPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "connect-tags",
-			name: "Connect two tags",
+			name: "Horizontal link two tags",
 			callback: () => this.promptConnectTags(),
 		});
 		this.addCommand({
@@ -211,7 +212,7 @@ export default class TagRelationsPlugin extends Plugin {
 		const tagA = normalizeTag(a, this.settings.caseSensitive);
 		const tagB = normalizeTag(b, this.settings.caseSensitive);
 		if (tagA === tagB) {
-			new Notice("A tag cannot be connected to itself.");
+			new Notice("A tag cannot be linked to itself.");
 			return;
 		}
 		const exists = this.settings.manualLinks.some(
@@ -226,7 +227,7 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings.manualLinks.push({ a: tagA, b: tagB, label });
 		await this.saveSettings();
 		this.rebuildGraph();
-		new Notice(`Connected ${tagLabel(tagA)} ↔ ${tagLabel(tagB)}`);
+		new Notice(`Linked ${tagLabel(tagA)} ↔ ${tagLabel(tagB)}`);
 	}
 
 	async removeManualLink(a: string, b: string): Promise<void> {
@@ -292,9 +293,44 @@ export default class TagRelationsPlugin extends Plugin {
 		).open();
 	}
 
-	/** Turn a plain tag into a group by giving it its first member. */
-	promptMakeGroup(tag: string): void {
-		this.promptAddToGroup(tag);
+	/**
+	 * The other direction: pick the tag that should *contain* `child`.
+	 *
+	 * This is the flow you want when you are looking at a tag and know where
+	 * it belongs. Typing a name that does not exist creates the main-tag on
+	 * the spot, so a new group needs no separate "create" step — the graph
+	 * already materialises tags that carry no notes.
+	 */
+	promptPutInsideGroup(child: string): void {
+		const groups = new TagGroups(this.settings.groupLinks);
+		const candidates = this.allKnownTags().filter(
+			(tag) => groups.canAdd(tag, child).ok
+		);
+		const subtitles = new Map<string, string>();
+		for (const tag of candidates) {
+			const level = groups.levelOf(tag);
+			const members = groups.childrenOf(tag).length;
+			if (members > 0) {
+				subtitles.set(
+					tag,
+					`${LEVEL_LABELS[level].toLowerCase()} · ${members} member${
+						members === 1 ? "" : "s"
+					}`
+				);
+			}
+		}
+		const childLevel = groups.levelOf(child);
+		const becomes =
+			childLevel === "simple"
+				? ""
+				: " — it keeps its members and becomes a sub-tag";
+		new TagChoiceModal(
+			this.app,
+			candidates,
+			`Put ${tagLabel(child)} inside which main-tag?${becomes}`,
+			(parent) => void this.addToGroup(parent, child),
+			{ subtitles }
+		).open();
 	}
 
 	async togglePinnedTag(tag: string): Promise<void> {
@@ -620,11 +656,11 @@ export default class TagRelationsPlugin extends Plugin {
 			new Notice("Not enough tags in this vault to connect.");
 			return;
 		}
-		new TagSuggestModal(this.app, tags, "Connect: pick the first tag", (first) => {
+		new TagSuggestModal(this.app, tags, "Horizontal link: pick the first tag", (first) => {
 			new TagSuggestModal(
 				this.app,
 				tags.filter((tag) => tag !== first),
-				`Connect ${tagLabel(first)} to…`,
+				`Horizontal link: ${tagLabel(first)} to…`,
 				(second) => void this.addManualLink(first, second)
 			).open();
 		}).open();

@@ -1,9 +1,16 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost, applyLevelStyle, scaleByCount } from "./host";
+import {
+	ModeRenderer,
+	ViewHost,
+	applyLevelStyle,
+	attachRenameInput,
+	scaleByCount,
+} from "./host";
 import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
 import { orderedLevels, separatesLevels, visibleLevels } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
+import { TagGroups } from "./groups";
 
 /**
  * The groups view: tags organised by the containment structure rather than by
@@ -25,6 +32,8 @@ export class GroupsRenderer implements ModeRenderer {
 	private host: ViewHost;
 	private panzoom: PanZoom;
 	private root: HTMLElement;
+	/** Tag currently being renamed in place — a section header or a member pill. */
+	private renaming: string | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -70,7 +79,7 @@ export class GroupsRenderer implements ModeRenderer {
 				0,
 				(container) => {
 					const field = container.createDiv({ cls: "tr-group-members" });
-					for (const tag of loose) this.renderTag(field, tag, 0);
+					for (const tag of loose) this.renderTag(field, tag, 0);  // ungrouped: no parent to detach from
 				}
 			);
 		}
@@ -131,11 +140,10 @@ export class GroupsRenderer implements ModeRenderer {
 			depth,
 			(container) => {
 				const levels = visibleLevels(host.settings.levelFilter);
-				const subGroups = children.filter(
-					(child) => host.groups.isGroup(child) && levels.has("sub")
-				);
-				const plain = children.filter(
-					(child) => !host.groups.isGroup(child) && levels.has("simple")
+				const { subGroups, plain } = visibleGroupChildren(
+					host.groups,
+					tag,
+					levels
 				);
 
 				if (separatesLevels(host.settings.levelFilter)) {
@@ -158,7 +166,7 @@ export class GroupsRenderer implements ModeRenderer {
 							text: LEVEL_LABELS.simple,
 						});
 						const field = lane.createDiv({ cls: "tr-group-members" });
-						for (const child of plain) this.renderTag(field, child, depth + 1);
+						for (const child of plain) this.renderTag(field, child, depth + 1, tag);
 					}
 				} else {
 					for (const child of subGroups) {
@@ -166,7 +174,7 @@ export class GroupsRenderer implements ModeRenderer {
 					}
 					if (plain.length > 0) {
 						const area = container.createDiv({ cls: "tr-group-members" });
-						for (const child of plain) this.renderTag(area, child, depth + 1);
+						for (const child of plain) this.renderTag(area, child, depth + 1, tag);
 					}
 				}
 
@@ -230,6 +238,11 @@ export class GroupsRenderer implements ModeRenderer {
 			if (tag) host.toggleGroupCollapsed(tag);
 		});
 
+		if (tag && level && this.renaming === tag) {
+			const nameField = header.createSpan({ cls: "tr-group-name-input-wrap" });
+			this.renderRenameInput(nameField, tag);
+			return;
+		}
 		const name = header.createSpan({ cls: "tr-group-name", text: label });
 		if (tag && level) {
 			applyLevelStyle(name, level, host.levelStyles);
@@ -259,6 +272,17 @@ export class GroupsRenderer implements ModeRenderer {
 				event.stopPropagation();
 				host.promptAddToGroup(tag);
 			});
+
+			if (host.editMode) {
+				const edit = header.createSpan({ cls: "tr-group-edit" });
+				setIcon(edit, "pencil");
+				setTooltip(edit, `Rename ${tagLabel(tag)}`, { placement: "top" });
+				edit.addEventListener("click", (event) => {
+					event.stopPropagation();
+					this.renaming = tag;
+					this.render();
+				});
+			}
 		}
 
 		header.addEventListener("click", () => {
@@ -269,7 +293,19 @@ export class GroupsRenderer implements ModeRenderer {
 		fill(section.createDiv({ cls: "tr-group-body" }));
 	}
 
-	private renderTag(parent: HTMLElement, tag: string, depth: number): void {
+	/**
+	 * `within`, when given, is the specific group this pill is rendered
+	 * inside — so a hover-revealed remove button can detach exactly that
+	 * membership without a submenu, even though the tag may belong to other
+	 * groups too. Omitted for the Ungrouped section, which has no membership
+	 * to remove.
+	 */
+	private renderTag(
+		parent: HTMLElement,
+		tag: string,
+		depth: number,
+		within?: string
+	): HTMLElement {
 		const { host } = this;
 		const level = host.levelOf(tag);
 		const count = host.graph.countOf(tag);
@@ -282,8 +318,22 @@ export class GroupsRenderer implements ModeRenderer {
 				scaleByCount(count, host.graph.maxCount);
 		pill.style.fontSize = size.toFixed(1) + "px";
 
+		if (this.renaming === tag) {
+			this.renderRenameInput(pill, tag);
+			return pill;
+		}
 		pill.createSpan({ cls: "tr-pill-name", text: tagLabel(tag) });
 		pill.createSpan({ cls: "tr-pill-count", text: String(count) });
+		if (host.editMode) {
+			const edit = pill.createSpan({ cls: "tr-pill-edit" });
+			setIcon(edit, "pencil");
+			setTooltip(edit, `Rename ${tagLabel(tag)}`, { placement: "top" });
+			edit.addEventListener("click", (event) => {
+				event.stopPropagation();
+				this.renaming = tag;
+				this.render();
+			});
+		}
 
 		pill.toggleClass("is-selected", host.isSelected(tag));
 		pill.toggleClass(
@@ -291,6 +341,16 @@ export class GroupsRenderer implements ModeRenderer {
 			!host.isSelected(tag) && host.isRelatedToSelection(tag)
 		);
 		pill.toggleClass("is-pinned", host.isPinned(tag));
+
+		if (within) {
+			const remove = pill.createSpan({ cls: "tr-group-pill-remove" });
+			setIcon(remove, "x");
+			setTooltip(remove, `Take out of ${tagLabel(within)}`, { placement: "top" });
+			remove.addEventListener("click", (event) => {
+				event.stopPropagation();
+				host.removeFromGroup(within, tag);
+			});
+		}
 
 		setTooltip(
 			pill,
@@ -311,6 +371,23 @@ export class GroupsRenderer implements ModeRenderer {
 			event.preventDefault();
 			host.openContextMenu(tag, event);
 		});
+		return pill;
+	}
+
+	private renderRenameInput(container: HTMLElement, tag: string): void {
+		attachRenameInput(
+			container,
+			tag,
+			(next) => {
+				this.renaming = null;
+				this.render();
+				this.host.renameInline(tag, next);
+			},
+			() => {
+				this.renaming = null;
+				this.render();
+			}
+		);
 	}
 
 	private renderEmpty(body: HTMLElement): void {
@@ -332,6 +409,36 @@ export class GroupsRenderer implements ModeRenderer {
 			text: "Right-click any tag and choose “Put a tag inside this one”. A tag can belong to as many groups as you like, and groups go three levels deep: group → sub-group → tag.",
 		});
 	}
+}
+
+/**
+ * How one group's children split into sub-tags and plain tags, given which
+ * levels are currently visible.
+ *
+ * When sub-tags are hidden, their members would otherwise vanish along with
+ * them — by the three-level invariant (ADR 0008) a sub-tag holds only plain
+ * tags, so flattening those members up into the parent's own plain list
+ * loses no structure. Only the intermediate sub-tag node stops being drawn.
+ */
+export function visibleGroupChildren(
+	groups: TagGroups,
+	parent: string,
+	levels: Set<TagLevel>
+): { subGroups: string[]; plain: string[] } {
+	const children = groups.childrenOf(parent);
+	const allSubGroups = children.filter((child) => groups.isGroup(child));
+	const subGroups = levels.has("sub") ? allSubGroups : [];
+	const plain = children.filter(
+		(child) => !groups.isGroup(child) && levels.has("simple")
+	);
+	if (!levels.has("sub") && levels.has("simple")) {
+		for (const subGroup of allSubGroups) {
+			for (const grandchild of groups.childrenOf(subGroup)) {
+				if (!plain.includes(grandchild)) plain.push(grandchild);
+			}
+		}
+	}
+	return { subGroups, plain };
 }
 
 /** Container for nested sub-group sections in the un-separated layout. */

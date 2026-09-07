@@ -6,6 +6,7 @@ import {
 	orderedLevels,
 	resolveLevelStyles,
 	separatesLevels,
+	sortDetailsRows,
 	togglePinned,
 	visibleLevels,
 } from "../src/levels";
@@ -174,5 +175,64 @@ describe("zoom clamping", () => {
 		assert.equal(clampScale(NaN), 1);
 		assert.equal(clampScale(Infinity), 1);
 		assert.equal(clampScale(-Infinity), 1);
+	});
+});
+
+describe("sortDetailsRows", () => {
+	const rows: Record<string, { level: "main" | "sub" | "simple"; count: number; relations: number; groups: number }> = {
+		"#zebra": { level: "simple", count: 5, relations: 2, groups: 1 },
+		"#apple": { level: "main", count: 2, relations: 9, groups: 0 },
+		"#mango": { level: "sub", count: 2, relations: 1, groups: 2 },
+	};
+	const ctx = {
+		nameOf: (tag: string) => tag.replace("#", ""),
+		levelOf: (tag: string) => rows[tag].level,
+		countOf: (tag: string) => rows[tag].count,
+		relationsOf: (tag: string) => rows[tag].relations,
+		groupsOf: (tag: string) => rows[tag].groups,
+	};
+	const tags = Object.keys(rows);
+
+	test("name ascending and descending", () => {
+		assert.deepEqual(sortDetailsRows(tags, "name", true, ctx), [
+			"#apple", "#mango", "#zebra",
+		]);
+		assert.deepEqual(sortDetailsRows(tags, "name", false, ctx), [
+			"#zebra", "#mango", "#apple",
+		]);
+	});
+
+	test("kind sorts by level order: main, sub, simple", () => {
+		assert.deepEqual(sortDetailsRows(tags, "kind", true, ctx), [
+			"#apple", "#mango", "#zebra",
+		]);
+	});
+
+	test("notes, relations and groups sort numerically", () => {
+		assert.deepEqual(sortDetailsRows(tags, "notes", true, ctx), [
+			"#apple", "#mango", "#zebra",
+		]);
+		assert.deepEqual(sortDetailsRows(tags, "relations", false, ctx), [
+			"#apple", "#zebra", "#mango",
+		]);
+		assert.deepEqual(sortDetailsRows(tags, "groups", true, ctx), [
+			"#apple", "#zebra", "#mango",
+		]);
+	});
+
+	test("ties break by name regardless of direction", () => {
+		// #apple and #mango both have count 2.
+		const ascending = sortDetailsRows(tags, "notes", true, ctx);
+		assert.deepEqual(ascending.slice(0, 2), ["#apple", "#mango"]);
+	});
+
+	test("does not mutate the input array", () => {
+		const input = tags.slice();
+		sortDetailsRows(input, "name", false, ctx);
+		assert.deepEqual(input, tags);
+	});
+
+	test("an empty list stays empty", () => {
+		assert.deepEqual(sortDetailsRows([], "name", true, ctx), []);
 	});
 });
