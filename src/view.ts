@@ -21,6 +21,14 @@ import { MapRenderer } from "./map";
 import { TreeRenderer } from "./tree";
 import { GroupsRenderer } from "./groupsView";
 import { TagGroups } from "./groups";
+import {
+	ACTION_GROUP_LABELS,
+	ACTION_GROUP_ORDER,
+	ActionHost,
+	TAG_ACTIONS,
+	TagAction,
+	iconFor,
+} from "./actions";
 import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import { TagSuggestModal } from "./modals";
 import {
@@ -81,6 +89,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private stickyButton!: HTMLElement;
 	private editButton!: HTMLElement;
 	private newNoteButton!: HTMLElement;
+	private actionBarEl!: HTMLElement;
+	private actionBarButton!: HTMLElement;
 	private matchSelect!: HTMLSelectElement;
 
 	private snapshot: NotesSnapshot | null = null;
@@ -152,8 +162,62 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.plugin.promptPutInsideGroup(child);
 	}
 
+	// --- ActionHost -------------------------------------------------------
+
+	removableRelationCount(tag: string): number {
+		return this.plugin.removableRelationCount(tag);
+	}
+
+	promptTakeOutOfGroup(tag: string): void {
+		this.plugin.promptTakeOutOfGroup(tag);
+	}
+
+	promptHorizontalLink(tag: string): void {
+		this.promptConnect(tag);
+	}
+
+	promptRemoveRelation(tag: string): void {
+		this.plugin.promptRemoveRelation(tag);
+	}
+
+	promptRemoveAllRelations(tag: string): void {
+		this.plugin.promptRemoveAllRelations(tag);
+	}
+
+	promptAssignTagToNotesOf(tag: string): void {
+		this.plugin.promptAssignTag(
+			this.plugin.notesWithTag(tag),
+			`notes tagged ${tagLabel(tag)}`
+		);
+	}
+
+	promptRemoveTagFromNotes(tag: string): void {
+		this.plugin.promptUnassignTag(
+			tag,
+			this.plugin.notesWithTag(tag),
+			"the whole vault"
+		);
+	}
+
+	createNote(): void {
+		void this.plugin.createNote(this.selection.slice());
+	}
+
+	copyTag(tag: string): void {
+		void navigator.clipboard.writeText(tag);
+		new Notice(`Copied ${tag}`);
+	}
+
+	/** The tag the button bar acts on: the most recently selected one. */
+	private actionTarget(): string | null {
+		return this.selection.length > 0
+			? this.selection[this.selection.length - 1]
+			: null;
+	}
+
 	removeFromGroup(parent: string, child: string): void {
-		void this.plugin.removeFromGroup(parent, child);
+		// Exactly this membership, not every parent the tag has.
+		void this.plugin.removeMembership(child, parent);
 	}
 
 	onZoomChanged(scale: number): void {
@@ -188,6 +252,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.contentEl.empty();
 		this.contentEl.addClass("tr-root");
 		this.buildToolbar();
+		this.actionBarEl = this.contentEl.createDiv({ cls: "tr-action-bar" });
 		const body = this.contentEl.createDiv({ cls: "tr-body" });
 		const column = body.createDiv({ cls: "tr-main-column" });
 		this.mainEl = column.createDiv({ cls: "tr-main" });
@@ -235,6 +300,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	private afterSelectionChange(): void {
 		this.syncNewNoteButton();
+		this.renderActionBar();
 		this.renderActiveMode();
 		this.renderInspector();
 		// The snapshot stays put; only its stale badge reacts.
@@ -287,159 +353,28 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	openContextMenu(tag: string, event: MouseEvent): void {
 		const menu = new Menu();
-		const selected = this.isSelected(tag);
+		const ctx = { tag, host: this as ActionHost };
 
-		menu.addItem((item) =>
-			item
-				.setTitle(selected ? "Select only this tag" : "Select this tag")
-				.setIcon("crosshair")
-				.onClick(() => this.select(tag, "replace"))
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle(selected ? "Remove from selection" : "Add to selection")
-				.setIcon(selected ? "minus-circle" : "plus-circle")
-				.onClick(() => this.select(tag, "toggle"))
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Search notes with this tag")
-				.setIcon("search")
-				.onClick(() => this.openTagSearch(tag))
-		);
-		menu.addSeparator();
-		const level = this.levelOf(tag);
-
-		// Two directions of the same relation. Which one to reach for depends
-		// on which tag you are looking at: start here-contains, or here-belongs.
-		menu.addItem((item) =>
-			item
-				.setTitle(`Make this a main-tag for…`)
-				.setIcon("folder-plus")
-				.onClick(() => this.plugin.promptAddToGroup(tag))
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle(`Put this ${level === "simple" ? "tag" : LEVEL_LABELS[level].toLowerCase()} inside…`)
-				.setIcon("corner-right-up")
-				.onClick(() => this.plugin.promptPutInsideGroup(tag))
-		);
-
-		const parents = this.groups.parentsOf(tag);
-		if (parents.length > 0) {
-			menu.addItem((item) => {
-				item.setTitle("Take out of a main-tag").setIcon("folder-minus");
-				const withSubmenu = item as unknown as { setSubmenu?: () => Menu };
-				if (typeof withSubmenu.setSubmenu === "function") {
-					const submenu = withSubmenu.setSubmenu();
-					for (const parent of parents) {
-						submenu.addItem((sub) =>
-							sub
-								.setTitle(tagLabel(parent))
-								.onClick(() => void this.plugin.removeFromGroup(parent, tag))
-						);
-					}
-				} else {
-					item.onClick(() =>
-						new TagSuggestModal(
-							this.app,
-							parents,
-							`Take ${tagLabel(tag)} out of…`,
-							(parent) => void this.plugin.removeFromGroup(parent, tag)
-						).open()
-					);
-				}
-			});
+		// Built from the same registry the button bar uses, so the two can
+		// never offer different capabilities (ADR 0010).
+		let firstGroup = true;
+		for (const group of ACTION_GROUP_ORDER) {
+			const available = TAG_ACTIONS.filter(
+				(action) => action.group === group && action.isEnabled(ctx)
+			);
+			if (available.length === 0) continue;
+			if (!firstGroup) menu.addSeparator();
+			firstGroup = false;
+			for (const action of available) {
+				menu.addItem((item) => {
+					item
+						.setTitle(action.label(ctx))
+						.setIcon(iconFor(action, this.settings.actionIcons))
+						.onClick(() => action.run(ctx));
+					if (action.destructive) item.setWarning(true);
+				});
+			}
 		}
-
-		menu.addItem((item) =>
-			item
-				.setTitle(this.isPinned(tag) ? "Unpin" : "Pin to the top")
-				.setIcon(this.isPinned(tag) ? "pin-off" : "pin")
-				.onClick(() => this.togglePin(tag))
-		);
-
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Rename tag…")
-				.setIcon("pencil")
-				.onClick(() => this.plugin.promptRenameTag(tag))
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Add another tag to these notes…")
-				.setIcon("tag")
-				.onClick(() =>
-					this.plugin.promptAssignTag(
-						this.plugin.notesWithTag(tag),
-						`notes tagged ${tagLabel(tag)}`
-					)
-				)
-		);
-		menu.addItem((item) =>
-			item
-				.setTitle("Remove this tag from all notes")
-				.setIcon("trash-2")
-				.onClick(() =>
-					this.plugin.promptUnassignTag(
-						tag,
-						this.plugin.notesWithTag(tag),
-						"the whole vault"
-					)
-				)
-		);
-
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Horizontal link to another tag…")
-				.setIcon("link")
-				.onClick(() => this.promptConnect(tag))
-		);
-
-		const manual = this.graph
-			.neighbors(tag)
-			.filter((edge) => edge.manual)
-			.map((edge) => (edge.a === tag ? edge.b : edge.a));
-		if (manual.length > 0) {
-			menu.addItem((item) => {
-				item.setTitle("Remove horizontal link").setIcon("unlink");
-				// Submenus exist at runtime but are not part of the public API,
-				// so fall back to a picker when they are unavailable.
-				const withSubmenu = item as unknown as { setSubmenu?: () => Menu };
-				if (typeof withSubmenu.setSubmenu === "function") {
-					const submenu = withSubmenu.setSubmenu();
-					for (const other of manual) {
-						submenu.addItem((sub) =>
-							sub
-								.setTitle(tagLabel(other))
-								.onClick(() => void this.plugin.removeManualLink(tag, other))
-						);
-					}
-				} else {
-					item.onClick(() =>
-						new TagSuggestModal(
-							this.app,
-							manual,
-							`Disconnect ${tagLabel(tag)} from…`,
-							(other) => void this.plugin.removeManualLink(tag, other)
-						).open()
-					);
-				}
-			});
-		}
-
-		menu.addSeparator();
-		menu.addItem((item) =>
-			item
-				.setTitle("Copy tag")
-				.setIcon("copy")
-				.onClick(() => {
-					void navigator.clipboard.writeText(tag);
-					new Notice(`Copied ${tag}`);
-				})
-		);
 		menu.showAtMouseEvent(event);
 	}
 
@@ -607,6 +542,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	renderAll(): void {
 		this.syncToolbar();
+		this.renderActionBar();
 		this.renderActiveMode();
 		this.renderInspector();
 		this.renderNotesPanel();
@@ -737,6 +673,18 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		});
 		showNotes.addEventListener("click", () => this.showNotes());
 
+		this.actionBarButton = toolbar.createDiv({ cls: "tr-icon-button" });
+		setIcon(this.actionBarButton, "wand-2");
+		setTooltip(this.actionBarButton, "Show the action bar", {
+			placement: "bottom",
+		});
+		this.actionBarButton.addEventListener("click", async () => {
+			this.settings.showActionBar = !this.settings.showActionBar;
+			await this.plugin.saveSettings();
+			this.syncToolbar();
+			this.renderActionBar();
+		});
+
 		const optionsButton = toolbar.createDiv({ cls: "tr-icon-button" });
 		setIcon(optionsButton, "sliders-horizontal");
 		setTooltip(optionsButton, "View options", { placement: "bottom" });
@@ -851,6 +799,62 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		menu.showAtMouseEvent(event);
 	}
 
+	/**
+	 * Every action as a button, so nothing is reachable only by right-click.
+	 * Buttons stay in place and grey out when they do not apply, rather than
+	 * appearing and vanishing — a bar that changes shape as the selection
+	 * changes is much harder to build muscle memory for.
+	 */
+	private renderActionBar(): void {
+		const bar = this.actionBarEl;
+		if (!bar) return;
+		bar.empty();
+		bar.toggleClass("is-hidden", !this.settings.showActionBar);
+		if (!this.settings.showActionBar) return;
+
+		const tag = this.actionTarget();
+		const ctx = { tag, host: this as ActionHost };
+
+		const target = bar.createDiv({ cls: "tr-action-bar-target" });
+		target.setText(
+			tag
+				? this.selection.length > 1
+					? `${tagLabel(tag)} (+${this.selection.length - 1})`
+					: tagLabel(tag)
+				: "No tag selected"
+		);
+		setTooltip(
+			target,
+			tag
+				? "Buttons act on this tag — the last one you selected"
+				: "Select a tag to enable the tag actions",
+			{ placement: "bottom" }
+		);
+
+		for (const group of ACTION_GROUP_ORDER) {
+			const actions = TAG_ACTIONS.filter((action) => action.group === group);
+			if (actions.length === 0) continue;
+			const cluster = bar.createDiv({ cls: "tr-action-cluster" });
+			setTooltip(cluster, ACTION_GROUP_LABELS[group], { placement: "bottom" });
+			for (const action of actions) this.renderActionButton(cluster, action, ctx);
+		}
+	}
+
+	private renderActionButton(
+		parent: HTMLElement,
+		action: TagAction,
+		ctx: { tag: string | null; host: ActionHost }
+	): void {
+		const enabled = action.isEnabled(ctx);
+		const button = parent.createDiv({ cls: "tr-action-btn" });
+		setIcon(button, iconFor(action, this.settings.actionIcons));
+		button.toggleClass("is-disabled", !enabled);
+		button.toggleClass("is-destructive", action.destructive === true);
+		setTooltip(button, action.label(ctx), { placement: "bottom" });
+		if (!enabled) return;
+		button.addEventListener("click", () => action.run(ctx));
+	}
+
 	private syncToolbar(): void {
 		for (const [mode, button] of this.modeButtons) {
 			button.toggleClass("is-active", mode === this.settings.mode);
@@ -860,6 +864,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.settings.stickyMultiSelect
 		);
 		this.editButton?.toggleClass("is-active", this.settings.editMode);
+		this.actionBarButton?.toggleClass("is-active", this.settings.showActionBar);
 		this.syncNewNoteButton();
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
 	}

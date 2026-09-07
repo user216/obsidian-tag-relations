@@ -1292,3 +1292,126 @@
 	flex: 1 1 auto;
 	min-width: 0;
 }
+
+/* ----------------------------------------------------------- action bar */
+
+.tr-action-bar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 5px 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background-color: var(--background-primary-alt, var(--background-secondary));
+	flex: 0 0 auto;
+}
+
+.tr-action-bar.is-hidden {
+	display: none;
+}
+
+.tr-action-bar-target {
+	padding: 2px 8px 2px 0;
+	margin-right: 4px;
+	border-right: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	color: var(--text-muted);
+	white-space: nowrap;
+	max-width: 14em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tr-action-cluster {
+	display: flex;
+	align-items: center;
+	gap: 1px;
+	padding: 0 3px;
+	border-radius: var(--radius-s);
+}
+
+.tr-action-cluster + .tr-action-cluster {
+	border-left: 1px solid var(--background-modifier-border);
+	margin-left: 3px;
+}
+
+.tr-action-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 27px;
+	height: 27px;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.tr-action-btn:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.tr-action-btn.is-destructive:hover {
+	color: var(--text-error);
+	background-color: var(--background-modifier-error);
+}
+
+/* Disabled buttons stay in place so the bar's layout never shifts. */
+.tr-action-btn.is-disabled {
+	opacity: 0.25;
+	cursor: default;
+	pointer-events: none;
+}
+
+.tr-action-btn .svg-icon {
+	width: 16px;
+	height: 16px;
+}
+
+/* -------------------------------------------------------- settings tabs */
+
+.tr-settings-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tr-settings-tab {
+	padding: 6px 12px;
+	border-radius: var(--radius-s) var(--radius-s) 0 0;
+	border-bottom: 2px solid transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.tr-settings-tab:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-settings-tab.is-active {
+	color: var(--text-accent);
+	border-bottom-color: var(--interactive-accent);
+	font-weight: 600;
+}
+
+.tr-icon-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	margin-right: 6px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+}
+
+.tr-icon-preview .svg-icon {
+	width: 15px;
+	height: 15px;
+}

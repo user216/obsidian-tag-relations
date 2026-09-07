@@ -52,6 +52,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/groupsView.ts` | 320 | Collapsible-clouds and tree layouts for groups |
 | `src/levels.ts` | 118 | Level styling, level filters, pin capping (pure) |
 | `src/panzoom.ts` | 175 | Pan/zoom layer for the DOM-based views |
+| `src/actions.ts` | 300 | The action registry: every tag action defined once (pure) |
+| `src/relations.ts` | 140 | Which relations are removable, and removing them (pure) |
 | `src/datetime.ts` | 214 | Timezone-aware formatting and filename sanitising (pure) |
 | `src/newNote.ts` | 137 | Timestamped note creation |
 | `src/modals.ts` | 43 | Fuzzy tag picker |
@@ -74,7 +76,7 @@ datetime.ts
 
 `view.ts` and `settings.ts` each `import type TagRelationsPlugin from "./main"`. These are **type-only** imports, erased at build time, so there is no runtime cycle.
 
-Five modules — `selection.ts`, `links.ts`, `datetime.ts`, `groups.ts` and `levels.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
+Seven modules — `selection.ts`, `links.ts`, `datetime.ts`, `groups.ts`, `levels.ts`, `actions.ts` and `relations.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
 
 ---
 
@@ -360,6 +362,16 @@ The mind-map draws to canvas and owns its own camera. The cloud, groups and tree
 
 One interaction worth noting: FLIP measures `getBoundingClientRect`, which is in screen pixels, but the pill's own transform lives *inside* the scaled layer — so the measured delta is divided by the current scale before being applied.
 
+## 8e. The action registry
+
+`TAG_ACTIONS` (`src/actions.ts`) defines every tag action once: its id, group, default icon, a label that may depend on state, whether it is currently enabled, and what it does. Three surfaces read it — the context menu, the button bar, and the icon-customisation settings — rather than each maintaining a list.
+
+That consolidation is the point. Three hand-written copies of "what can you do to a tag" drift within a release or two, and an action reachable from one surface but not another is invisible until someone goes looking. The same reasoning produced `describeRelation` after the identical bug was found in three renderers.
+
+Actions reach the app through `ActionHost`, a deliberately narrow interface — an action needing something outside it is a prompt to reconsider whether it belongs here, mirroring the `ViewHost` constraint (ADR 0003).
+
+**Relation removal** (`src/relations.ts`) is pure and separate, and draws one distinction carefully: a co-occurrence relation is *observed*, not stored, so there is nothing to delete — removing one would mean editing notes. Only horizontal links and group membership can be removed, and `withoutRelation` deliberately takes **both** ties between a pair at once, since half-removing would leave the two tags still joined.
+
 ## 9. Settings and persistence
 
 One flat `TagRelationsSettings` interface, persisted to `data.json` via Obsidian's `loadData`/`saveData`. Loading merges stored values over `DEFAULT_SETTINGS`, so a settings file written by an older version gains new keys with their defaults rather than leaving them `undefined`. `manualLinks` is additionally guarded against a hand-edited file that made it a non-array.
@@ -383,7 +395,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-274 tests across 53 suites:
+325 tests across 61 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -394,6 +406,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `views.test.ts` | Tree branching, map node collection and anchoring, `scaleByCount`, modifier detection, manual-link remapping, settings invariants |
 | `groups.test.ts` | Every depth-rule case, multi-parent membership, promotion/demotion, cycle resistance, rename propagation |
 | `levels.test.ts` | Level style resolution and CSS, level filters, pin capping, zoom clamping |
+| `relations.test.ts` | Removable-relation discovery, single/all/membership removal, and the action registry's ids, groups, enablement and icon fallbacks |
 | `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |
 
 `tests/helpers/vault.ts` is an in-memory vault: it stores note text, derives a metadata cache from it (inline tag offsets plus parsed frontmatter), and implements `vault.process` and `processFrontMatter`. Its tag scanner approximates Obsidian's parser — skipping fenced blocks and headings — and a dedicated suite tests *the fixture itself*, since the editor's safety depends on those exclusions being real.

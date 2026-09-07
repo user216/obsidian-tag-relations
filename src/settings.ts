@@ -1,4 +1,11 @@
-import { App, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, setIcon } from "obsidian";
+import {
+	ACTION_GROUP_LABELS,
+	ACTION_GROUP_ORDER,
+	ActionHost,
+	actionsInGroup,
+	iconFor,
+} from "./actions";
 import type TagRelationsPlugin from "./main";
 import { AddLocation } from "./edit";
 import {
@@ -61,6 +68,11 @@ export interface TagRelationsSettings {
 	levelStyles: LevelStyles;
 	showGroupConnections: boolean;
 	connectionColors: Record<ConnectionKind, string>;
+
+	// Action bar
+	showActionBar: boolean;
+	/** Per-action Lucide icon overrides, keyed by action id. */
+	actionIcons: Record<string, string>;
 
 	// Cloud presentation
 	cloudLayout: CloudLayout;
@@ -132,6 +144,9 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	showGroupConnections: true,
 	connectionColors: { ...DEFAULT_CONNECTION_COLORS },
 
+	showActionBar: false,
+	actionIcons: {},
+
 	cloudLayout: "icons",
 	cloudZoom: 1,
 	pinnedTags: [],
@@ -177,8 +192,58 @@ export function splitList(value: string): string[] {
 		.filter((part) => part.length > 0);
 }
 
+type SettingsTabId =
+	| "relations"
+	| "groups"
+	| "views"
+	| "editing"
+	| "newNote"
+	| "actions";
+
+interface SettingsTab {
+	id: SettingsTabId;
+	label: string;
+	render(tab: TagRelationsSettingTab, el: HTMLElement): void;
+}
+
+/**
+ * Six tabs, arranged as two threes (ADR 0009): what a relation *is*, then how
+ * it is shown; then what editing does, then the two things that act rather
+ * than describe.
+ */
+const SETTINGS_TABS: SettingsTab[] = [
+	{
+		id: "relations",
+		label: "Relations",
+		render: (tab, el) => {
+			tab.displayRelationsCore(el);
+			tab.displayManualLinks(el);
+		},
+	},
+	{ id: "groups", label: "Groups", render: (tab, el) => tab.displayGroups(el) },
+	{
+		id: "views",
+		label: "Views",
+		render: (tab, el) => {
+			tab.displaySelectionNotes(el);
+			tab.displayCloud(el);
+			tab.displayMap(el);
+			tab.displayTree(el);
+		},
+	},
+	{ id: "editing", label: "Editing", render: (tab, el) => tab.displayEditing(el) },
+	{ id: "newNote", label: "New note", render: (tab, el) => tab.displayNewNote(el) },
+	{
+		id: "actions",
+		label: "Action bar",
+		render: (tab, el) => tab.displayActionBar(el),
+	},
+];
+
 export class TagRelationsSettingTab extends PluginSettingTab {
 	plugin: TagRelationsPlugin;
+	/** Which tab is open; kept across re-renders within a settings session. */
+	private activeTab: SettingsTabId = "relations";
 
 	constructor(app: App, plugin: TagRelationsPlugin) {
 		super(app, plugin);
@@ -189,6 +254,26 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		// Tabs rather than one long scroll: the settings had grown past the
+		// point where anything could be found by reading top to bottom.
+		const nav = containerEl.createDiv({ cls: "tr-settings-tabs" });
+		const panel = containerEl.createDiv({ cls: "tr-settings-panel" });
+
+		for (const tab of SETTINGS_TABS) {
+			const button = nav.createDiv({ cls: "tr-settings-tab", text: tab.label });
+			button.toggleClass("is-active", this.activeTab === tab.id);
+			button.addEventListener("click", () => {
+				this.activeTab = tab.id;
+				this.display();
+			});
+		}
+
+		const active =
+			SETTINGS_TABS.find((tab) => tab.id === this.activeTab) ?? SETTINGS_TABS[0];
+		active.render(this, panel);
+	}
+
+	displayRelationsCore(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Relations").setHeading();
 
 		new Setting(containerEl)
@@ -302,13 +387,9 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.rebuildGraphDebounced();
 					})
 			);
+	}
 
-		this.displayManualLinks(containerEl);
-
-		this.displayGroups(containerEl);
-
-		this.displayNewNote(containerEl);
-
+	displayEditing(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Editing").setHeading();
 
 		containerEl.createEl("p", {
@@ -360,7 +441,9 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+	}
 
+	displaySelectionNotes(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Selection and notes").setHeading();
 
 		new Setting(containerEl)
@@ -426,7 +509,9 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+	}
 
+	displayCloud(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Tag cloud").setHeading();
 
 		new Setting(containerEl)
@@ -500,7 +585,9 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+	}
 
+	displayMap(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Mind-map").setHeading();
 
 		new Setting(containerEl)
@@ -578,7 +665,9 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+	}
 
+	displayTree(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Tree").setHeading();
 
 		new Setting(containerEl)
@@ -612,7 +701,84 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private displayGroups(containerEl: HTMLElement): void {
+
+	displayActionBar(containerEl: HTMLElement): void {
+		const settings = this.plugin.settings;
+		new Setting(containerEl).setName("Action bar").setHeading();
+
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "A row of buttons for every tag action, so nothing is reachable only by right-clicking. Buttons act on the last tag you selected, and grey out rather than disappear when they do not apply — the bar keeps a stable shape so its layout stays learnable.",
+		});
+
+		new Setting(containerEl)
+			.setName("Show the action bar")
+			.setDesc("Also toggleable on the fly from the view's toolbar.")
+			.addToggle((toggle) =>
+				toggle.setValue(settings.showActionBar).onChange(async (value) => {
+					settings.showActionBar = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+				})
+			);
+
+		new Setting(containerEl).setName("Button icons").setHeading();
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Any Lucide icon name works — the same set Obsidian itself uses; see lucide.dev for the list. The preview updates as you type, and an unknown name simply leaves the button blank rather than breaking it. Leave a field empty for the default.",
+		});
+
+		for (const group of ACTION_GROUP_ORDER) {
+			const actions = actionsInGroup(group);
+			if (actions.length === 0) continue;
+			new Setting(containerEl)
+				.setName(ACTION_GROUP_LABELS[group])
+				.setHeading();
+
+			for (const action of actions) {
+				const setting = new Setting(containerEl).setName(
+					action.label({ tag: "#tag", host: previewHost(this.plugin) })
+				);
+				const preview = setting.controlEl.createDiv({ cls: "tr-icon-preview" });
+				const paint = (name: string) => {
+					preview.empty();
+					try {
+						setIcon(preview, name);
+					} catch {
+						/* an unknown icon name just leaves it blank */
+					}
+				};
+				paint(iconFor(action, settings.actionIcons));
+
+				setting.addText((text) =>
+					text
+						.setPlaceholder(action.defaultIcon)
+						.setValue(settings.actionIcons[action.id] ?? "")
+						.onChange(async (value) => {
+							const trimmed = value.trim();
+							if (trimmed.length === 0) delete settings.actionIcons[action.id];
+							else settings.actionIcons[action.id] = trimmed;
+							paint(iconFor(action, settings.actionIcons));
+							await this.plugin.saveSettings();
+							this.plugin.refreshViews();
+						})
+				);
+				setting.addExtraButton((button) =>
+					button
+						.setIcon("rotate-ccw")
+						.setTooltip(`Back to ${action.defaultIcon}`)
+						.onClick(async () => {
+							delete settings.actionIcons[action.id];
+							await this.plugin.saveSettings();
+							this.plugin.refreshViews();
+							this.display();
+						})
+				);
+			}
+		}
+	}
+
+	displayGroups(containerEl: HTMLElement): void {
 		const settings = this.plugin.settings;
 		new Setting(containerEl).setName("Tag groups").setHeading();
 
@@ -776,7 +942,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private displayNewNote(containerEl: HTMLElement): void {
+	displayNewNote(containerEl: HTMLElement): void {
 		const settings = this.plugin.settings;
 
 		new Setting(containerEl).setName("New note").setHeading();
@@ -920,7 +1086,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private displayManualLinks(containerEl: HTMLElement): void {
+	displayManualLinks(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setName("Horizontal links")
 			.setDesc(
@@ -1012,4 +1178,37 @@ function cloneStyles(styles: LevelStyles): LevelStyles {
 	const out = {} as LevelStyles;
 	for (const level of LEVEL_ORDER) out[level] = { ...styles[level] };
 	return out;
+}
+
+/**
+ * A stand-in host for rendering action labels in settings, where there is no
+ * real selection. Labels that vary with state ("Pin" / "Unpin") show their
+ * neutral form; nothing here is ever run.
+ */
+function previewHost(plugin: TagRelationsPlugin): ActionHost {
+	const noop = () => undefined;
+	return {
+		graph: plugin.graph,
+		groups: plugin.graph.groups,
+		selection: [],
+		isSelected: () => false,
+		isPinned: () => false,
+		removableRelationCount: () => 0,
+		select: noop,
+		clearSelection: noop,
+		togglePin: noop,
+		openTagSearch: noop,
+		showNotes: noop,
+		createNote: noop,
+		promptAddToGroup: noop,
+		promptPutInsideGroup: noop,
+		promptTakeOutOfGroup: noop,
+		promptHorizontalLink: noop,
+		promptRemoveRelation: noop,
+		promptRemoveAllRelations: noop,
+		promptRename: noop,
+		promptAssignTagToNotesOf: noop,
+		promptRemoveTagFromNotes: noop,
+		copyTag: noop,
+	};
 }

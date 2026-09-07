@@ -323,3 +323,78 @@ function renderFileList(parent: HTMLElement, plan: EditPlan): void {
 		});
 	}
 }
+
+/**
+ * Confirms removing relations. Distinct from ConfirmEditModal because that
+ * one is built around a list of *files* it will rewrite; this touches no
+ * files at all, and saying so plainly is most of the point.
+ */
+export class ConfirmRelationModal extends Modal {
+	private options: {
+		title: string;
+		summary: string;
+		note?: string;
+		lines: string[];
+		confirmLabel: string;
+		onConfirm: () => void;
+	};
+
+	constructor(
+		app: App,
+		options: {
+			title: string;
+			summary: string;
+			note?: string;
+			lines: string[];
+			confirmLabel: string;
+			onConfirm: () => void;
+		}
+	) {
+		super(app);
+		this.options = options;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.addClass("tr-modal");
+		contentEl.createEl("h3", { text: this.options.title });
+		contentEl.createDiv({ cls: "tr-modal-summary", text: this.options.summary });
+		if (this.options.note) {
+			contentEl.createDiv({ cls: "tr-modal-note", text: this.options.note });
+		}
+
+		if (this.options.lines.length > 0) {
+			const list = contentEl.createDiv({ cls: "tr-modal-files" });
+			for (const line of this.options.lines.slice(0, 200)) {
+				list.createDiv({ cls: "tr-modal-file" }).createSpan({
+					cls: "tr-modal-file-path",
+					text: line,
+				});
+			}
+			if (this.options.lines.length > 200) {
+				list.createDiv({
+					cls: "tr-modal-file-more",
+					text: `+ ${this.options.lines.length - 200} more`,
+				});
+			}
+		}
+
+		new Setting(contentEl)
+			.addButton((button) =>
+				button.setButtonText("Cancel").onClick(() => this.close())
+			)
+			.addButton((button) =>
+				button
+					.setButtonText(this.options.confirmLabel)
+					.setWarning()
+					.onClick(() => {
+						this.close();
+						this.options.onConfirm();
+					})
+			);
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}

@@ -100,6 +100,22 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Optionally opens the note after creating it
 - Filenames sanitised; same-minute collisions get a numeric suffix
 
+## Action bar
+
+- Every tag action available as a button, not only via right-click
+- Toggle on the fly from the toolbar, or in settings
+- Acts on the last-selected tag, named at the left of the bar
+- Grouped by kind; buttons grey out rather than vanish, so the layout stays stable
+- Every button's icon customisable to any Lucide icon, with live preview
+- Context menu and button bar are generated from one shared registry, so they can never offer different capabilities
+
+## Removing relations
+
+- Remove one relation to a chosen tag — takes the horizontal link and any containment together, leaving nothing half-joined
+- Remove every removable relation a tag has, with a confirmation listing them
+- Take a tag out of one specific main-tag, or out of a specific group directly from the Groups view
+- Shared-note relations are explicitly out of scope and the confirmation says why — there is nothing stored to delete
+
 ## Editing
 
 > These write to your notes. Everything else only reads them.
@@ -145,5 +161,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 274 tests across 53 suites (`npm test`)
-- Architecture decisions recorded in [docs/adr/](docs/adr/)
+- 325 tests across 61 suites (`npm test`)
+- Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

@@ -15,7 +15,17 @@ import { TagGroups } from "./groups";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
 import {
+	RelationStore,
+	countRemovable,
+	describeRemovable,
+	removableRelations,
+	withoutAllRelations,
+	withoutMembership,
+	withoutRelation,
+} from "./relations";
+import {
 	ConfirmEditModal,
+	ConfirmRelationModal,
 	RenameTagModal,
 	TagChoiceModal,
 } from "./editModals";
@@ -342,6 +352,121 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings.pinnedTags = result.pinned;
 		await this.saveSettings();
 		this.refreshViews();
+	}
+
+	// --- Removing relations ------------------------------------------------
+
+	/** The stored relations, in the shape the pure helpers expect. */
+	private relationStore(): RelationStore {
+		return {
+			manualLinks: this.settings.manualLinks,
+			groupLinks: this.settings.groupLinks,
+		};
+	}
+
+	removableRelationCount(tag: string): number {
+		return countRemovable(tag, this.relationStore());
+	}
+
+	private async applyRelationStore(next: RelationStore): Promise<void> {
+		this.settings.manualLinks = next.manualLinks;
+		this.settings.groupLinks = next.groupLinks;
+		await this.saveSettings();
+		this.rebuildGraph();
+	}
+
+	/** Pick one relation of `tag` to remove, whatever kind it is. */
+	promptRemoveRelation(tag: string): void {
+		const relations = removableRelations(tag, this.relationStore());
+		if (relations.length === 0) {
+			new Notice(
+				`${tagLabel(tag)} has no removable relations. Relations from shared notes come from your notes, not from this plugin.`
+			);
+			return;
+		}
+		const subtitles = new Map<string, string>();
+		for (const relation of relations) {
+			subtitles.set(relation.other, describeRemovable(relation));
+		}
+		new TagSuggestModal(
+			this.app,
+			relations.map((relation) => relation.other),
+			`Remove ${tagLabel(tag)}'s relation to…`,
+			(other) => void this.removeRelation(tag, other),
+			subtitles
+		).open();
+	}
+
+	async removeRelation(tag: string, other: string): Promise<void> {
+		await this.applyRelationStore(
+			withoutRelation(tag, other, this.relationStore())
+		);
+		new Notice(`Removed the relation between ${tagLabel(tag)} and ${tagLabel(other)}.`);
+	}
+
+	/** Drop every removable relation this tag has, after confirming. */
+	promptRemoveAllRelations(tag: string): void {
+		const relations = removableRelations(tag, this.relationStore());
+		const total = countRemovable(tag, this.relationStore());
+		if (total === 0) {
+			new Notice(`${tagLabel(tag)} has no removable relations.`);
+			return;
+		}
+		new ConfirmRelationModal(this.app, {
+			title: `Remove all relations of ${tagLabel(tag)}`,
+			summary: `${total} relation${total === 1 ? "" : "s"} to ${
+				relations.length
+			} tag${relations.length === 1 ? "" : "s"} will be removed.`,
+			// Said explicitly because it is the obvious next question, and the
+			// answer is reassuring: nothing here touches note content.
+			note: "Only horizontal links and group membership are removed — both live in this plugin's data, not in your notes. Relations that come from two tags sharing a note are left alone; those would need the tag removed from the notes themselves.",
+			lines: relations.map(
+				(relation) => `${tagLabel(relation.other)} — ${describeRemovable(relation)}`
+			),
+			confirmLabel: "Remove all",
+			onConfirm: () => void this.removeAllRelations(tag),
+		}).open();
+	}
+
+	async removeAllRelations(tag: string): Promise<void> {
+		const total = countRemovable(tag, this.relationStore());
+		await this.applyRelationStore(withoutAllRelations(tag, this.relationStore()));
+		new Notice(
+			`Removed ${total} relation${total === 1 ? "" : "s"} from ${tagLabel(tag)}.`
+		);
+	}
+
+	/** Take a tag out of one specific main-tag or sub-tag. */
+	promptTakeOutOfGroup(tag: string): void {
+		const parents = new TagGroups(this.settings.groupLinks).parentsOf(tag);
+		if (parents.length === 0) {
+			new Notice(`${tagLabel(tag)} is not inside anything.`);
+			return;
+		}
+		if (parents.length === 1) {
+			void this.removeFromGroup(parents[0], tag);
+			return;
+		}
+		const groups = new TagGroups(this.settings.groupLinks);
+		const subtitles = new Map<string, string>();
+		for (const parent of parents) {
+			subtitles.set(parent, LEVEL_LABELS[groups.levelOf(parent)].toLowerCase());
+		}
+		new TagSuggestModal(
+			this.app,
+			parents,
+			`Take ${tagLabel(tag)} out of…`,
+			(parent) => void this.removeFromGroup(parent, tag),
+			subtitles
+		).open();
+	}
+
+	/** Remove exactly one membership, used by the in-place control in the groups view. */
+	async removeMembership(tag: string, parent: string): Promise<void> {
+		await this.applyRelationStore(
+			withoutMembership(tag, parent, this.relationStore())
+		);
+		new Notice(`${tagLabel(tag)} taken out of ${tagLabel(parent)}.`);
 	}
 
 	// --- Editing ----------------------------------------------------------

@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-07
+
+### Added
+
+- **Action bar.** Every tag action now exists as a button, so nothing is reachable only by right-clicking. Toggle it on the fly from the toolbar's wand button, or in settings. Buttons act on the last-selected tag (named at the left of the bar so the target is never ambiguous), are grouped by kind, and **grey out rather than disappear** when they don't apply — a bar that changes shape as the selection changes can't become muscle memory.
+- **Customisable button icons.** Every action's icon can be set to any [Lucide](https://lucide.dev) icon name, with a live preview as you type and a per-action reset. An unknown name leaves the button blank rather than breaking it.
+- **Remove this relation…** — removes every removable tie to one chosen tag: the horizontal link *and* any containment together, so a pair that had both isn't left half-joined.
+- **Remove all relations…** — clears every horizontal link and group membership a tag has, with a confirmation listing each one.
+- **Take out of a main-tag…** as a first-class action, going straight through when there's only one parent and asking which when there are several. The Groups view's hover ✕ now removes exactly that one membership rather than routing through the general handler.
+- [VOCABULARY.md](VOCABULARY.md) — a glossary of every term the plugin uses, including where the code's names differ from the interface's (horizontal link = `ManualLink`), and the three different things called "remove".
+
+### Changed
+
+- **Settings are now six tabs** instead of one long scroll: Relations, Groups, Views, Editing, New note, Action bar. Arranged as two threes, per [ADR 0009](docs/adr/0009-three-or-three-plus-one.md).
+- **The context menu is generated from the same action registry the button bar uses**, so the two can never offer different capabilities. Previously the menu was hand-written; the parity was accidental and would not have survived the next feature.
+- Removing relations explains what it *doesn't* touch: relations that come from two tags sharing a note can't be removed this way, because nothing is stored to delete. The confirmation says so rather than leaving you to wonder why a relation survived.
+
+### Tests
+
+- 29 new tests covering removable-relation discovery, single/all/membership removal (including the both-ties-at-once case), and the action registry's ids, grouping, enablement rules and icon fallbacks.
+
 ## [0.5.1] - 2026-09-07
 
 Closes the loop on tag groups: a second way to build the structure, matching terminology throughout, and three real display bugs found and fixed while auditing the feature end to end.
@@ -168,7 +189,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...0.4.0

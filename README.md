@@ -73,6 +73,28 @@ The cloud has three layouts, like a file browser:
 
 Per-view switches live in the toolbar's **view options** menu, so the toolbar keeps a stable shape as you change views.
 
+## The action bar
+
+Every tag action also exists as a button, so nothing is reachable only by right-clicking. Toggle it from the toolbar's wand button (or in settings) — it appears as a row under the toolbar.
+
+Buttons act on the **last tag you selected**, named at the left of the bar so the target is never ambiguous. They're grouped by kind (selection · notes · grouping · links · editing) and **grey out rather than disappear** when they don't apply, so the layout stays in the same place and becomes muscle memory.
+
+Every button's icon can be changed in **Settings → Action bar** — any [Lucide](https://lucide.dev) icon name works, with a live preview as you type.
+
+## Removing relations
+
+Three removals, and the difference between them matters:
+
+| Action | What it removes | Reversible |
+| --- | --- | --- |
+| **Remove this relation…** | Every removable tie to one chosen tag — the horizontal link *and* any containment, so nothing is left half-joined | Just make it again |
+| **Remove all relations…** | Every horizontal link and group membership the tag has | Just make them again |
+| **Remove this tag from all notes…** | The tag itself, from your note files | **Not** covered by Obsidian's undo |
+
+The first two touch only plugin data. Relations that come from two tags **sharing a note** can't be removed this way at all — there's nothing stored to delete; you'd have to remove the tag from the notes themselves. The confirmation says so explicitly rather than leaving you to wonder why a relation survived.
+
+To take a tag out of one specific group, use **Take out of a main-tag…** (or the ✕ that appears when hovering a member in the Groups view, which removes exactly that one membership without asking which).
+
 ## Selecting tags
 
 Selection works the same way in all three views:
@@ -237,6 +259,10 @@ Not covered: DOM rendering and canvas drawing. Those are exercised by using the 
 ## Design decisions
 
 The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
+
+## Vocabulary
+
+Several words here have narrow meanings — *main-tag*, *horizontal link*, *snapshot*, and three different things called "remove". [VOCABULARY.md](VOCABULARY.md) defines them all, including where the code's names differ from the interface's.
 
 ## Changelog
 
