@@ -24,7 +24,7 @@ Tag groups — the containment that nested tags provided, without what made them
 - **Pan and zoom** for the cloud and groups views: drag empty space to pan, Ctrl/Cmd+wheel to zoom about the cursor. Plain scrolling still scrolls. Zoom is remembered between sessions.
 - **Whole-vault mind-map** — an option to draw every tag and every connection at once rather than only the selection's neighbourhood, with a notice when the node cap truncates.
 - A **view options** menu in the toolbar holding the per-mode switches, so the toolbar keeps a stable shape as you change views.
-- [ADR 0008](docs/adr/0008-tag-groups-are-tags.md) on why a group is a tag rather than a separate object, and [ADR 0009](docs/adr/0009-three-or-three-plus-one.md) recording the "three options, or three plus an escape hatch" heuristic — including where it deliberately does not apply.
+- [ADR 0008](docs/adr/0008-tag-groups-are-tags.md) on why a group is a tag rather than a separate object, and [ADR 0009](docs/adr/0009-three-or-three-plus-one.md) recording the "prefer threes" heuristic in its four shapes — 3, 3+1, 3+3 and 3+3+3 — with where each already appears, where it deliberately does not apply, and what composition costs.
 - 32 tests for the group model and level styling, covering every depth-rule case, multi-parent membership, cycle resistance, rename propagation and pin capping.
 
 ### Changed
