@@ -2,6 +2,14 @@ import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type TagRelationsPlugin from "./main";
 import { AddLocation } from "./edit";
 import {
+	DEFAULT_TITLE_FORMAT,
+	TITLE_FORMAT_PRESETS,
+	availableTimeZones,
+	isValidTimeZone,
+	systemTimeZone,
+} from "./datetime";
+import { titleFor } from "./newNote";
+import {
 	ManualLink,
 	NoteMatchMode,
 	SortMode,
@@ -26,6 +34,14 @@ export interface TagRelationsSettings {
 	mode: ViewMode;
 	sort: SortMode;
 	showInspector: boolean;
+
+	// New note
+	newNoteEnabled: boolean;
+	newNoteTitleFormat: string;
+	newNoteTimeZone: string;
+	newNoteFolder: string;
+	newNoteApplySelectedTags: boolean;
+	newNoteOpenAfterCreate: boolean;
 
 	// Editing
 	addTagLocation: AddLocation;
@@ -70,6 +86,13 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	mode: "cloud",
 	sort: "name-asc",
 	showInspector: true,
+
+	newNoteEnabled: true,
+	newNoteTitleFormat: DEFAULT_TITLE_FORMAT,
+	newNoteTimeZone: "",
+	newNoteFolder: "",
+	newNoteApplySelectedTags: true,
+	newNoteOpenAfterCreate: true,
 
 	addTagLocation: "frontmatter",
 	confirmBulkEdits: true,
@@ -230,6 +253,8 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 
 		this.displayManualLinks(containerEl);
+
+		this.displayNewNote(containerEl);
 
 		new Setting(containerEl).setName("Editing").setHeading();
 
@@ -530,6 +555,150 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.settings.treeAutoExpandDepth = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshViews();
+					})
+			);
+	}
+
+	private displayNewNote(containerEl: HTMLElement): void {
+		const settings = this.plugin.settings;
+
+		new Setting(containerEl).setName("New note").setHeading();
+
+		new Setting(containerEl)
+			.setName("Show the new note button")
+			.setDesc(
+				"Adds a button to the Tag Relations toolbar that creates a note named after the current date and time. The command stays available either way."
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.newNoteEnabled).onChange(async (value) => {
+					settings.newNoteEnabled = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+					this.display();
+				})
+			);
+
+		if (!settings.newNoteEnabled) return;
+
+		// A live sample of what the current format and timezone produce, so the
+		// token vocabulary never has to be guessed at.
+		let previewEl: HTMLElement | null = null;
+		const renderPreview = () => {
+			if (!previewEl) return;
+			previewEl.empty();
+			const zoneOk = isValidTimeZone(settings.newNoteTimeZone);
+			const name = titleFor(
+				settings.newNoteTitleFormat,
+				zoneOk ? settings.newNoteTimeZone : ""
+			);
+			previewEl.createSpan({ cls: "tr-preview-label", text: "Right now: " });
+			previewEl.createSpan({ cls: "tr-preview-value", text: `${name}.md` });
+			if (!zoneOk) {
+				previewEl.createDiv({
+					cls: "tr-preview-warning",
+					text: `Unknown timezone "${settings.newNoteTimeZone}" — using the system zone instead.`,
+				});
+			}
+		};
+
+		new Setting(containerEl)
+			.setName("Title format")
+			.setDesc(
+				"Moment-style tokens: YYYY YY MM DD HH mm ss, plus MMM MMMM ddd dddd and h/A for 12-hour time. Text in [square brackets] is kept literally. Characters a filename cannot hold become hyphens."
+			)
+			.addText((text) => {
+				text
+					.setPlaceholder(DEFAULT_TITLE_FORMAT)
+					.setValue(settings.newNoteTitleFormat)
+					.onChange(async (value) => {
+						settings.newNoteTitleFormat = value || DEFAULT_TITLE_FORMAT;
+						await this.plugin.saveSettings();
+						renderPreview();
+					});
+				text.inputEl.addClass("tr-format-input");
+			});
+
+		new Setting(containerEl)
+			.setName("Format presets")
+			.setDesc("Pick one to fill the field above.")
+			.addDropdown((dd) => {
+				dd.addOption("", "Choose a preset…");
+				for (const preset of TITLE_FORMAT_PRESETS) {
+					dd.addOption(preset.format, preset.label);
+				}
+				dd.setValue("");
+				dd.onChange(async (value) => {
+					if (!value) return;
+					settings.newNoteTitleFormat = value;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName("Timezone")
+			.setDesc(
+				"Which zone the timestamp is read in. Useful when you want stable filenames while travelling, or a whole vault kept in UTC."
+			)
+			.addDropdown((dd) => {
+				dd.addOption("", `System default (${systemTimeZone()})`);
+				for (const zone of availableTimeZones()) dd.addOption(zone, zone);
+				// A zone saved on another machine may not exist here; keep it
+				// selectable rather than silently switching the user's setting.
+				const current = settings.newNoteTimeZone;
+				if (current && !availableTimeZones().includes(current)) {
+					dd.addOption(current, `${current} (not available here)`);
+				}
+				dd.setValue(current);
+				dd.onChange(async (value) => {
+					settings.newNoteTimeZone = value;
+					await this.plugin.saveSettings();
+					renderPreview();
+				});
+			});
+
+		const preview = new Setting(containerEl).setName("Preview");
+		previewEl = preview.controlEl.createDiv({ cls: "tr-preview" });
+		renderPreview();
+
+		new Setting(containerEl)
+			.setName("Folder for new notes")
+			.setDesc(
+				"Vault-relative path, created if missing. Leave empty to use Obsidian's own default location for new notes."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("Default location from Obsidian settings")
+					.setValue(settings.newNoteFolder)
+					.onChange(async (value) => {
+						settings.newNoteFolder = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Apply the selected tags")
+			.setDesc(
+				"Write whichever tags are selected in the view into the new note's frontmatter, so it joins the graph immediately."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.newNoteApplySelectedTags)
+					.onChange(async (value) => {
+						settings.newNoteApplySelectedTags = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Open after creating")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.newNoteOpenAfterCreate)
+					.onChange(async (value) => {
+						settings.newNoteOpenAfterCreate = value;
+						await this.plugin.saveSettings();
 					})
 			);
 	}

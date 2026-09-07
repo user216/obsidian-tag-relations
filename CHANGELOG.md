@@ -6,9 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-07
+
 ### Added
 
+- **Create a new note.** A toolbar button (and a command) creates a note titled from the current date and time, defaulting to `YYYYMMDDHHmm` — for example `202609071432.md`.
+  - **Title format** is configurable with moment-style tokens: `YYYY YY MM DD HH mm ss`, plus `MMM MMMM ddd dddd` and `h`/`A` for 12-hour time. Text in `[square brackets]` is kept literally. Eight presets are offered, and the settings page shows a live preview of the filename the current format produces.
+  - **Timezone** is selectable from every zone the runtime knows (418 of them), or left on the system default. Useful for stable filenames while travelling, or keeping a whole vault on UTC. An unknown zone falls back to the system zone rather than blocking note creation.
+  - **Folder** is configurable and created if missing; left empty, Obsidian's own "default location for new notes" is honoured.
+  - **The current tag selection** is written into the new note's frontmatter by default, so it joins the graph immediately. Toggleable.
+  - The whole feature can be switched off, which hides the toolbar button.
+  - Filenames are sanitised: characters a filename cannot hold become hyphens, so a format containing `/` produces one note rather than silently creating folders. Same-minute collisions get a `-1`, `-2` suffix.
+- 42 tests covering date formatting, timezone handling (including DST, date-line and year boundaries), filename sanitising, and frontmatter generation.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — full technical documentation: module map and dependency direction, the graph data model and six-phase build pipeline, the `ViewHost` contract, per-renderer internals (FLIP re-grouping, the mind-map's force equations, camera and hit-testing math, tree path-keyed expansion), the editing subsystem's four safety invariants, settings persistence, build and test architecture, performance characteristics, known limitations, and extension points.
+
+### Fixed
+
+- `Intl.supportedValuesOf("timeZone")` returns canonical zone names, which spell UTC as `Etc/UTC`. Plain `UTC` is now offered explicitly in the timezone list, so it is selectable and a saved `UTC` setting is no longer mislabelled as unavailable.
 
 ## [0.3.1] - 2026-09-06
 
@@ -103,7 +117,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/user216/obsidian-tag-relations/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/user216/obsidian-tag-relations/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/user216/obsidian-tag-relations/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/user216/obsidian-tag-relations/compare/0.1.0...0.2.0

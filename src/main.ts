@@ -10,6 +10,7 @@ import { TagRelationsView, VIEW_TYPE_TAG_RELATIONS } from "./view";
 import { TagSuggestModal } from "./modals";
 import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
+import { NoteCreator } from "./newNote";
 import {
 	ConfirmEditModal,
 	RenameTagModal,
@@ -20,6 +21,7 @@ export default class TagRelationsPlugin extends Plugin {
 	settings: TagRelationsSettings = { ...DEFAULT_SETTINGS };
 	graph = new TagGraph();
 	editor!: TagEditor;
+	noteCreator!: NoteCreator;
 
 	/** Vault edits arrive in bursts; rebuild once the dust settles. */
 	rebuildGraphDebounced = debounce(() => this.rebuildGraph(), 900, true);
@@ -30,6 +32,14 @@ export default class TagRelationsPlugin extends Plugin {
 		this.editor = new TagEditor(this.app, () => ({
 			caseSensitive: this.settings.caseSensitive,
 			addLocation: this.settings.addTagLocation,
+		}));
+
+		this.noteCreator = new NoteCreator(this.app, () => ({
+			titleFormat: this.settings.newNoteTitleFormat,
+			timeZone: this.settings.newNoteTimeZone,
+			folder: this.settings.newNoteFolder,
+			applySelectedTags: this.settings.newNoteApplySelectedTags,
+			openAfterCreate: this.settings.newNoteOpenAfterCreate,
 		}));
 
 		this.registerView(
@@ -105,6 +115,11 @@ export default class TagRelationsPlugin extends Plugin {
 				).open();
 				return true;
 			},
+		});
+		this.addCommand({
+			id: "create-new-note",
+			name: "Create a new note",
+			callback: () => void this.createNote(this.selectionFromViews()),
 		});
 		this.addCommand({
 			id: "rebuild-tag-graph",
@@ -362,6 +377,34 @@ export default class TagRelationsPlugin extends Plugin {
 		const outcome = await this.editor.applyUnassign(tag, paths, includeNested);
 		this.report(outcome, `Removed ${tagLabel(tag)}`);
 		this.rebuildGraphDebounced();
+	}
+
+	/**
+	 * Create a timestamped note, optionally carrying the given tags. Returns
+	 * silently on failure; NoteCreator has already told the user why.
+	 */
+	async createNote(tags: string[] = []): Promise<void> {
+		const result = await this.noteCreator.create(tags);
+		if (!result) return;
+		if (result.tags.length > 0) {
+			new Notice(
+				`Created ${result.file.basename} with ${result.tags.length} tag${
+					result.tags.length === 1 ? "" : "s"
+				}.`
+			);
+			// The new note carries tags, so the graph is now out of date.
+			this.rebuildGraphDebounced();
+		} else {
+			new Notice(`Created ${result.file.basename}.`);
+		}
+	}
+
+	/** The selection of the first open view, for commands invoked outside one. */
+	private selectionFromViews(): string[] {
+		for (const view of this.views()) {
+			if (view.selection.length > 0) return view.selection.slice();
+		}
+		return [];
 	}
 
 	/** Tags on one file, normalised, for the "remove from this note" picker. */

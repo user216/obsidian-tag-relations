@@ -48,6 +48,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/host.ts` | 66 | The `ViewHost` contract renderers see |
 | `src/types.ts` | 44 | Shared enums and labels |
 | `src/links.ts` | 42 | Manual-link remapping across renames (pure) |
+| `src/datetime.ts` | 214 | Timezone-aware formatting and filename sanitising (pure) |
+| `src/newNote.ts` | 137 | Timestamped note creation |
 | `src/modals.ts` | 43 | Fuzzy tag picker |
 
 ### Dependency direction
@@ -61,12 +63,14 @@ main.ts                        ← plugin lifecycle, orchestration
               └── host.ts      ← the contract they see
                     └── graph.ts, settings.ts, types.ts
 edit.ts, editModals.ts         ← writes; used by main and view
-selection.ts, links.ts         ← pure logic; no Obsidian imports at all
+newNote.ts                     ← creates notes; uses datetime.ts
+selection.ts, links.ts,        ← pure logic; no Obsidian imports at all
+datetime.ts
 ```
 
 `view.ts` and `settings.ts` each `import type TagRelationsPlugin from "./main"`. These are **type-only** imports, erased at build time, so there is no runtime cycle.
 
-Two modules — `selection.ts` and `links.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
+Three modules — `selection.ts`, `links.ts` and `datetime.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
 
 ---
 
@@ -311,6 +315,22 @@ Renames additionally call `remapManualLinks` (pure, in `links.ts`), which rewrit
 
 ---
 
+## 8b. Creating notes
+
+`NoteCreator` (`src/newNote.ts`) is the plugin's second writer, and a far simpler one than `TagEditor`: it only ever creates files, never modifies existing ones, so it needs none of the plan-verify-apply machinery.
+
+**Formatting** lives in `src/datetime.ts`, which is Obsidian-free and fully tested. Obsidian bundles plain moment.js, which cannot resolve named IANA zones without moment-timezone; `Intl.DateTimeFormat` can, is built into the runtime, and costs no dependency. So wall-clock parts are read from `Intl` in the target zone and substituted into a moment-style format string — the token vocabulary Obsidian users already know.
+
+Three details worth knowing:
+
+- `hourCycle: "h23"` is used rather than `hour12: false`, because the latter can yield `"24"` for midnight in some runtimes.
+- The weekday is *derived* from the zone-local calendar date (`Date.UTC(y, m-1, d).getUTCDay()`) rather than requested separately, so it can never disagree with the y/m/d that were formatted.
+- `Intl.supportedValuesOf("timeZone")` returns canonical names, which spell UTC as `Etc/UTC`. Plain `UTC` is prepended explicitly, since it is valid and is what people look for.
+
+**Creation** resolves the folder (an explicit setting, created if missing; otherwise `fileManager.getNewFileParent`, which honours Obsidian's own preference), sanitises the formatted title into a legal filename, finds a free path (`-1`, `-2`… — same-minute collisions are routine under the default format, not an edge case), writes frontmatter carrying the selected tags, and optionally opens the result. Failures surface as a `Notice` and return null rather than throwing into the click handler.
+
+Sanitising replaces path separators rather than honouring them, so a format containing `/` yields one note instead of silently creating a folder tree.
+
 ## 9. Settings and persistence
 
 One flat `TagRelationsSettings` interface, persisted to `data.json` via Obsidian's `loadData`/`saveData`. Loading merges stored values over `DEFAULT_SETTINGS`, so a settings file written by an older version gains new keys with their defaults rather than leaving them `undefined`. `manualLinks` is additionally guarded against a hand-edited file that made it a non-array.
@@ -334,7 +354,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-163 tests across 31 suites:
+205 tests across 40 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -343,6 +363,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `editor.test.ts` | `TagEditor` end to end against an in-memory vault — rename, assign, remove, and that code blocks / URL fragments / headings survive |
 | `selection.test.ts` | Selection transitions, filtering, all five sort orders, snapshot staleness |
 | `views.test.ts` | Tree branching, map node collection and anchoring, `scaleByCount`, modifier detection, manual-link remapping, settings invariants |
+| `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |
 
 `tests/helpers/vault.ts` is an in-memory vault: it stores note text, derives a metadata cache from it (inline tag offsets plus parsed frontmatter), and implements `vault.process` and `processFrontMatter`. Its tag scanner approximates Obsidian's parser — skipping fenced blocks and headings — and a dedicated suite tests *the fixture itself*, since the editor's safety depends on those exclusions being real.
 

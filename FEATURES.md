@@ -65,6 +65,18 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Click a result to open it; Ctrl/Cmd click opens a new tab
 - Configurable panel height and rendered-result cap
 
+## Creating notes
+
+- New note button in the toolbar, plus a command; the whole feature is toggleable
+- Title from the current date and time, `YYYYMMDDHHmm` by default
+- Configurable format with moment-style tokens and `[literal]` escaping
+- Eight format presets, with a live filename preview in settings
+- Any IANA timezone, or the system default; an unknown zone falls back rather than failing
+- Configurable target folder, created if missing; otherwise Obsidian's own default location
+- The current tag selection written into the new note's frontmatter (toggleable)
+- Optionally opens the note after creating it
+- Filenames sanitised; same-minute collisions get a numeric suffix
+
 ## Editing
 
 > These write to your notes. Everything else only reads them.
@@ -101,7 +113,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 ## Commands
 
 - Open tag relations · Open tag relations in sidebar
-- Focus a tag · Connect two tags
+- Focus a tag · Connect two tags · Create a new note
 - Rename a tag
 - Add a tag to the active note · Remove a tag from the active note
 - Rescan vault for tags
@@ -110,5 +122,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 163 tests across 31 suites (`npm test`)
+- 205 tests across 40 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/)

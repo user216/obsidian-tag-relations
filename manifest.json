@@ -1,7 +1,7 @@
 {
 	"id": "tag-relations",
 	"name": "Tag Relations",
-	"version": "0.3.1",
+	"version": "0.4.0",
 	"minAppVersion": "1.4.4",
 	"description": "Explore relations between tags as a tag cloud, mind-map and tree, and rename or assign tags in place. Connect tags to each other without nesting them.",
 	"author": "spivak.a.o",

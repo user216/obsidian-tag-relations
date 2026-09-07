@@ -64,6 +64,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private searchInput!: HTMLInputElement;
 	private stickyButton!: HTMLElement;
 	private editButton!: HTMLElement;
+	private newNoteButton!: HTMLElement;
 	private matchSelect!: HTMLSelectElement;
 
 	private snapshot: NotesSnapshot | null = null;
@@ -161,6 +162,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	}
 
 	private afterSelectionChange(): void {
+		this.syncNewNoteButton();
 		this.renderActiveMode();
 		this.renderInspector();
 		// The snapshot stays put; only its stale badge reacts.
@@ -545,6 +547,12 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.renderActiveMode();
 		});
 
+		this.newNoteButton = toolbar.createDiv({ cls: "tr-icon-button" });
+		setIcon(this.newNoteButton, "file-plus");
+		this.newNoteButton.addEventListener("click", () =>
+			void this.plugin.createNote(this.selection.slice())
+		);
+
 		this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });
 		setIcon(this.editButton, "pencil");
 		setTooltip(
@@ -636,7 +644,28 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.settings.stickyMultiSelect
 		);
 		this.editButton?.toggleClass("is-active", this.settings.editMode);
+		this.syncNewNoteButton();
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
+	}
+
+	/**
+	 * The button is hidden when disabled, and its tooltip names both the
+	 * filename it will produce and the tags it will carry, so the result is
+	 * predictable before clicking.
+	 */
+	private syncNewNoteButton(): void {
+		const button = this.newNoteButton;
+		if (!button) return;
+		const enabled = this.settings.newNoteEnabled;
+		button.toggleClass("is-hidden", !enabled);
+		if (!enabled) return;
+
+		const name = this.plugin.noteCreator.previewTitle();
+		const tags =
+			this.settings.newNoteApplySelectedTags && this.selection.length > 0
+				? ` tagged ${this.selection.map(tagLabel).join(", ")}`
+				: "";
+		setTooltip(button, `Create ${name}.md${tags}`, { placement: "bottom" });
 	}
 
 	private async setMode(mode: ViewMode): Promise<void> {

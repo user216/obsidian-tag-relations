@@ -883,3 +883,33 @@
 		display: none;
 	}
 }
+
+/* ------------------------------------------------------- new note button */
+
+.tr-icon-button.is-hidden {
+	display: none;
+}
+
+.tr-format-input {
+	font-family: var(--font-monospace);
+}
+
+.tr-preview {
+	font-size: var(--font-ui-small);
+	text-align: right;
+}
+
+.tr-preview-label {
+	color: var(--text-muted);
+}
+
+.tr-preview-value {
+	font-family: var(--font-monospace);
+	color: var(--text-normal);
+}
+
+.tr-preview-warning {
+	margin-top: 2px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-error);
+}

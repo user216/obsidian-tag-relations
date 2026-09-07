@@ -55,6 +55,20 @@ Press **Show notes** to list the notes carrying your selected tags. **Match mode
 
 The list is a **snapshot**, not a live query. It fills only when you press the button, so you can keep clicking around the graph to investigate results without the list shifting under you. When the selection, match mode, or vault moves on, the panel marks itself **Outdated** and offers a refresh rather than silently changing. Click a result to open it, Ctrl/Cmd click for a new tab.
 
+## Creating notes
+
+A **new note** button in the toolbar creates a note named after the current date and time — `202609071432.md` by default. It is also a command, and can be switched off entirely in settings.
+
+| Setting | What it does |
+| --- | --- |
+| **Title format** | Moment-style tokens: `YYYY YY MM DD HH mm ss`, plus `MMM MMMM ddd dddd` and `h`/`A` for 12-hour time. Text in `[square brackets]` is kept literally, so `[Note] YYYY-MM-DD` gives `Note 2026-09-07`. Eight presets are offered, with a live preview of the filename. |
+| **Timezone** | Any IANA zone, or the system default. Handy for stable filenames while travelling, or keeping a vault on UTC. |
+| **Folder** | Created if missing. Left empty, Obsidian's own default location for new notes is used. |
+| **Apply the selected tags** | Writes whichever tags are selected in the view into the new note's frontmatter, so it joins the graph immediately. |
+| **Open after creating** | Opens the note once made. |
+
+Characters a filename cannot hold become hyphens — a format containing `/` makes one note, not nested folders. Two notes made in the same minute get a `-1`, `-2` suffix rather than colliding.
+
 ## Editing tags
 
 > **This part writes to your notes.** Everything above only reads them. Obsidian's undo is per-file and does not cover a bulk edit, so keep a backup or version control before renaming across a large vault. Every bulk action shows you exactly which notes it will change before it changes them.
@@ -87,6 +101,7 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 - Open tag relations / Open tag relations in sidebar
 - Focus a tag (fuzzy picker showing note and relation counts)
 - Connect two tags
+- Create a new note
 - Rename a tag
 - Add a tag to the active note / Remove a tag from the active note
 - Rescan vault for tags
@@ -103,6 +118,7 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 - **Write new tags to** — frontmatter (default) or the end of the note body.
 - **Confirm bulk edits** — show the affected notes before writing to more than one. Removals always ask regardless.
 - **Edit mode** — show inline rename controls on tags; also on the view's toolbar.
+- **New note** — enable the button, and set its title format, timezone, folder, whether selected tags are applied, and whether the note opens.
 
 ## Install
 
@@ -151,6 +167,8 @@ src/
   host.ts        the interface renderers see
   selection.ts   selection, filtering, sorting, snapshot staleness
   links.ts       manual-link remapping across renames
+  datetime.ts    timezone-aware date formatting and filename sanitising
+  newNote.ts     timestamped note creation
 tests/           node:test suites, run with `npm test`
 ```
 
