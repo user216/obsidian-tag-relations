@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-09-08
+
+### Added
+
+- **The plex's starting-point list can sit on either side,** chosen in Settings → Views → Plex. Which side reads as "the index" depends on where the view is docked: in a right sidebar the list usually wants to be against the plex rather than against the window edge, and in the main pane the opposite is usually true.
+  - The column is reordered in CSS rather than rebuilt in the DOM, so switching sides keeps the pan-and-zoom layer and its camera intact instead of resetting the view.
+  - The dividing border and the tooltips move with it, so the border always faces the plex and no tooltip is thrown off-screen.
+
 ## [0.22.0] - 2026-09-08
 
 ### Fixed
@@ -527,6 +535,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.22.1]: https://github.com/user216/obsidian-tag-relations/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/user216/obsidian-tag-relations/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/user216/obsidian-tag-relations/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/user216/obsidian-tag-relations/compare/0.19.2...0.20.0

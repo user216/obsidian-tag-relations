@@ -11,7 +11,9 @@ import { MAX_EXCERPT_LINES } from "./excerpt";
 import {
 	PLEX_DEPTH_DESCRIPTIONS,
 	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_SIDE_LABELS,
 	PlexDepth,
+	PlexLauncherSide,
 } from "./plex";
 import {
 	TOOLBAR_CONTROLS,
@@ -98,6 +100,8 @@ export interface TagRelationsSettings {
 	plexPreviewLines: number;
 	/** Whether the plex's starting-point tag list is expanded. */
 	plexLauncherOpen: boolean;
+	/** Which side of the plex that list sits on. */
+	plexLauncherSide: PlexLauncherSide;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -211,6 +215,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	plexPreviewCount: 6,
 	plexPreviewLines: 0,
 	plexLauncherOpen: true,
+	plexLauncherSide: "right",
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -722,6 +727,26 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Which side it sits on")
+			.setDesc(
+				"Where the starting-point list goes. Which side reads best depends on where the view is docked — in a right sidebar the list usually wants to be against the plex rather than the window edge."
+			)
+			.addDropdown((drop) => {
+				for (const side of Object.keys(
+					PLEX_LAUNCHER_SIDE_LABELS
+				) as PlexLauncherSide[]) {
+					drop.addOption(side, PLEX_LAUNCHER_SIDE_LABELS[side]);
+				}
+				drop
+					.setValue(this.plugin.settings.plexLauncherSide)
+					.onChange(async (value) => {
+						this.plugin.settings.plexLauncherSide = value as PlexLauncherSide;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("Lines of each note to preview")

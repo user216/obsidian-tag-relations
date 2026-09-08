@@ -40,6 +40,21 @@ export const PLEX_DEPTH_DESCRIPTIONS: Record<PlexDepth, string> = {
 		"Adds siblings, plus the level above the main-tags and below the sub-tags, drawn faintly.",
 };
 
+/**
+ * Which side of the plex the starting-point list sits on.
+ *
+ * Worth a setting rather than a fixed choice: which side reads as "the index"
+ * depends on where the view is docked. In a right sidebar the list wants to be
+ * on the left, against the plex rather than against the window edge, and in
+ * the main pane the opposite is usually true.
+ */
+export type PlexLauncherSide = "left" | "right";
+
+export const PLEX_LAUNCHER_SIDE_LABELS: Record<PlexLauncherSide, string> = {
+	left: "Left of the plex",
+	right: "Right of the plex",
+};
+
 export type PlexRowId =
 	| "grandparents"
 	| "parents"

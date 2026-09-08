@@ -210,7 +210,13 @@ export class PlexRenderer implements ModeRenderer {
 		const el = this.launcherEl;
 		el.empty();
 		const open = host.settings.plexLauncherOpen;
+		const side = host.settings.plexLauncherSide;
 		el.toggleClass("is-collapsed", !open);
+		// Ordered in CSS rather than by re-creating the DOM, so changing sides
+		// does not throw away the panzoom layer and its camera.
+		this.root.toggleClass("is-launcher-left", side === "left");
+		// The tooltip belongs on the side facing the plex, not off-screen.
+		const away = side === "left" ? "right" : "left";
 
 		const header = el.createDiv({ cls: "tr-plex-launcher-head" });
 		const twisty = header.createSpan({ cls: "tr-twisty" });
@@ -218,7 +224,7 @@ export class PlexRenderer implements ModeRenderer {
 		twisty.toggleClass("is-open", open);
 		header.createSpan({ text: open ? "Start from" : "" });
 		setTooltip(header, open ? "Collapse the tag list" : "Show the tag list", {
-			placement: "left",
+			placement: away,
 		});
 		header.addEventListener("click", () => void host.togglePlexLauncher());
 		if (!open) return;
@@ -255,7 +261,7 @@ export class PlexRenderer implements ModeRenderer {
 					text: String(host.graph.countOf(tag)),
 				});
 				setTooltip(row, `Centre the plex on ${tagLabel(tag)}`, {
-					placement: "left",
+					placement: away,
 				});
 				row.addEventListener("click", (event) => {
 					event.stopPropagation();

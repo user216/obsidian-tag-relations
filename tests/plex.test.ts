@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
 	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_SIDE_LABELS,
 	PlexDepth,
 	PlexSource,
 	buildPlex,
@@ -293,4 +294,16 @@ test("a preview count of zero lists everything rather than nothing", () => {
 	const preview = previewNotes("#urgent", paths, 0);
 	assert.deepEqual(preview.paths, paths);
 	assert.equal(preview.hidden, 0);
+});
+
+test("both launcher sides are offered and labelled", () => {
+	// A stored value outside this record is repaired on load, so the record
+	// is the authority on what the setting may hold.
+	assert.deepEqual(Object.keys(PLEX_LAUNCHER_SIDE_LABELS).sort(), [
+		"left",
+		"right",
+	]);
+	for (const label of Object.values(PLEX_LAUNCHER_SIDE_LABELS)) {
+		assert.ok(label.length > 0);
+	}
 });

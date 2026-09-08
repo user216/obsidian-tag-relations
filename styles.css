@@ -2199,6 +2199,17 @@
 	flex-basis: 26px;
 }
 
+/*
+ * The other side. Ordered rather than reordered in the DOM, so switching
+ * sides keeps the panzoom layer and its camera intact — and the dividing
+ * border moves with the column so it always faces the plex.
+ */
+.tr-plex.is-launcher-left .tr-plex-launcher {
+	order: -1;
+	border-left: none;
+	border-right: 1px solid var(--background-modifier-border);
+}
+
 .tr-plex-launcher-head {
 	display: flex;
 	align-items: center;
