@@ -200,7 +200,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 ## Font zoom
 
-- Smaller / percentage / larger buttons scaling the type in every view, 60% to 250%
+- Smaller / percentage / larger buttons scaling the type in every view, 25% to 400%
+- Buttons move between proportionally spaced stops, like a browser's zoom menu, so every press is a similar relative change
 - Distinct from the cloud's pan-and-zoom: the type size changes, so tags **reflow** instead of the layout being magnified
 - Covers the cloud, list, details, tree, groups and the mind-map's labels, band headings included
 - The percentage doubles as the reset button; the arrows dim at the bounds
@@ -236,5 +237,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 496 tests across 92 suites (`npm test`)
+- 499 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

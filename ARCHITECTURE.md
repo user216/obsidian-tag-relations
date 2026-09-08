@@ -57,7 +57,7 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/actionLayout.ts` | 115 | Button placement, ordering and reordering (pure) |
 | `src/toolbarControls.ts` | 110 | The toolbar's built-in controls and their visibility (pure) |
 | `src/bands.ts` | 100 | Splitting a tag list into pinned/bookmarked/rest bands (pure) |
-| `src/fontZoom.ts` | 42 | Font-zoom bounds, stepping and labelling (pure) |
+| `src/fontZoom.ts` | 78 | Font-zoom stops, stepping and labelling (pure) |
 | `src/transfer.ts` | 300 | Export payloads, import validation, merge planning (pure) |
 | `src/transferModals.ts` | 220 | The import dialog, showing a plan before applying |
 | `src/newNoteModal.ts` | 250 | The multi-tag picker shown when creating a note |
@@ -392,6 +392,8 @@ The mind-map cannot follow that model literally. Removing nodes from a graph str
 
 Three factors decide a tag pill's size: its note count, its level (main-tag, sub-tag, plain) and the font zoom. They are multiplied in `pillFontSize` (`src/host.ts`) rather than split between code and CSS, because the count-based size differs per tag and must therefore be an inline style — and an inline `font-size` beats any stylesheet rule. The level scale had in fact been living in CSS as `--tr-level-scale` and was being silently discarded on every pill; the views that *don't* set an inline size (the details table, group names) still read that property, which is why it remains.
 
+The buttons step along a ladder of stops rather than by a fixed amount. Over a 25–400% range a fixed step is wrong at both ends — ten percentage points is a third of the way out at 30% and a rounding error at 400% — so the stops are spaced roughly proportionally, which keeps every press a similar relative change. Stepping is defined as "the next stop past the current value" rather than "one index along", because the settings slider sets values between stops and pressing + there must go up rather than sideways.
+
 For everything sized by the theme rather than by count — tree rows, the details table, band headings — the view publishes `--tr-font-scale` on its root and the stylesheet multiplies. That keeps one scale driving both halves.
 
 ## 8e. The action registry
@@ -427,7 +429,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-496 tests across 92 suites:
+499 tests across 92 suites:
 
 | Suite | Covers |
 | --- | --- |

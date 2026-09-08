@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-08
+
+### Changed
+
+- **A much wider font zoom range: 25% to 400%,** up from 60% to 250%. Zooming out far enough to fit a large vault's tags on one screen is the main thing the feature is for, and 60% was not far enough.
+- **The buttons now move between stops rather than by a fixed amount** — 25, 33, 40, 50, 60, 67, 75, 85, 100, 115, 130, 150, 175, 200, 250, 300, 400%, in the manner of a browser's zoom menu. A fixed step cannot serve a range this wide: ten percentage points is a third of the way out at 30% and a rounding error at 400%, so it would be either too coarse at the small end or a hundred clicks at the large one. Proportional spacing keeps every press a similar relative change and keeps the readings round.
+  - The settings slider is **not** restricted to the stops — it still sets any value in range, now in 5% increments.
+  - Pressing − or + from a value between two stops moves to the next stop *past* it, rather than snapping backwards to the nearest one first.
+
+### Tests
+
+- 3 new tests, and the stepping tests rewritten for the ladder: every stop reachable in both directions, off-ladder values stepping the right way, no single press changing the size by more than half again.
+
 ## [0.17.0] - 2026-09-08
 
 ### Added
@@ -409,6 +422,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.18.0]: https://github.com/user216/obsidian-tag-relations/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/user216/obsidian-tag-relations/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...0.15.0

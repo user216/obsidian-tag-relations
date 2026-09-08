@@ -118,7 +118,9 @@ It's a presentation override, not a settings change: nothing it hides is actuall
 
 ## Font zoom, and why it isn't the same as zooming
 
-Three toolbar buttons — **−**, a percentage, **+** — scale the type in every view between 60% and 250%. The percentage is also the reset button, so the group takes three slots instead of four, and the arrows dim when there's nowhere further to go.
+Three toolbar buttons — **−**, a percentage, **+** — scale the type in every view between **25% and 400%**. The percentage is also the reset button, so the group takes three slots instead of four, and the arrows dim when there's nowhere further to go.
+
+The buttons move between a ladder of stops — 25, 33, 40, 50, 60, 67, 75, 85, 100, 115, 130, 150, 175, 200, 250, 300, 400% — rather than by a fixed amount, the way a browser's zoom menu does. A fixed step can't serve a range this wide: ten points is a third of the way out at 30% and a rounding error at 400%. The slider in settings isn't limited to the stops, and pressing − or + from a value between two of them moves to the next stop past it rather than snapping backwards first.
 
 This is a different thing from the cloud's pan-and-zoom, and both are useful:
 
@@ -224,7 +226,7 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 - **Write new tags to** — frontmatter (default) or the end of the note body.
 - **Confirm bulk edits** — show the affected notes before writing to more than one. Removals always ask regardless.
 - **Edit mode** — show inline rename controls on tags; also on the view's toolbar.
-- **Tag font size** — the same scale the toolbar's − / + buttons set, from 60% to 250%.
+- **Tag font size** — the same scale the toolbar's − / + buttons set, anywhere from 25% to 400%.
 - **New note** — enable the button, and set its title format, timezone, folder, whether selected tags are applied, and whether the note opens.
 
 ## Install
