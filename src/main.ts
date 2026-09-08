@@ -498,6 +498,14 @@ export default class TagRelationsPlugin extends Plugin {
 		this.refreshViews();
 	}
 
+	/** Every bookmarked tag, at any depth. */
+	allBookmarkedTags(): string[] {
+		const marks = this.bookmarks();
+		const tags = new Set(this.settings.bookmarkRoots);
+		for (const tag of marks.involved()) tags.add(tag);
+		return Array.from(tags);
+	}
+
 	/** Top-level bookmark entries, in the order they were added. */
 	bookmarkTopLevel(): string[] {
 		const marks = this.bookmarks();

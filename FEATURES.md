@@ -165,6 +165,14 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Groups section lists every main-tag, expandable to its members
 - Every row selects on click and opens the full context menu on right-click
 
+## Bands
+
+- Pinned and bookmarked tags separated into labelled sections in the cloud, tree and groups views
+- The bookmarked band can sit above or below the rest of the list
+- Either band can be turned off; its tags then sit with the rest rather than being hidden
+- A tag that is both pinned and bookmarked appears once, under Pinned
+- On the mind-map, bookmarked tags are always drawn and ringed (dashed, versus a pin's solid ring)
+
 ## Bookmarks
 
 - A shortlist you arrange yourself, separate from groups and usable alongside them
@@ -202,5 +210,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 442 tests across 86 suites (`npm test`)
+- 456 tests across 90 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

@@ -143,6 +143,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		return this.plugin.isBookmarked(tag);
 	}
 
+	bookmarkedTags(): string[] {
+		return this.plugin.allBookmarkedTags();
+	}
+
 	toggleBookmark(tag: string): void {
 		void this.plugin.toggleBookmark(tag);
 	}

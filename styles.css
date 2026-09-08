@@ -1680,3 +1680,28 @@
 	opacity: 0.5;
 	text-decoration: line-through;
 }
+
+/* ---------------------------------------------------------------- bands */
+
+.tr-band-label {
+	margin: 14px 0 4px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.tr-tree-list > .tr-band-label:first-child {
+	margin-top: 0;
+}
+
+.tr-band-body {
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 2px;
+}
+
+.tr-band-body:last-child {
+	border-bottom: none;
+}

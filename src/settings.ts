@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice, setIcon } from "obsidian";
 import { ActionHost, TAG_ACTIONS, iconFor } from "./actions";
+import { BAND_POSITION_LABELS, BandPosition } from "./bands";
 import {
 	TOOLBAR_CONTROLS,
 	ToolbarControlId,
@@ -93,6 +94,11 @@ export interface TagRelationsSettings {
 	/** Built-in toolbar controls turned off, keyed by control id. */
 	hiddenToolbarControls: Record<string, boolean>;
 
+	// Bands
+	showPinnedBand: boolean;
+	showBookmarkedBand: boolean;
+	bookmarkedBandPosition: BandPosition;
+
 	// Cloud presentation
 	cloudLayout: CloudLayout;
 	cloudZoom: number;
@@ -173,6 +179,10 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	actionPlacement: {},
 	actionOrder: [],
 	hiddenToolbarControls: {},
+
+	showPinnedBand: true,
+	showBookmarkedBand: true,
+	bookmarkedBandPosition: "top",
 
 	cloudLayout: "icons",
 	cloudZoom: 1,
@@ -473,6 +483,52 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 	}
 
 	displaySelectionNotes(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Pinned and bookmarked bands").setHeading();
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Whether the cloud, tree and groups views lift pinned and bookmarked tags out into their own labelled sections. Turning a band off does not hide its tags — they simply sit with the rest.",
+		});
+
+		new Setting(containerEl)
+			.setName("Separate pinned tags")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showPinnedBand)
+					.onChange(async (value) => {
+						this.plugin.settings.showPinnedBand = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Separate bookmarked tags")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showBookmarkedBand)
+					.onChange(async (value) => {
+						this.plugin.settings.showBookmarkedBand = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Where bookmarked tags go")
+			.setDesc("Above everything else, or down at the end of the list.")
+			.addDropdown((dd) => {
+				for (const key of Object.keys(BAND_POSITION_LABELS) as BandPosition[]) {
+					dd.addOption(key, BAND_POSITION_LABELS[key]);
+				}
+				dd.setValue(this.plugin.settings.bookmarkedBandPosition).onChange(
+					async (value) => {
+						this.plugin.settings.bookmarkedBandPosition = value as BandPosition;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					}
+				);
+			});
+
 		new Setting(containerEl).setName("Selection and notes").setHeading();
 
 		new Setting(containerEl)

@@ -1,6 +1,7 @@
 import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost, attachRenameInput } from "./host";
 import { TagGraph, tagLabel } from "./graph";
+import { splitIntoBands } from "./bands";
 
 /**
  * A relation tree, the way TheBrain unfolds a thought: the selected tag is the
@@ -70,8 +71,28 @@ export class TreeRenderer implements ModeRenderer {
 		}
 
 		const list = this.container.createDiv({ cls: "tr-tree-list" });
-		for (const tag of roots) {
-			this.renderNode(list, [tag], 0);
+		// With a selection the roots are the selection, so banding them would
+		// be noise; the bands are for the full index.
+		if (host.selection.length > 0) {
+			for (const tag of roots) this.renderNode(list, [tag], 0);
+			return;
+		}
+		const bands = splitIntoBands(roots, {
+			pinned: host.settings.pinnedTags,
+			bookmarked: host.bookmarkedTags(),
+			showPinned: host.settings.showPinnedBand,
+			showBookmarked: host.settings.showBookmarkedBand,
+			bookmarkedPosition: host.settings.bookmarkedBandPosition,
+		});
+		for (const band of bands) {
+			if (band.label) {
+				list.createDiv({
+					cls: "tr-band-label",
+					text: `${band.label} (${band.tags.length})`,
+				});
+			}
+			const body = list.createDiv({ cls: "tr-band-body" });
+			for (const tag of band.tags) this.renderNode(body, [tag], 0);
 		}
 	}
 

@@ -47,6 +47,9 @@ export interface ViewHost {
 	levelStyles: LevelStyles;
 
 	isPinned(tag: string): boolean;
+	isBookmarked(tag: string): boolean;
+	/** Every bookmarked tag, for splitting a list into bands. */
+	bookmarkedTags(): string[];
 	togglePin(tag: string): void;
 
 	isGroupCollapsed(tag: string): boolean;

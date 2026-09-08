@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-08
+
+### Added
+
+- **Pinned and bookmarked tags are now separated into labelled bands**, with space and a rule between them, in the **cloud**, **tree** and **groups** views. The tree previously ran pinned tags straight into the rest with nothing marking where one ended and the other began.
+- **A bookmarked band in every view.** In the cloud and tree it is its own labelled section; on the **mind-map**, bookmarked tags are always drawn regardless of depth or the node cap, never dim, always keep their label, and carry a **dashed ring** — distinct from a pin's solid one, so the two are still tellable apart when a tag has only one of them.
+- **The bookmarked band can sit at the bottom of the list** instead of the top (Settings → Views). Pinned stays above regardless, so moving bookmarks down never buries a pin.
+- Either band can be turned off. Doing so does **not** hide its tags — they simply sit with the rest, so a display preference can never make something unreachable.
+
+### Notes
+
+- A tag that is both pinned and bookmarked appears **once**, under Pinned. Showing it twice would make the bands read as filters rather than as a partition of the list.
+- The rest band is called "Unpinned" only when pinning alone was lifted out. With a bookmarked band above it, those tags are unpinned too, so it reads "Other tags" instead rather than stating something false.
+
+### Tests
+
+- 14 new tests: band order and positioning, precedence when a tag qualifies for two, that no tag is ever lost or duplicated across bands, that a disabled band falls through rather than hiding anything, and the label rules.
+
 ## [0.12.0] - 2026-09-08
 
 ### Added
@@ -317,7 +335,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...HEAD
+[0.13.0]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...0.12.0
 [0.11.1]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...0.11.1
 [0.11.0]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...0.11.0

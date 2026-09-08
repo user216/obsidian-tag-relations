@@ -17,6 +17,7 @@ import {
 	visibleLevels,
 } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
+import { splitIntoBands } from "./bands";
 
 interface PillRect {
 	left: number;
@@ -99,7 +100,9 @@ export class CloudRenderer implements ModeRenderer {
 		if (layout === "details") {
 			this.renderDetails(body, pinned, rest);
 		} else {
-			this.renderFlow(body, pinned, rest, layout === "list");
+			// The flow layouts band the whole list themselves, so they get it
+			// intact rather than pre-split.
+			this.renderFlow(body, [], tags, layout === "list");
 		}
 
 		if (before) this.flip(before);
@@ -126,9 +129,6 @@ export class CloudRenderer implements ModeRenderer {
 			cls: compact ? "tr-cloud tr-cloud-list" : "tr-cloud",
 		});
 
-		if (pinned.length > 0) {
-			this.appendGroup(field, `Pinned (${pinned.length})`, pinned);
-		}
 
 		const selection = host.selection;
 		const grouped =
@@ -175,7 +175,19 @@ export class CloudRenderer implements ModeRenderer {
 			return;
 		}
 
-		for (const tag of rest) field.appendChild(this.pillFor(tag));
+		for (const band of splitIntoBands(rest, {
+			pinned: host.settings.pinnedTags,
+			bookmarked: host.bookmarkedTags(),
+			showPinned: host.settings.showPinnedBand,
+			showBookmarked: host.settings.showBookmarkedBand,
+			bookmarkedPosition: host.settings.bookmarkedBandPosition,
+		})) {
+			if (band.label) {
+				this.appendGroup(field, `${band.label} (${band.tags.length})`, band.tags);
+			} else {
+				for (const tag of band.tags) field.appendChild(this.pillFor(tag));
+			}
+		}
 	}
 
 	private appendGroup(

@@ -138,6 +138,11 @@ export class MapRenderer implements ModeRenderer {
 		// node cap would otherwise have done with it — that is what pinning
 		// is for, and dropping it here made pinning look cloud-only.
 		withPinned(ordered, host.settings.pinnedTags, host.graph);
+		// Bookmarks get the same guarantee: a tag you deliberately kept to
+		// hand should not disappear because it fell outside the depth limit.
+		if (host.settings.showBookmarkedBand) {
+			withPinned(ordered, host.bookmarkedTags(), host.graph);
+		}
 
 		const live = new Set(ordered.map((entry) => entry.tag));
 		for (const tag of Array.from(this.particles.keys())) {
@@ -390,8 +395,11 @@ export class MapRenderer implements ModeRenderer {
 			const isNeighbor = this.neighborsOfSelected.has(p.tag);
 			const isHovered = this.hovered === p;
 			const isPinned = this.host.isPinned(p.tag);
-			// A pinned tag never dims — it is meant to stay findable.
-			const dimmed = hasSelection && !isSelected && !isNeighbor && !isPinned;
+			const isBookmarked = this.host.isBookmarked(p.tag);
+			// Neither a pin nor a bookmark ever dims — both mean "keep this
+			// findable", which dimming would directly undo.
+			const kept = isPinned || isBookmarked;
+			const dimmed = hasSelection && !isSelected && !isNeighbor && !kept;
 
 			ctx.globalAlpha = dimmed ? 0.3 : 1;
 			ctx.beginPath();
@@ -407,14 +415,18 @@ export class MapRenderer implements ModeRenderer {
 				ctx.lineWidth = 2 / scale;
 				ctx.strokeStyle = palette.accent;
 				ctx.stroke();
-			} else if (isPinned) {
-				// A ring rather than a fill, so a pin reads as a marker on the
-				// node instead of changing what the node itself means.
+			} else if (isPinned || isBookmarked) {
+				// A ring rather than a fill, so the marker reads as something
+				// attached to the node instead of changing what it means.
+				// Solid for a pin, dashed for a bookmark, so the two are
+				// distinguishable when a tag carries only one of them.
 				ctx.beginPath();
 				ctx.arc(p.x, p.y, p.r + 3 / scale, 0, Math.PI * 2);
 				ctx.lineWidth = 1.5 / scale;
 				ctx.strokeStyle = palette.accent;
+				ctx.setLineDash(isPinned ? [] : [3 / scale, 3 / scale]);
 				ctx.stroke();
+				ctx.setLineDash([]);
 			}
 			ctx.globalAlpha = 1;
 		}
@@ -428,6 +440,7 @@ export class MapRenderer implements ModeRenderer {
 			const showLabel =
 				this.host.settings.mapShowAllLabels ||
 				this.host.isPinned(p.tag) ||
+				this.host.isBookmarked(p.tag) ||
 				isSelected ||
 				isHovered ||
 				isNeighbor ||
