@@ -59,15 +59,13 @@ export class TreeRenderer implements ModeRenderer {
 		const pinnedRoots = host.settings.pinnedTags.filter((tag) =>
 			host.graph.nodes.has(tag)
 		);
-		if (host.selection.length === 0 && pinnedRoots.length === 0) {
+		if (host.selection.length === 0) {
 			this.container.createDiv({
 				cls: "tr-tree-hint",
-				text: "Pick a tag to grow the tree from it. Showing the most connected tags:",
-			});
-		} else if (host.selection.length === 0) {
-			this.container.createDiv({
-				cls: "tr-tree-hint",
-				text: "Your pinned tags. Pick any tag to grow the tree from it instead.",
+				text:
+					pinnedRoots.length > 0
+						? "Pinned tags first, then every other tag. Pick one to grow the tree from it."
+						: "Every tag. Pick one to grow the tree from it.",
 			});
 		}
 
@@ -85,8 +83,6 @@ export class TreeRenderer implements ModeRenderer {
 				host.graph.nodes.has(tag)
 			),
 			visible: host.visibleTags(),
-			degreeOf: (tag) => host.graph.neighbors(tag).length,
-			countOf: (tag) => host.graph.countOf(tag),
 		});
 	}
 
@@ -215,18 +211,20 @@ export class TreeRenderer implements ModeRenderer {
 export interface TreeRootOptions {
 	selection: string[];
 	pinned: string[];
+	/** Every tag passing the filter, already in the chosen sort order. */
 	visible: string[];
-	degreeOf(tag: string): number;
-	countOf(tag: string): number;
 }
 
 /**
  * Which tags the tree grows from.
  *
- * Pinned tags lead, always — a pin means "keep this to hand", and a view that
- * ignored it would make pinning look like a cloud-only decoration. After them
- * come the selected tags, then, only when there is nothing else, the
- * best-connected tags as a starting point.
+ * Pinned tags lead, always — a pin means "keep this to hand". Everything else
+ * still follows, because the tree is an index of the vault and pinning should
+ * promote a few tags rather than hide the rest.
+ *
+ * A selection is the one thing that does narrow the list: picking a tag means
+ * "show me this one", so the tree focuses on it (with pins still above, so
+ * they stay reachable).
  */
 export function treeRoots(options: TreeRootOptions): string[] {
 	const roots: string[] = [];
@@ -238,18 +236,17 @@ export function treeRoots(options: TreeRootOptions): string[] {
 	};
 
 	for (const tag of options.pinned) push(tag);
-	for (const tag of options.selection) push(tag);
-	if (roots.length > 0) return roots;
 
-	return options.visible
-		.slice()
-		.sort(
-			(a, b) =>
-				options.degreeOf(b) - options.degreeOf(a) ||
-				options.countOf(b) - options.countOf(a) ||
-				a.localeCompare(b)
-		)
-		.slice(0, 20);
+	if (options.selection.length > 0) {
+		for (const tag of options.selection) push(tag);
+		return roots;
+	}
+
+	// `visible` already carries the sort chosen in the toolbar, so it is used
+	// as-is rather than re-sorted — the tree's root list previously ignored
+	// that control entirely.
+	for (const tag of options.visible) push(tag);
+	return roots;
 }
 
 /**

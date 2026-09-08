@@ -457,49 +457,74 @@ describe("describeRelation", () => {
 	});
 });
 
-describe("treeRoots — pinned tags are always entry points", () => {
-	const base = {
-		visible: ["#a", "#b", "#c"],
-		degreeOf: (tag: string) => ({ "#a": 3, "#b": 2, "#c": 1 })[tag] ?? 0,
-		countOf: () => 0,
-	};
+describe("treeRoots — pinned tags lead, without hiding the rest", () => {
+	const visible = ["#a", "#b", "#c"];
 
-	test("pinned tags lead, ahead of the selection", () => {
-		const roots = treeRoots({ ...base, pinned: ["#pin"], selection: ["#sel"] });
-		assert.deepEqual(roots, ["#pin", "#sel"]);
+	test("with nothing pinned or selected, every tag is a root", () => {
+		assert.deepEqual(
+			treeRoots({ visible, pinned: [], selection: [] }),
+			["#a", "#b", "#c"]
+		);
 	});
 
-	test("pinned alone is enough — no selection needed", () => {
+	test("pinning promotes a tag WITHOUT hiding the others", () => {
+		// The reported bug: one pin made every unpinned tag vanish.
 		assert.deepEqual(
-			treeRoots({ ...base, pinned: ["#pin"], selection: [] }),
-			["#pin"]
+			treeRoots({ visible, pinned: ["#c"], selection: [] }),
+			["#c", "#a", "#b"]
+		);
+	});
+
+	test("a pinned tag is not then repeated further down", () => {
+		const roots = treeRoots({ visible, pinned: ["#b"], selection: [] });
+		assert.equal(roots.filter((tag) => tag === "#b").length, 1);
+	});
+
+	test("several pins keep their pin order, then the rest follow", () => {
+		assert.deepEqual(
+			treeRoots({ visible, pinned: ["#c", "#a"], selection: [] }),
+			["#c", "#a", "#b"]
+		);
+	});
+
+	test("the visible order is used as given, so the toolbar sort applies", () => {
+		assert.deepEqual(
+			treeRoots({ visible: ["#c", "#b", "#a"], pinned: [], selection: [] }),
+			["#c", "#b", "#a"]
+		);
+	});
+
+	test("a pinned tag absent from the visible list still leads", () => {
+		// Filtering the view should not drop something deliberately pinned.
+		assert.deepEqual(
+			treeRoots({ visible: ["#a"], pinned: ["#hidden"], selection: [] }),
+			["#hidden", "#a"]
+		);
+	});
+
+	test("a selection narrows the tree — that is what selecting is for", () => {
+		assert.deepEqual(
+			treeRoots({ visible, pinned: [], selection: ["#b"] }),
+			["#b"]
+		);
+	});
+
+	test("pins stay above a selection, so they remain reachable", () => {
+		assert.deepEqual(
+			treeRoots({ visible, pinned: ["#c"], selection: ["#a"] }),
+			["#c", "#a"]
 		);
 	});
 
 	test("a tag both pinned and selected appears once", () => {
 		assert.deepEqual(
-			treeRoots({ ...base, pinned: ["#x"], selection: ["#x"] }),
-			["#x"]
+			treeRoots({ visible, pinned: ["#a"], selection: ["#a"] }),
+			["#a"]
 		);
 	});
 
-	test("with neither, it falls back to the best-connected tags", () => {
-		assert.deepEqual(
-			treeRoots({ ...base, pinned: [], selection: [] }),
-			["#a", "#b", "#c"]
-		);
-	});
-
-	test("the fallback is skipped entirely once anything is pinned", () => {
-		const roots = treeRoots({ ...base, pinned: ["#pin"], selection: [] });
-		assert.equal(roots.includes("#a"), false);
-	});
-
-	test("pin order is preserved", () => {
-		assert.deepEqual(
-			treeRoots({ ...base, pinned: ["#z", "#a"], selection: [] }),
-			["#z", "#a"]
-		);
+	test("an empty vault yields no roots", () => {
+		assert.deepEqual(treeRoots({ visible: [], pinned: [], selection: [] }), []);
 	});
 });
 

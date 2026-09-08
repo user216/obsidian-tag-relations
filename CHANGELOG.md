@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-09-08
+
+### Fixed
+
+- **Pinning a tag made every other tag vanish from the tree.** Pinned tags were treated as a replacement for the root list rather than a promotion within it, so a single pin emptied the view of everything else. Pinned tags now lead the list and every other tag still follows beneath them, which is what a pin should mean.
+- The tree's root list now respects the toolbar's **Sort** control. It previously re-sorted by connectedness and capped itself at twenty tags, so the sort dropdown had no effect there and most of the vault was unreachable from the tree without selecting something first.
+
+### Tests
+
+- The test that asserted the old behaviour ("the fallback is skipped entirely once anything is pinned") encoded the bug as intended, and was replaced by ten covering the correct behaviour: promotion without hiding, no duplication of a pinned tag further down, pin order, sort order being honoured, and a selection still narrowing the tree.
+
 ## [0.11.0] - 2026-09-08
 
 ### Added
@@ -293,7 +304,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...HEAD
+[0.11.1]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...0.11.1
 [0.11.0]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...0.9.0

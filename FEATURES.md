@@ -65,7 +65,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Branches are the strongest relations, capped per node
 - Cycle-free: a tag never repeats within its own ancestor path
 - Configurable auto-expand depth
-- With nothing selected, lists the most-connected tags as entry points
+- With nothing selected, lists every tag in the toolbar's sort order, pinned ones first
 - Inline rename control on each row in edit mode
 
 ## Selection
@@ -200,5 +200,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 431 tests across 84 suites (`npm test`)
+- 435 tests across 84 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)
