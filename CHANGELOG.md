@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-08
+
+### Added
+
+- **Zen mode.** A new toolbar button hides the toolbar, action bar and side panel, leaving the tags themselves with more room and nothing around them.
+  - **Three ways out**, because a mode that hides the button you entered by would otherwise be a trap: a floating exit button that is always present while zen is on, the **Escape** key, and a **Toggle zen mode** command.
+  - It is a **presentation override, not a settings change** — nothing it hides is actually turned off, so leaving zen restores exactly the toolbar, bar and panel you had.
+  - The **notes panel stays**. It only exists because you asked for it and has its own close button, so hiding it would be discarding a result rather than removing chrome.
+  - The exit button sits at 35% opacity until hovered: visible enough to find, faint enough not to become the distraction zen mode exists to remove.
+  - The zen button itself can be hidden like any other toolbar control; the command and the in-mode exit remain either way.
+
+### Tests
+
+- 2 new tests, including one asserting the zen control's description names the ways out — hiding the entry point must never imply hiding the exit.
+
 ## [0.13.0] - 2026-09-08
 
 ### Added
@@ -335,7 +350,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...HEAD
+[0.14.0]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...0.12.0
 [0.11.1]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...0.11.1

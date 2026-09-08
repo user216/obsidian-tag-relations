@@ -99,6 +99,14 @@ The first two touch only plugin data. Relations that come from two tags **sharin
 
 To take a tag out of one specific group, use **Take out of a main-tag…** (or the ✕ that appears when hovering a member in the Groups view, which removes exactly that one membership without asking which).
 
+## Zen mode
+
+One button hides the toolbar, action bar and side panel, leaving the tags with room to breathe.
+
+There are **three ways out** — a floating exit button that stays visible while zen is on, the **Escape** key, and a **Toggle zen mode** command — because a mode that hides the button you entered by would otherwise be a trap.
+
+It's a presentation override, not a settings change: nothing it hides is actually turned off, so leaving restores exactly the toolbar, bar and panel you had. The notes panel stays put — it only exists because you asked for it, and has its own close button, so hiding it would be discarding a result rather than removing clutter.
+
 ## Selecting tags
 
 Selection works the same way in all three views:

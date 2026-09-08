@@ -94,6 +94,13 @@ export interface TagRelationsSettings {
 	/** Built-in toolbar controls turned off, keyed by control id. */
 	hiddenToolbarControls: Record<string, boolean>;
 
+	/**
+	 * Zen mode: chrome hidden, the view itself untouched. A presentation
+	 * override rather than a change to any of the settings it hides, so
+	 * leaving it restores exactly what was there.
+	 */
+	zenMode: boolean;
+
 	// Bands
 	showPinnedBand: boolean;
 	showBookmarkedBand: boolean;
@@ -179,6 +186,8 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	actionPlacement: {},
 	actionOrder: [],
 	hiddenToolbarControls: {},
+
+	zenMode: false,
 
 	showPinnedBand: true,
 	showBookmarkedBand: true,

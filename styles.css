@@ -1705,3 +1705,61 @@
 .tr-band-body:last-child {
 	border-bottom: none;
 }
+
+/* ------------------------------------------------------------ zen mode */
+
+.tr-zen-exit {
+	display: none;
+	position: absolute;
+	top: 10px;
+	right: 12px;
+	z-index: 20;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-primary);
+	color: var(--text-muted);
+	box-shadow: var(--shadow-s);
+	cursor: pointer;
+	/* Faint until wanted, so it does not become the distraction that zen
+	   mode exists to remove — but never invisible. */
+	opacity: 0.35;
+	transition: opacity 120ms ease;
+}
+
+.tr-root.is-zen .tr-zen-exit {
+	display: flex;
+}
+
+.tr-zen-exit:hover {
+	opacity: 1;
+	color: var(--text-normal);
+}
+
+.tr-root.is-zen {
+	position: relative;
+}
+
+/* Chrome goes; the view itself, and any notes list you asked for, stay. */
+.tr-root.is-zen .tr-toolbar,
+.tr-root.is-zen .tr-action-bar,
+.tr-root.is-zen .tr-inspector {
+	display: none;
+}
+
+.tr-root.is-zen .tr-cloud,
+.tr-root.is-zen .tr-groups .tr-panzoom-content {
+	padding: 28px 32px;
+}
+
+.tr-root.is-zen .tr-tree {
+	padding: 28px 32px;
+}
+
+.tr-root.is-zen:focus,
+.tr-root.is-zen:focus-visible {
+	outline: none;
+}

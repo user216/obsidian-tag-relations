@@ -165,6 +165,14 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Groups section lists every main-tag, expandable to its members
 - Every row selects on click and opens the full context menu on right-click
 
+## Zen mode
+
+- One button hides the toolbar, action bar and side panel
+- Three ways out: floating exit button, Escape, or the command
+- A presentation override, not a settings change — leaving restores exactly what you had
+- The notes panel stays, since it is a result you asked for rather than chrome
+- The zen button can itself be hidden; the command and in-mode exit remain
+
 ## Bands
 
 - Pinned and bookmarked tags separated into labelled sections in the cloud, tree and groups views
@@ -200,7 +208,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 ## Commands
 
-- Open tag relations · Open tag relations in sidebar
+- Open tag relations · Open tag relations in sidebar · Toggle zen mode
 - Focus a tag · Connect two tags · Create a new note
 - Rename a tag
 - Add a tag to the active note · Remove a tag from the active note
@@ -210,5 +218,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 456 tests across 90 suites (`npm test`)
+- 458 tests across 91 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

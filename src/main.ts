@@ -143,6 +143,19 @@ export default class TagRelationsPlugin extends Plugin {
 			callback: () => this.promptCreateNote(this.selectionFromViews()),
 		});
 		this.addCommand({
+			id: "toggle-zen-mode",
+			name: "Toggle zen mode",
+			callback: () => {
+				const views = this.views();
+				if (views.length === 0) {
+					new Notice("Open Tag Relations first.");
+					return;
+				}
+				const next = !this.settings.zenMode;
+				for (const view of views) void view.setZen(next);
+			},
+		});
+		this.addCommand({
 			id: "export-relations",
 			name: "Export relations to a file",
 			callback: () => void this.exportRelationsToFile(),

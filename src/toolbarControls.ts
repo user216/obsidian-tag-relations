@@ -28,7 +28,8 @@ export type ToolbarControlId =
 	| "actionBarToggle"
 	| "viewOptions"
 	| "inspectorToggle"
-	| "refresh";
+	| "refresh"
+	| "zen";
 
 export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 	{
@@ -80,6 +81,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		id: "inspectorToggle",
 		label: "Side panel toggle",
 		description: "Shows or hides the panel of pinned tags, bookmarks and groups.",
+	},
+	{
+		id: "zen",
+		label: "Zen mode button",
+		description:
+			"Enters zen mode. Hiding it leaves the command and, once inside, the floating exit button — zen mode can always be left.",
 	},
 	{
 		id: "refresh",

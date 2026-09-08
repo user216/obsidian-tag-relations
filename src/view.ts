@@ -291,6 +291,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	async onOpen(): Promise<void> {
 		this.contentEl.empty();
 		this.contentEl.addClass("tr-root");
+		// Focusable so Escape reaches the view without needing a global hook.
+		this.contentEl.tabIndex = -1;
+		this.contentEl.toggleClass("is-zen", this.settings.zenMode);
+		this.buildZenExit();
 		this.buildToolbar();
 		this.actionBarEl = this.contentEl.createDiv({ cls: "tr-action-bar" });
 		const body = this.contentEl.createDiv({ cls: "tr-body" });
@@ -298,6 +302,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.mainEl = column.createDiv({ cls: "tr-main" });
 		this.notesEl = column.createDiv({ cls: "tr-notes-panel" });
 		this.inspectorEl = body.createDiv({ cls: "tr-inspector" });
+		this.contentEl.addEventListener("keydown", this.onKeyDown);
 		this.renderAll();
 	}
 
@@ -308,6 +313,13 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.rendererMode = null;
 		await this.onOpen();
 	}
+
+	/** Escape is the expected way out of a full-screen-ish mode. */
+	private onKeyDown = (event: KeyboardEvent): void => {
+		if (event.key !== "Escape" || !this.settings.zenMode) return;
+		event.preventDefault();
+		void this.setZen(false);
+	};
 
 	async onClose(): Promise<void> {
 		this.renderer?.destroy();
@@ -611,6 +623,35 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		return isControlVisible(id, this.settings.hiddenToolbarControls);
 	}
 
+	/**
+	 * The way out of zen mode, always present while it is on.
+	 *
+	 * Zen hides the toolbar, so the button that got you in is gone. Leaving
+	 * without a visible exit would be a trap, and the same reasoning that put
+	 * a description on every hideable control applies here: a mode you cannot
+	 * see how to leave is worse than no mode at all.
+	 */
+	private buildZenExit(): void {
+		const exit = this.contentEl.createDiv({ cls: "tr-zen-exit" });
+		setIcon(exit, "minimize-2");
+		setTooltip(exit, "Leave zen mode (Escape)", { placement: "left" });
+		exit.addEventListener("click", () => void this.setZen(false));
+	}
+
+	async setZen(on: boolean): Promise<void> {
+		if (this.settings.zenMode === on) return;
+		this.settings.zenMode = on;
+		await this.plugin.saveSettings();
+		this.contentEl.toggleClass("is-zen", on);
+		this.syncToolbar();
+		if (on) {
+			// Focused so Escape works immediately, rather than only after the
+			// view happens to be clicked.
+			this.contentEl.focus();
+			new Notice("Zen mode. Press Escape, or the button top-right, to leave.");
+		}
+	}
+
 	private buildToolbar(): void {
 		const toolbar = this.contentEl.createDiv({ cls: "tr-toolbar" });
 
@@ -760,6 +801,15 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.toolbarActionsEl = toolbar.createDiv({ cls: "tr-toolbar-actions" });
 
 		const actions = toolbar.createDiv({ cls: "tr-actions" });
+		if (this.showsControl("zen")) {
+			const zenButton = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(zenButton, "maximize-2");
+			setTooltip(zenButton, "Zen mode — hide everything but the tags", {
+				placement: "bottom",
+			});
+			zenButton.addEventListener("click", () => void this.setZen(true));
+		}
+
 		if (this.showsControl("inspectorToggle")) {
 			const inspectorButton = actions.createDiv({ cls: "tr-icon-button" });
 			setIcon(inspectorButton, "panel-right");

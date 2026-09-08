@@ -41,6 +41,21 @@ describe("toolbar control visibility", () => {
 	});
 });
 
+describe("zen mode's control", () => {
+	test("the zen button is a control like any other, and hideable", () => {
+		assert.equal(isControlVisible("zen", {}), true);
+		assert.equal(isControlVisible("zen", { zen: true }), false);
+	});
+
+	test("its description names the ways out, since it hides the toolbar", () => {
+		const zen = TOOLBAR_CONTROLS.find((c) => c.id === "zen");
+		assert.ok(zen);
+		// Hiding the entry point must not imply hiding the exit.
+		assert.match(zen!.description, /command/i);
+		assert.match(zen!.description, /exit|leave/i);
+	});
+});
+
 describe("the control registry itself", () => {
 	test("ids are unique", () => {
 		const ids = TOOLBAR_CONTROLS.map((c) => c.id);
