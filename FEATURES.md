@@ -91,6 +91,11 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 ## Creating notes
 
 - New note button in the toolbar, plus a command; the whole feature is toggleable
+- A dialog for choosing the new note's tags, pre-filled from the current selection
+- Add any number of tags, existing or newly created, shown as removable chips
+- Live preview of the filename the note will get
+- Keyboard-first: arrows to move, Enter to add, Backspace to undo, Enter on an empty box to create
+- The dialog can be turned off for one-click creation
 - Title from the current date and time, `YYYYMMDDHHmm` by default
 - Configurable format with moment-style tokens and `[literal]` escaping
 - Eight format presets, with a live filename preview in settings
@@ -161,5 +166,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 325 tests across 61 suites (`npm test`)
+- 344 tests across 65 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

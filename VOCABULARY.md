@@ -75,6 +75,7 @@ Two tags can be related in three different ways. They look similar in the views 
 - **Notes panel** — the list produced by "Show notes". It is a **snapshot**: it fills only when you press the button, and marks itself *Outdated* rather than silently changing ([ADR 0005](docs/adr/0005-multi-select-and-a-frozen-notes-panel.md)).
 - **Match mode** — whether the notes panel wants notes carrying **all** the selected tags (intersection) or **any** of them (union).
 - **Action bar** — the optional row of buttons giving every tag action a button, so nothing is reachable only by right-clicking.
+- **New note dialog** — the tag picker shown when creating a note. Starts from the current selection; tags can be added or removed before the note is made.
 
 ---
 

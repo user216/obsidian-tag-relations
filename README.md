@@ -121,6 +121,10 @@ The list is a **snapshot**, not a live query. It fills only when you press the b
 
 A **new note** button in the toolbar creates a note named after the current date and time — `202609071432.md` by default. It is also a command, and can be switched off entirely in settings.
 
+Pressing it opens a dialog for choosing the note's tags, pre-filled with whatever you have selected. Type to find a tag, or type a name that doesn't exist yet to create it — the same gesture as adding a tag to a main-tag. Added tags appear as removable chips, and the dialog shows the filename it's about to create.
+
+It's built for the keyboard: **↑/↓** move, **Enter** adds the highlighted tag, **Backspace** on an empty box takes the last one back off, and **Enter on an empty box** (or **Ctrl/Cmd+Enter** anywhere) creates the note. So the common case — create with the tags already selected — is still a single keystroke. Turn the dialog off in settings if you'd rather the button create immediately.
+
 | Setting | What it does |
 | --- | --- |
 | **Title format** | Moment-style tokens: `YYYY YY MM DD HH mm ss`, plus `MMM MMMM ddd dddd` and `h`/`A` for 12-hour time. Text in `[square brackets]` is kept literally, so `[Note] YYYY-MM-DD` gives `Note 2026-09-07`. Eight presets are offered, with a live preview of the filename. |

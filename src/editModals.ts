@@ -1,6 +1,7 @@
 import { App, Modal, Setting, SuggestModal, setIcon } from "obsidian";
 import { tagLabel } from "./graph";
 import { EditPlan, TagEditor, validateTagName } from "./edit";
+import { tagSuggestions } from "./tagSuggest";
 
 /**
  * Pick an existing tag, or type a name that does not exist yet to create it.
@@ -36,30 +37,17 @@ export class TagChoiceModal extends SuggestModal<TagChoice> {
 	}
 
 	getSuggestions(query: string): TagChoice[] {
-		const needle = query.trim().toLowerCase().replace(/^#/, "");
-		const matches = this.tags
-			.filter((tag) => tagLabel(tag).toLowerCase().includes(needle))
-			.map((tag) => ({
-				tag,
-				isNew: false,
-				subtitle: this.subtitles.get(tag),
-			}));
-
-		if (!this.allowNew || needle.length === 0) return matches;
-
-		const validation = validateTagName(needle);
-		const exists = this.tags.some(
-			(tag) => tag.toLowerCase() === validation.tag?.toLowerCase()
+		// Shared with the new-note dialog's multi-pick list, so "type a name
+		// that does not exist to create it" behaves identically in both.
+		return tagSuggestions(query, this.tags, { allowNew: this.allowNew }).map(
+			(suggestion) => ({
+				tag: suggestion.tag,
+				isNew: suggestion.isNew,
+				subtitle: suggestion.isNew
+					? "Create this new tag"
+					: this.subtitles.get(suggestion.tag),
+			})
 		);
-		if (validation.ok && validation.tag && !exists) {
-			// Offer creation first so a deliberate new name is one Enter away.
-			matches.unshift({
-				tag: validation.tag,
-				isNew: true,
-				subtitle: "Create this new tag",
-			});
-		}
-		return matches;
 	}
 
 	renderSuggestion(choice: TagChoice, el: HTMLElement): void {

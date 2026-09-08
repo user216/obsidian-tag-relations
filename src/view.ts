@@ -200,7 +200,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	}
 
 	createNote(): void {
-		void this.plugin.createNote(this.selection.slice());
+		this.plugin.promptCreateNote(this.selection.slice());
 	}
 
 	copyTag(tag: string): void {
@@ -610,7 +610,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.newNoteButton = toolbar.createDiv({ cls: "tr-icon-button" });
 		setIcon(this.newNoteButton, "file-plus");
 		this.newNoteButton.addEventListener("click", () =>
-			void this.plugin.createNote(this.selection.slice())
+			this.plugin.promptCreateNote(this.selection.slice())
 		);
 
 		this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });

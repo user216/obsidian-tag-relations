@@ -1415,3 +1415,66 @@
 	width: 15px;
 	height: 15px;
 }
+
+/* ------------------------------------------------------ new note dialog */
+
+.tr-new-note-preview {
+	margin-bottom: 10px;
+	font-size: var(--font-ui-small);
+}
+
+.tr-new-note-count {
+	color: var(--text-muted);
+}
+
+.tr-new-note-chips {
+	min-height: 26px;
+	margin-bottom: 8px;
+}
+
+.tr-new-note-chips.is-empty {
+	align-items: center;
+}
+
+.tr-new-note-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+	margin-bottom: 6px;
+}
+
+.tr-new-note-search .tr-search-input {
+	width: 100%;
+	padding-left: 27px;
+}
+
+.tr-new-note-suggestions {
+	max-height: 240px;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-secondary);
+}
+
+.tr-new-note-suggestion {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 9px;
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+}
+
+.tr-new-note-suggestion.is-highlighted {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-new-note-suggestion .tr-choice-sub {
+	margin-left: auto;
+}
+
+.tr-new-note-empty {
+	padding: 8px 9px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}

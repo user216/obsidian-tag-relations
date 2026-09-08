@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-08
+
+### Added
+
+- **A tag picker when creating a note.** The new-note button now opens a dialog for choosing the note's tags instead of silently using whatever was selected. It starts pre-filled from the selection, and tags can be added or removed before the note is made.
+  - Type to find an existing tag, or type a name that doesn't exist yet to create it — the same gesture as adding a tag to a main-tag.
+  - Chosen tags show as removable chips, above a live preview of the filename about to be created.
+  - Keyboard-first: **↑/↓** move, **Enter** adds the highlighted tag, **Backspace** on an empty box removes the last chip, and **Enter on an empty box** or **Ctrl/Cmd+Enter** creates the note — so "create with what I already selected" stays one keystroke.
+  - **Ask which tags to add** (Settings → New note) turns the dialog off for one-click creation.
+
+### Changed
+
+- Tag-picker filtering moved into a shared `tagSuggest` module used by both the new-note dialog and the existing single-pick picker, so create-new behaviour cannot diverge between them.
+- A tag list chosen explicitly in the dialog is now written even when "apply the selected tags" is off — that setting governs what the dialog is *pre-filled* with, and shouldn't veto a deliberate choice.
+
+### Tests
+
+- 19 new tests for suggestion filtering: substring and case matching, when a create-new row is and isn't offered, exclusion of already-chosen tags, and the row limit.
+
 ## [0.6.0] - 2026-09-07
 
 ### Added
@@ -189,7 +208,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/user216/obsidian-tag-relations/compare/0.4.0...0.5.0

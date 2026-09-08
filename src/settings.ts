@@ -88,6 +88,7 @@ export interface TagRelationsSettings {
 	newNoteTimeZone: string;
 	newNoteFolder: string;
 	newNoteApplySelectedTags: boolean;
+	newNotePromptForTags: boolean;
 	newNoteOpenAfterCreate: boolean;
 
 	// Editing
@@ -158,6 +159,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	newNoteTimeZone: "",
 	newNoteFolder: "",
 	newNoteApplySelectedTags: true,
+	newNotePromptForTags: true,
 	newNoteOpenAfterCreate: true,
 
 	addTagLocation: "frontmatter",
@@ -1060,9 +1062,23 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Ask which tags to add")
+			.setDesc(
+				"Open a dialog when creating a note, so tags can be added or removed first. Off: the note is created straight away from whatever is selected."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settings.newNotePromptForTags)
+					.onChange(async (value) => {
+						settings.newNotePromptForTags = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Apply the selected tags")
 			.setDesc(
-				"Write whichever tags are selected in the view into the new note's frontmatter, so it joins the graph immediately."
+				"Start from whichever tags are selected in the view — pre-filled in the dialog, or written straight in when the dialog is off."
 			)
 			.addToggle((toggle) =>
 				toggle

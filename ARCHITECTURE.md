@@ -54,6 +54,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/panzoom.ts` | 175 | Pan/zoom layer for the DOM-based views |
 | `src/actions.ts` | 300 | The action registry: every tag action defined once (pure) |
 | `src/relations.ts` | 140 | Which relations are removable, and removing them (pure) |
+| `src/newNoteModal.ts` | 250 | The multi-tag picker shown when creating a note |
+| `src/tagSuggest.ts` | 55 | Tag-picker filtering and create-new offers (pure) |
 | `src/datetime.ts` | 214 | Timezone-aware formatting and filename sanitising (pure) |
 | `src/newNote.ts` | 137 | Timestamped note creation |
 | `src/modals.ts` | 43 | Fuzzy tag picker |
@@ -76,7 +78,7 @@ datetime.ts
 
 `view.ts` and `settings.ts` each `import type TagRelationsPlugin from "./main"`. These are **type-only** imports, erased at build time, so there is no runtime cycle.
 
-Seven modules — `selection.ts`, `links.ts`, `datetime.ts`, `groups.ts`, `levels.ts`, `actions.ts` and `relations.ts` — import nothing from Obsidian. That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
+Seven modules — `selection.ts`, `links.ts`, `datetime.ts`, `groups.ts`, `levels.ts`, `actions.ts` and `relations.ts` — import nothing from Obsidian. (`tagSuggest.ts` is pure logic too, but reaches `validateTagName` in `edit.ts`, so it inherits that module's import.) That is deliberate: they hold logic that would otherwise be trapped inside DOM-bound classes, and keeping them Obsidian-free is what makes them directly testable.
 
 ---
 
@@ -334,6 +336,8 @@ Three details worth knowing:
 - The weekday is *derived* from the zone-local calendar date (`Date.UTC(y, m-1, d).getUTCDay()`) rather than requested separately, so it can never disagree with the y/m/d that were formatted.
 - `Intl.supportedValuesOf("timeZone")` returns canonical names, which spell UTC as `Etc/UTC`. Plain `UTC` is prepended explicitly, since it is valid and is what people look for.
 
+**The dialog.** Obsidian's `SuggestModal` closes as soon as something is chosen — right for picking one thing, wrong for building a list — so `NewNoteModal` is a plain `Modal` with its own input and suggestion list. The filtering itself lives in `tagSuggest.ts` and is shared with the single-pick `TagChoiceModal`, so "type a name that does not exist to create it" cannot behave differently in the two places.
+
 **Creation** resolves the folder (an explicit setting, created if missing; otherwise `fileManager.getNewFileParent`, which honours Obsidian's own preference), sanitises the formatted title into a legal filename, finds a free path (`-1`, `-2`… — same-minute collisions are routine under the default format, not an edge case), writes frontmatter carrying the selected tags, and optionally opens the result. Failures surface as a `Notice` and return null rather than throwing into the click handler.
 
 Sanitising replaces path separators rather than honouring them, so a format containing `/` yields one note instead of silently creating a folder tree.
@@ -395,7 +399,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-325 tests across 61 suites:
+344 tests across 65 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -406,6 +410,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `views.test.ts` | Tree branching, map node collection and anchoring, `scaleByCount`, modifier detection, manual-link remapping, settings invariants |
 | `groups.test.ts` | Every depth-rule case, multi-parent membership, promotion/demotion, cycle resistance, rename propagation |
 | `levels.test.ts` | Level style resolution and CSS, level filters, pin capping, zoom clamping |
+| `tagSuggest.test.ts` | Substring and case matching, create-new offers and their suppression, exclusions, limits |
 | `relations.test.ts` | Removable-relation discovery, single/all/membership removal, and the action registry's ids, groups, enablement and icon fallbacks |
 | `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |
 

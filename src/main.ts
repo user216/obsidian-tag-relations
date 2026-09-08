@@ -11,6 +11,7 @@ import { TagSuggestModal } from "./modals";
 import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
 import { NoteCreator } from "./newNote";
+import { NewNoteModal } from "./newNoteModal";
 import { TagGroups } from "./groups";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
@@ -132,7 +133,7 @@ export default class TagRelationsPlugin extends Plugin {
 		this.addCommand({
 			id: "create-new-note",
 			name: "Create a new note",
-			callback: () => void this.createNote(this.selectionFromViews()),
+			callback: () => this.promptCreateNote(this.selectionFromViews()),
 		});
 		this.addCommand({
 			id: "rebuild-tag-graph",
@@ -622,8 +623,37 @@ export default class TagRelationsPlugin extends Plugin {
 	 * Create a timestamped note, optionally carrying the given tags. Returns
 	 * silently on failure; NoteCreator has already told the user why.
 	 */
-	async createNote(tags: string[] = []): Promise<void> {
-		const result = await this.noteCreator.create(tags);
+	/**
+	 * Entry point for the button and the command: ask which tags the note
+	 * should carry, then create it. The dialog starts from the current
+	 * selection, so the common case is still one keystroke away — Enter on an
+	 * empty box creates immediately.
+	 */
+	promptCreateNote(selection: string[] = []): void {
+		const applySelection = this.settings.newNoteApplySelectedTags;
+		const initial = applySelection ? selection : [];
+		if (!this.settings.newNotePromptForTags) {
+			void this.createNote(initial);
+			return;
+		}
+		new NewNoteModal(this.app, {
+			initialTags: initial,
+			allTags: this.allKnownTags(),
+			previewTitle: () => this.noteCreator.previewTitle(),
+			onCreate: (tags) => void this.createNote(tags, { force: true }),
+		}).open();
+	}
+
+	/**
+	 * `force` writes the given tags even when "apply the selected tags" is
+	 * off — the dialog's list is an explicit choice, not the selection
+	 * leaking in, so that setting should not veto it.
+	 */
+	async createNote(
+		tags: string[] = [],
+		options: { force?: boolean } = {}
+	): Promise<void> {
+		const result = await this.noteCreator.create(tags, options.force === true);
 		if (!result) return;
 		if (result.tags.length > 0) {
 			new Notice(

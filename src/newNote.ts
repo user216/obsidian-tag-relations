@@ -43,9 +43,18 @@ export class NoteCreator {
 		return titleFor(options.titleFormat, options.timeZone, now);
 	}
 
-	async create(selectedTags: string[] = []): Promise<NewNoteResult | null> {
+	/**
+	 * `explicit` marks a tag list the user chose in the dialog rather than one
+	 * inherited from the selection, so the "apply the selected tags" setting
+	 * does not override a deliberate choice.
+	 */
+	async create(
+		selectedTags: string[] = [],
+		explicit = false
+	): Promise<NewNoteResult | null> {
 		const options = this.options();
-		const tags = options.applySelectedTags ? selectedTags.slice() : [];
+		const tags =
+			explicit || options.applySelectedTags ? selectedTags.slice() : [];
 
 		try {
 			const folder = await this.resolveFolder(options.folder);
