@@ -176,6 +176,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 ## Bands
 
 - Pinned and bookmarked tags separated into labelled sections in the cloud, tree and groups views
+- Bands survive selection and level grouping — they are lifted out first, not skipped
+- On the mind-map the same split becomes reserved, labelled rows above or below the cluster
 - The bookmarked band can sit above or below the rest of the list
 - Either band can be turned off; its tags then sit with the rest rather than being hidden
 - A tag that is both pinned and bookmarked appears once, under Pinned
@@ -218,5 +220,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 458 tests across 91 suites (`npm test`)
+- 467 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

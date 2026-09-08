@@ -129,10 +129,58 @@ export class CloudRenderer implements ModeRenderer {
 			cls: compact ? "tr-cloud tr-cloud-list" : "tr-cloud",
 		});
 
+		// Pinned and bookmarked come out first, whatever else the cloud is
+		// doing with the remainder. Previously the selection regrouping and
+		// the level bands each returned early, so selecting anything made the
+		// pinned band disappear — which defeats the point of a pin.
+		const bands = splitIntoBands(rest, {
+			pinned: host.settings.pinnedTags,
+			bookmarked: host.bookmarkedTags(),
+			showPinned: host.settings.showPinnedBand,
+			showBookmarked: host.settings.showBookmarkedBand,
+			bookmarkedPosition: host.settings.bookmarkedBandPosition,
+		});
+		const banded = (id: string) => bands.find((band) => band.id === id);
+		const pinnedBand = banded("pinned");
+		const bookmarkedBand = banded("bookmarked");
+		const remainder = banded("rest")?.tags ?? [];
+		const bookmarksOnTop = host.settings.bookmarkedBandPosition === "top";
 
-		const selection = host.selection;
+		if (pinnedBand) {
+			this.appendGroup(field, `Pinned (${pinnedBand.tags.length})`, pinnedBand.tags);
+		}
+		if (bookmarkedBand && bookmarksOnTop) {
+			this.appendGroup(
+				field,
+				`Bookmarked (${bookmarkedBand.tags.length})`,
+				bookmarkedBand.tags
+			);
+		}
+
+		this.renderRemainder(field, remainder, pinnedBand !== undefined || bookmarkedBand !== undefined);
+
+		if (bookmarkedBand && !bookmarksOnTop) {
+			this.appendGroup(
+				field,
+				`Bookmarked (${bookmarkedBand.tags.length})`,
+				bookmarkedBand.tags
+			);
+		}
+	}
+
+	/** Everything that is neither pinned nor bookmarked, grouped as usual. */
+	private renderRemainder(
+		field: HTMLElement,
+		rest: string[],
+		bandsAbove: boolean
+	): void {
+		const { host } = this;
+		if (rest.length === 0) return;
+
 		const grouped =
-			selection.length > 0 && host.settings.regroupOnSelect && rest.length > 1;
+			host.selection.length > 0 &&
+			host.settings.regroupOnSelect &&
+			rest.length > 1;
 
 		if (grouped) {
 			const selected: string[] = [];
@@ -161,33 +209,21 @@ export class CloudRenderer implements ModeRenderer {
 		}
 
 		if (separatesLevels(host.settings.levelFilter)) {
-			// Each level gets its own band, so kinds read apart at a glance.
 			for (const level of orderedLevels(host.settings.levelFilter)) {
 				const band = rest.filter((tag) => host.levelOf(tag) === level);
 				if (band.length > 0) {
-					this.appendGroup(
-						field,
-						`${LEVEL_LABELS[level]}s (${band.length})`,
-						band
-					);
+					this.appendGroup(field, `${LEVEL_LABELS[level]}s (${band.length})`, band);
 				}
 			}
 			return;
 		}
 
-		for (const band of splitIntoBands(rest, {
-			pinned: host.settings.pinnedTags,
-			bookmarked: host.bookmarkedTags(),
-			showPinned: host.settings.showPinnedBand,
-			showBookmarked: host.settings.showBookmarkedBand,
-			bookmarkedPosition: host.settings.bookmarkedBandPosition,
-		})) {
-			if (band.label) {
-				this.appendGroup(field, `${band.label} (${band.tags.length})`, band.tags);
-			} else {
-				for (const tag of band.tags) field.appendChild(this.pillFor(tag));
-			}
+		// A heading only when something is above it to distinguish it from.
+		if (bandsAbove) {
+			this.appendGroup(field, `Other tags (${rest.length})`, rest);
+			return;
 		}
+		for (const tag of rest) field.appendChild(this.pillFor(tag));
 	}
 
 	private appendGroup(

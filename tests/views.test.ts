@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { TagGraph } from "../src/graph";
 import type { GraphBuildOptions } from "../src/graph";
 import { branchChildren, treeRoots } from "../src/tree";
-import { anchorPositions, collectMapNodes, withPinned } from "../src/map";
+import {
+	anchorPositions,
+	bandRowAnchors,
+	bandRows,
+	collectMapNodes,
+	withPinned,
+} from "../src/map";
 import { scaleByCount, hasToggleModifier, describeRelation } from "../src/host";
 import { remapManualLinks } from "../src/links";
 import { splitList, DEFAULT_SETTINGS } from "../src/settings";
@@ -551,5 +557,81 @@ describe("withPinned — the map always draws pinned tags", () => {
 		const nodes = [{ tag: "#project", hop: 0 }];
 		withPinned(nodes, [], GRAPH);
 		assert.equal(nodes.length, 1);
+	});
+});
+
+describe("map band rows", () => {
+	function opts(over: Partial<Parameters<typeof bandRows>[0]> = {}) {
+		return {
+			pinned: [] as string[],
+			bookmarked: [] as string[],
+			linkDistance: 100,
+			bookmarkedPosition: "top" as const,
+			showPinned: true,
+			showBookmarked: true,
+			...over,
+		};
+	}
+
+	test("nothing pinned or bookmarked means no reserved rows", () => {
+		assert.deepEqual(bandRows(opts()), []);
+	});
+
+	test("a pinned row sits above the main cluster", () => {
+		const rows = bandRows(opts({ pinned: ["#a", "#b"] }));
+		assert.equal(rows.length, 1);
+		assert.equal(rows[0].id, "pinned");
+		assert.ok(rows[0].y < 0, "above means negative y");
+	});
+
+	test("bookmarked can sit below instead", () => {
+		const rows = bandRows(
+			opts({ bookmarked: ["#a"], bookmarkedPosition: "bottom" })
+		);
+		assert.ok(rows[0].y > 0);
+	});
+
+	test("with both on top, pinned is the higher row", () => {
+		const rows = bandRows(opts({ pinned: ["#a"], bookmarked: ["#b"] }));
+		const pinned = rows.find((r) => r.id === "pinned")!;
+		const marked = rows.find((r) => r.id === "bookmarked")!;
+		assert.ok(pinned.y < marked.y, "pinned sits further from the graph");
+	});
+
+	test("a tag that is both appears only in the pinned row", () => {
+		// Same precedence as the list bands; two anchors for one node would
+		// be a contradiction the simulation cannot honour.
+		const rows = bandRows(opts({ pinned: ["#a"], bookmarked: ["#a", "#b"] }));
+		assert.deepEqual(rows.find((r) => r.id === "pinned")!.tags, ["#a"]);
+		assert.deepEqual(rows.find((r) => r.id === "bookmarked")!.tags, ["#b"]);
+	});
+
+	test("a disabled band reserves no row", () => {
+		assert.deepEqual(
+			bandRows(opts({ pinned: ["#a"], showPinned: false })),
+			[]
+		);
+	});
+
+	test("anchors spread evenly and centre on the origin", () => {
+		const rows = bandRows(opts({ pinned: ["#a", "#b", "#c"] }));
+		const anchors = bandRowAnchors(rows, 100);
+		const xs = ["#a", "#b", "#c"].map((tag) => anchors.get(tag)!.x);
+		assert.equal(xs.length, 3);
+		assert.ok(Math.abs(xs[0] + xs[2]) < 1e-9, "symmetric about zero");
+		assert.ok(Math.abs(xs[1]) < 1e-9, "middle tag centred");
+	});
+
+	test("every tag in a row gets an anchor on that row's y", () => {
+		const rows = bandRows(opts({ pinned: ["#a", "#b"] }));
+		const anchors = bandRowAnchors(rows, 100);
+		for (const tag of ["#a", "#b"]) {
+			assert.equal(anchors.get(tag)!.y, rows[0].y);
+		}
+	});
+
+	test("a single tag in a row sits at the centre", () => {
+		const anchors = bandRowAnchors(bandRows(opts({ pinned: ["#solo"] })), 100);
+		assert.equal(anchors.get("#solo")!.x, 0);
 	});
 });

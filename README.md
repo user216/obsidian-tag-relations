@@ -67,7 +67,7 @@ The cloud has three layouts, like a file browser:
 | **List** | One tag per line, compact |
 | **Details** | A table: kind, note count, relation count, group membership — click a column header to sort by it |
 
-**Pin up to 10 tags** from any context menu. Pinned and bookmarked tags are lifted into their own labelled bands in the cloud, tree and groups views, and the bookmarked band can sit above or below the rest (Settings → Views). Turning a band off doesn't hide its tags — they just sit with everything else. A tag that's both appears once, under Pinned.
+**Pin up to 10 tags** from any context menu. Pinned and bookmarked tags are lifted into their own labelled bands in the cloud, tree and groups views, and the bookmarked band can sit above or below the rest (Settings → Views). Turning a band off doesn't hide its tags — they just sit with everything else. A tag that's both appears once, under Pinned. On the mind-map, where there's no list to band, they get reserved labelled rows above or below the main cluster instead — anchored in world space, so they pan and zoom with the graph.
 
 **Pan and zoom**: drag empty space to pan, Ctrl/Cmd+wheel to zoom about the cursor. Plain scrolling still scrolls, and the zoom level is remembered. The mind-map keeps its own camera, and gains a **whole-vault** option that draws every tag and connection at once rather than just the selection's neighbourhood.
 

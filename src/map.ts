@@ -61,6 +61,8 @@ export class MapRenderer implements ModeRenderer {
 	private palette: Palette | null = null;
 	/** Tags left out by the node cap in whole-vault mode, for the notice. */
 	private truncated = 0;
+	/** Reserved rows for pinned and bookmarked tags. */
+	private bands: BandRow[] = [];
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -151,8 +153,28 @@ export class MapRenderer implements ModeRenderer {
 
 		this.neighborsOfSelected = new Set(host.graph.relatedToSelection(selection));
 
-		// Selected tags are held still so the map re-forms around them.
-		const anchors = anchorPositions(selection, settings.mapLinkDistance);
+		// Pinned and bookmarked tags get their own reserved rows, the map's
+		// equivalent of the labelled bands the list views show.
+		this.bands = bandRows({
+			pinned: settings.pinnedTags.filter((tag) => host.graph.nodes.has(tag)),
+			bookmarked: host
+				.bookmarkedTags()
+				.filter((tag) => host.graph.nodes.has(tag)),
+			linkDistance: settings.mapLinkDistance,
+			bookmarkedPosition: settings.bookmarkedBandPosition,
+			showPinned: settings.showPinnedBand,
+			showBookmarked: settings.showBookmarkedBand,
+		});
+
+		// Selected tags are held still so the map re-forms around them, and
+		// win over a band row: the selection is the active focus.
+		const anchors = bandRowAnchors(this.bands, settings.mapLinkDistance);
+		for (const [tag, position] of anchorPositions(
+			selection,
+			settings.mapLinkDistance
+		)) {
+			anchors.set(tag, position);
+		}
 
 		this.active = [];
 		for (const { tag, hop } of ordered) {
@@ -429,6 +451,38 @@ export class MapRenderer implements ModeRenderer {
 				ctx.setLineDash([]);
 			}
 			ctx.globalAlpha = 1;
+		}
+
+		// Band headings, drawn in world space so they travel with their rows.
+		if (this.bands.length > 0) {
+			ctx.textAlign = "left";
+			ctx.textBaseline = "bottom";
+			for (const row of this.bands) {
+				const spacing = this.host.settings.mapLinkDistance * 0.95;
+				const halfWidth = ((row.tags.length - 1) * spacing) / 2;
+				const left = -halfWidth - spacing * 0.5;
+				const right = halfWidth + spacing * 0.5;
+
+				ctx.globalAlpha = 0.5;
+				ctx.strokeStyle = palette.line;
+				ctx.setLineDash([4 / scale, 4 / scale]);
+				ctx.lineWidth = 1 / scale;
+				ctx.beginPath();
+				ctx.moveTo(left, row.y + spacing * 0.42);
+				ctx.lineTo(right, row.y + spacing * 0.42);
+				ctx.stroke();
+				ctx.setLineDash([]);
+
+				ctx.globalAlpha = 0.75;
+				ctx.fillStyle = palette.textMuted;
+				ctx.font = `600 ${11 / scale}px ${FONT_STACK}`;
+				ctx.fillText(
+					`${row.label} (${row.tags.length})`,
+					left,
+					row.y - spacing * 0.42
+				);
+				ctx.globalAlpha = 1;
+			}
 		}
 
 		ctx.textAlign = "center";
@@ -761,4 +815,86 @@ export function withPinned(
 		nodes.push({ tag, hop: 1 });
 	}
 	return nodes;
+}
+
+
+export interface BandRow {
+	id: "pinned" | "bookmarked";
+	label: string;
+	tags: string[];
+	/** World-space y for the row. */
+	y: number;
+}
+
+export interface BandRowOptions {
+	pinned: string[];
+	bookmarked: string[];
+	linkDistance: number;
+	bookmarkedPosition: "top" | "bottom";
+	showPinned: boolean;
+	showBookmarked: boolean;
+}
+
+/**
+ * Where the pinned and bookmarked rows sit on the map.
+ *
+ * A list can put these in labelled bands; a force-directed graph has no list,
+ * so the equivalent is a reserved strip of space. The rows are anchored in
+ * world coordinates, which means they pan and zoom with everything else —
+ * screen-anchored strips would slide over the graph as you moved it.
+ */
+export function bandRows(options: BandRowOptions): BandRow[] {
+	const gap = options.linkDistance * 1.6;
+	const rows: BandRow[] = [];
+
+	// Precedence matches the list bands: a tag that is both belongs to pinned.
+	const pinnedSet = new Set(options.showPinned ? options.pinned : []);
+	const pinnedTags = Array.from(pinnedSet);
+	const bookmarkedTags = (options.showBookmarked ? options.bookmarked : []).filter(
+		(tag) => !pinnedSet.has(tag)
+	);
+
+	const above: BandRow[] = [];
+	if (pinnedTags.length > 0) {
+		above.push({ id: "pinned", label: "Pinned", tags: pinnedTags, y: 0 });
+	}
+	if (bookmarkedTags.length > 0 && options.bookmarkedPosition === "top") {
+		above.push({
+			id: "bookmarked",
+			label: "Bookmarked",
+			tags: bookmarkedTags,
+			y: 0,
+		});
+	}
+	// Stack upward so the row nearest the graph is the last one added.
+	above.forEach((row, index) => {
+		row.y = -gap * (above.length - index + 1.5);
+		rows.push(row);
+	});
+
+	if (bookmarkedTags.length > 0 && options.bookmarkedPosition === "bottom") {
+		rows.push({
+			id: "bookmarked",
+			label: "Bookmarked",
+			tags: bookmarkedTags,
+			y: gap * 2.5,
+		});
+	}
+	return rows;
+}
+
+/** Evenly spaced positions along each row, centred on the origin. */
+export function bandRowAnchors(
+	rows: BandRow[],
+	linkDistance: number
+): Map<string, { x: number; y: number }> {
+	const anchors = new Map<string, { x: number; y: number }>();
+	const spacing = linkDistance * 0.95;
+	for (const row of rows) {
+		const width = (row.tags.length - 1) * spacing;
+		row.tags.forEach((tag, index) => {
+			anchors.set(tag, { x: index * spacing - width / 2, y: row.y });
+		});
+	}
+	return anchors;
 }

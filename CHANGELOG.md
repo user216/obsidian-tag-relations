@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-08
+
+### Fixed
+
+- **The cloud's Pinned and Bookmarked bands vanished as soon as anything was selected.** Two code paths — the Selected/Related/Unrelated regrouping, and the side-by-side level filter — each returned before the bands were reached, so in practice the bands were only visible with nothing selected. Pinned and bookmarked are now lifted out first and the remainder is grouped as before, which is what a pin is supposed to mean.
+
+### Added
+
+- **Pinned and bookmarked bands on the mind-map.** A graph has no list to band, so the equivalent is reserved space: pinned and bookmarked tags are anchored in their own labelled rows above (or below) the main cluster, with a dashed rule and a heading giving the count.
+  - The rows are anchored in world space, so they pan and zoom with the graph rather than sliding across it.
+  - A **selection still wins** over a band row — the selected tag is the active focus and is pulled to the centre as usual.
+  - A tag that is both pinned and bookmarked takes the pinned row only, matching the list bands. Two anchors for one node is a contradiction the simulation cannot honour.
+
+### Tests
+
+- 9 new tests for the map rows: ordering above and below, precedence when a tag qualifies for both, disabled bands reserving nothing, and even, centred spacing.
+
 ## [0.14.0] - 2026-09-08
 
 ### Added
@@ -350,7 +367,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.15.0]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...0.13.0
 [0.12.0]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...0.12.0
