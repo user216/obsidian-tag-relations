@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
 	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_MODE_LABELS,
 	PLEX_LAUNCHER_SIDE_LABELS,
 	PlexDepth,
 	PlexSource,
@@ -304,6 +305,16 @@ test("both launcher sides are offered and labelled", () => {
 		"right",
 	]);
 	for (const label of Object.values(PLEX_LAUNCHER_SIDE_LABELS)) {
+		assert.ok(label.length > 0);
+	}
+});
+
+test("both launcher arrangements are offered and labelled", () => {
+	assert.deepEqual(Object.keys(PLEX_LAUNCHER_MODE_LABELS).sort(), [
+		"groups",
+		"list",
+	]);
+	for (const label of Object.values(PLEX_LAUNCHER_MODE_LABELS)) {
 		assert.ok(label.length > 0);
 	}
 });

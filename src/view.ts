@@ -36,7 +36,7 @@ import {
 import { actionsForSurface, menuActions } from "./actionLayout";
 import { BandId } from "./bands";
 import { PlexRenderer, plexDepthMenu } from "./plexView";
-import { PLEX_DEPTH_LABELS } from "./plex";
+import { PLEX_DEPTH_LABELS, PlexLauncherMode } from "./plex";
 import { EXCERPT_STOPS, excerptStopLabel } from "./excerpt";
 import { tagSuggestions } from "./tagSuggest";
 
@@ -222,6 +222,13 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	togglePlexLauncher(): void {
 		this.settings.plexLauncherOpen = !this.settings.plexLauncherOpen;
+		void this.plugin.saveSettings();
+		this.renderActiveMode();
+	}
+
+	setPlexLauncherMode(mode: PlexLauncherMode): void {
+		if (this.settings.plexLauncherMode === mode) return;
+		this.settings.plexLauncherMode = mode;
 		void this.plugin.saveSettings();
 		this.renderActiveMode();
 	}

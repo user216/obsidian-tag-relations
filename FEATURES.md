@@ -79,6 +79,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Three depths on a toolbar button: immediate, plus siblings, plus a faint outer ring
 - Opens on a pinned tag, falling back to the most connected one
 - Starting-point column listing every tag, collapsible, on either side, one click to centre
+- That column arranges flat or grouped by main-tag, switched from its own heading
 - Per-row cap with an honest `+N more` count
 - Optional note preview under the plex, following the centre as you walk — toolbar button, command, or Settings → Views
 - Preview shows each note's opening lines: name only, 3, 5, 10, or any exact count up to 20
@@ -254,5 +255,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 564 tests across 92 suites (`npm test`)
+- 565 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

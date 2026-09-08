@@ -20,7 +20,11 @@ import {
 	serializeExport,
 } from "./transfer";
 import { TagGroups } from "./groups";
-import { PLEX_DEPTH_LABELS, PLEX_LAUNCHER_SIDE_LABELS } from "./plex";
+import {
+	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_MODE_LABELS,
+	PLEX_LAUNCHER_SIDE_LABELS,
+} from "./plex";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
 import {
@@ -246,6 +250,9 @@ export default class TagRelationsPlugin extends Plugin {
 		}
 		if (!(this.settings.plexLauncherSide in PLEX_LAUNCHER_SIDE_LABELS)) {
 			this.settings.plexLauncherSide = DEFAULT_SETTINGS.plexLauncherSide;
+		}
+		if (!(this.settings.plexLauncherMode in PLEX_LAUNCHER_MODE_LABELS)) {
+			this.settings.plexLauncherMode = DEFAULT_SETTINGS.plexLauncherMode;
 		}
 		if (!Array.isArray(this.settings.bookmarkLinks)) {
 			this.settings.bookmarkLinks = [];

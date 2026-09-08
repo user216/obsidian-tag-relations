@@ -7,6 +7,7 @@ import { levelCss } from "./levels";
 import { clampFontScale } from "./fontZoom";
 import { LevelStyles, SelectMode, SortMode, TagLevel } from "./types";
 import { BandId } from "./bands";
+import { PlexLauncherMode } from "./plex";
 
 /**
  * What each mode renderer is allowed to see and do. Keeping this narrow lets
@@ -60,6 +61,8 @@ export interface ViewHost {
 	/** Whether a band heading is folded shut, hiding its tags. */
 	/** Show or hide the plex's starting-point list. */
 	togglePlexLauncher(): void;
+	/** Flat or grouped, for that list. */
+	setPlexLauncherMode(mode: PlexLauncherMode): void;
 	isBandCollapsed(id: BandId): boolean;
 	toggleBandCollapsed(id: BandId): void;
 	/** Ask the user which tag to put inside `parent`. */

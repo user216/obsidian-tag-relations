@@ -2228,6 +2228,70 @@
 	color: var(--text-muted);
 }
 
+.tr-plex-launcher-title {
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tr-plex-launcher-modes {
+	display: flex;
+	gap: 1px;
+	flex: 0 0 auto;
+}
+
+.tr-plex-launcher-mode {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.tr-plex-launcher-mode:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.tr-plex-launcher-mode.is-active {
+	color: var(--text-accent);
+}
+
+.tr-plex-launcher-mode .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+/* Group headings in the list, folding with the rest of the plugin. */
+.tr-plex-launcher-group {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	margin-top: 8px;
+	padding: 1px 4px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-plex-launcher-group:first-child {
+	margin-top: 0;
+}
+
+.tr-plex-launcher-group:hover {
+	color: var(--text-normal);
+}
+
+.tr-plex-launcher-row.is-indented {
+	padding-left: 18px;
+}
+
 .tr-plex-launcher-list {
 	flex: 1 1 auto;
 	overflow-y: auto;

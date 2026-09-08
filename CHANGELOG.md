@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-08
+
+### Added
+
+- **A grouped arrangement for the plex's starting-point list.** Two small buttons on the list's own heading switch between a flat list and one grouped under each main-tag, and the choice is also in Settings → Views → Plex.
+  - Two genuinely different ways of finding a tag you cannot quite name: by the word, which the flat list serves, or by remembering what it sits *under*, which is the thing tag groups exist for. Neither replaces the other, so both are one click away rather than one being buried in settings.
+  - Sections fold on the **same state** as the groups view and the cloud's Groups layout, so a group folded in one is folded everywhere. A group is one thing, and remembering it open here and shut there would be a detail nobody asked to keep track of.
+  - The Ungrouped section is there too, on its own shared key, so no visible tag is missing from the list.
+
 ## [0.22.1] - 2026-09-08
 
 ### Added
@@ -535,6 +544,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.23.0]: https://github.com/user216/obsidian-tag-relations/compare/0.22.1...0.23.0
 [0.22.1]: https://github.com/user216/obsidian-tag-relations/compare/0.22.0...0.22.1
 [0.22.0]: https://github.com/user216/obsidian-tag-relations/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/user216/obsidian-tag-relations/compare/0.20.0...0.21.0

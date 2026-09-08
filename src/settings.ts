@@ -11,8 +11,10 @@ import { MAX_EXCERPT_LINES } from "./excerpt";
 import {
 	PLEX_DEPTH_DESCRIPTIONS,
 	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_MODE_LABELS,
 	PLEX_LAUNCHER_SIDE_LABELS,
 	PlexDepth,
+	PlexLauncherMode,
 	PlexLauncherSide,
 } from "./plex";
 import {
@@ -102,6 +104,8 @@ export interface TagRelationsSettings {
 	plexLauncherOpen: boolean;
 	/** Which side of the plex that list sits on. */
 	plexLauncherSide: PlexLauncherSide;
+	/** Whether that list is flat or arranged by group. */
+	plexLauncherMode: PlexLauncherMode;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -216,6 +220,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	plexPreviewLines: 0,
 	plexLauncherOpen: true,
 	plexLauncherSide: "right",
+	plexLauncherMode: "list",
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -727,6 +732,26 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.refreshViews();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("How it arranges tags")
+			.setDesc(
+				"A flat list, sorted as the toolbar says, or grouped under each main-tag. Two ways of finding a tag you cannot quite name: by the word, or by remembering what it sits under. Switchable from the list's own heading."
+			)
+			.addDropdown((drop) => {
+				for (const mode of Object.keys(
+					PLEX_LAUNCHER_MODE_LABELS
+				) as PlexLauncherMode[]) {
+					drop.addOption(mode, PLEX_LAUNCHER_MODE_LABELS[mode]);
+				}
+				drop
+					.setValue(this.plugin.settings.plexLauncherMode)
+					.onChange(async (value) => {
+						this.plugin.settings.plexLauncherMode = value as PlexLauncherMode;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("Which side it sits on")

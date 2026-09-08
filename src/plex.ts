@@ -55,6 +55,22 @@ export const PLEX_LAUNCHER_SIDE_LABELS: Record<PlexLauncherSide, string> = {
 	right: "Right of the plex",
 };
 
+/**
+ * How the starting-point list arranges its tags.
+ *
+ * Two genuinely different ways of finding a tag you cannot quite name. The
+ * flat list is alphabetical or by count — good when you half-remember the
+ * word. The grouped one shows the vocabulary you built, so you can find a tag
+ * by remembering what it sits under instead, which is the thing tag groups
+ * exist for in the first place.
+ */
+export type PlexLauncherMode = "list" | "groups";
+
+export const PLEX_LAUNCHER_MODE_LABELS: Record<PlexLauncherMode, string> = {
+	list: "Flat list",
+	groups: "Grouped by main-tag",
+};
+
 export type PlexRowId =
 	| "grandparents"
 	| "parents"

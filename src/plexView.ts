@@ -9,15 +9,19 @@ import {
 	noteName,
 	openNote,
 	pillFontSize,
+	renderBandHeader,
 } from "./host";
 import { tagLabel } from "./graph";
 import { MAX_EXCERPT_LINES, excerptLines } from "./excerpt";
 import { splitIntoBands } from "./bands";
 import { levelCss, visibleLevels } from "./levels";
 import { PanZoom } from "./panzoom";
+import { UNGROUPED_KEY, groupSections } from "./groups";
 import {
 	PLEX_DEPTH_LABELS,
+	PLEX_LAUNCHER_MODE_LABELS,
 	PlexDepth,
+	PlexLauncherMode,
 	PlexLayout,
 	PlexRow,
 	PlexSideBand,
@@ -222,12 +226,36 @@ export class PlexRenderer implements ModeRenderer {
 		const twisty = header.createSpan({ cls: "tr-twisty" });
 		setIcon(twisty, "chevron-right");
 		twisty.toggleClass("is-open", open);
-		header.createSpan({ text: open ? "Start from" : "" });
-		setTooltip(header, open ? "Collapse the tag list" : "Show the tag list", {
+		const collapseTarget = header.createSpan({
+			cls: "tr-plex-launcher-title",
+			text: open ? "Start from" : "",
+		});
+		setTooltip(collapseTarget, open ? "Collapse the tag list" : "Show the tag list", {
 			placement: away,
 		});
-		header.addEventListener("click", () => void host.togglePlexLauncher());
+		const toggleOpen = () => void host.togglePlexLauncher();
+		twisty.addEventListener("click", toggleOpen);
+		collapseTarget.addEventListener("click", toggleOpen);
+
 		if (!open) return;
+
+		// The arrangement switch lives on the heading rather than only in
+		// settings: which way of looking helps depends on what you are trying
+		// to remember, and that changes minute to minute.
+		const modes = header.createDiv({ cls: "tr-plex-launcher-modes" });
+		for (const [mode, icon] of [
+			["list", "list"],
+			["groups", "folder-tree"],
+		] as Array<[PlexLauncherMode, string]>) {
+			const button = modes.createSpan({ cls: "tr-plex-launcher-mode" });
+			setIcon(button, icon);
+			button.toggleClass("is-active", host.settings.plexLauncherMode === mode);
+			setTooltip(button, PLEX_LAUNCHER_MODE_LABELS[mode], { placement: away });
+			button.addEventListener("click", (event) => {
+				event.stopPropagation();
+				host.setPlexLauncherMode(mode);
+			});
+		}
 
 		const list = el.createDiv({ cls: "tr-plex-launcher-list" });
 		const tags = host.visibleTags();
@@ -236,6 +264,11 @@ export class PlexRenderer implements ModeRenderer {
 				cls: "tr-empty",
 				text: host.filter ? "No tags match." : "No tags yet.",
 			});
+			return;
+		}
+
+		if (host.settings.plexLauncherMode === "groups") {
+			this.renderLauncherGroups(list, tags, active, away);
 			return;
 		}
 
@@ -253,26 +286,84 @@ export class PlexRenderer implements ModeRenderer {
 				});
 			}
 			for (const tag of band.tags) {
-				const row = list.createDiv({ cls: "tr-plex-launcher-row" });
-				row.toggleClass("is-active", tag === active);
-				row.createSpan({ cls: "tr-note-name", text: tagLabel(tag) });
-				row.createSpan({
-					cls: "tr-pill-count",
-					text: String(host.graph.countOf(tag)),
-				});
-				setTooltip(row, `Centre the plex on ${tagLabel(tag)}`, {
-					placement: away,
-				});
-				row.addEventListener("click", (event) => {
-					event.stopPropagation();
-					host.selectFromEvent(tag, event);
-				});
-				row.addEventListener("contextmenu", (event) => {
-					event.preventDefault();
-					host.openContextMenu(tag, event);
-				});
+				this.launcherRow(list, tag, active, away);
 			}
 		}
+	}
+
+	/**
+	 * The same list, arranged by the group structure instead of flat.
+	 *
+	 * Sections fold on the same state as the groups view and the cloud's
+	 * Groups layout, so a group folded in one is folded everywhere — a group
+	 * is one thing, and remembering it open here and shut there would be a
+	 * detail nobody asked to keep track of.
+	 */
+	private renderLauncherGroups(
+		list: HTMLElement,
+		tags: string[],
+		active: string | null,
+		away: "left" | "right"
+	): void {
+		const { host } = this;
+		const sections = groupSections(host.groups, tags);
+
+		for (const section of sections) {
+			const collapsed = host.isGroupCollapsed(section.group);
+			renderBandHeader(list, {
+				cls: "tr-plex-launcher-group",
+				label: tagLabel(section.group),
+				count: section.members.length,
+				collapsed,
+				onToggle: () => host.toggleGroupCollapsed(section.group),
+			});
+			if (collapsed) continue;
+			for (const tag of section.members) {
+				this.launcherRow(list, tag, active, away, true);
+			}
+		}
+
+		const loose = host.groups
+			.ungrouped(tags)
+			.filter((tag) => !host.groups.isGroup(tag));
+		if (loose.length === 0) return;
+		const collapsed = host.isGroupCollapsed(UNGROUPED_KEY);
+		renderBandHeader(list, {
+			cls: "tr-plex-launcher-group",
+			label: "Ungrouped",
+			count: loose.length,
+			collapsed,
+			onToggle: () => host.toggleGroupCollapsed(UNGROUPED_KEY),
+		});
+		if (collapsed) return;
+		for (const tag of loose) this.launcherRow(list, tag, active, away, true);
+	}
+
+	private launcherRow(
+		parent: HTMLElement,
+		tag: string,
+		active: string | null,
+		away: "left" | "right",
+		indented = false
+	): void {
+		const { host } = this;
+		const row = parent.createDiv({ cls: "tr-plex-launcher-row" });
+		row.toggleClass("is-active", tag === active);
+		row.toggleClass("is-indented", indented);
+		row.createSpan({ cls: "tr-note-name", text: tagLabel(tag) });
+		row.createSpan({
+			cls: "tr-pill-count",
+			text: String(host.graph.countOf(tag)),
+		});
+		setTooltip(row, `Centre the plex on ${tagLabel(tag)}`, { placement: away });
+		row.addEventListener("click", (event) => {
+			event.stopPropagation();
+			host.selectFromEvent(tag, event);
+		});
+		row.addEventListener("contextmenu", (event) => {
+			event.preventDefault();
+			host.openContextMenu(tag, event);
+		});
 	}
 
 	private fillExcerpt(el: HTMLElement, lines: string[], count: number): void {
