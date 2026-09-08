@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-08
+
+### Added
+
+- **A right-click menu line for the note preview**, reading "Preview tagged notes" or "Hide the note preview". It is a real entry in the action registry rather than a special case, so it also gets an icon setting, an optional button and a place in the shared order like everything else. By default it has **no button**, since it already has a dedicated toolbar button that knows to appear only in the plex — a second, mode-blind copy would be two controls for one switch.
+- **The right-click menu is now manageable, the same way the buttons are.** Each row in Settings → Buttons gains a switch for whether that action offers a menu line.
+  - Menu visibility is a **separate switch** rather than a fourth placement value. Three surfaces would need eight placement combinations in one dropdown, which is unreadable — and the menu is a different sort of surface anyway, a list of labelled lines whose only meaningful controls are presence and position.
+  - The menu now follows the **same shared order** as the buttons, so an action keeps its relative place wherever it appears. Separators fall wherever that order crosses from one kind of action into another, rather than being fixed by the registry.
+  - Turning every line off is allowed; the menu then says where to turn them back on.
+
+### Changed
+
+- The placement dropdown's "Hidden" now reads **"No button"**. With the menu controlled separately, an action without a button is no longer thereby out of reach, and the old label said otherwise. A row is greyed in settings only when it has neither a button nor a menu line.
+
+### Tests
+
+- 7 new tests: menu lines defaulting to shown, the menu following the shared order, lines being dropped when turned off, every line off leaving an empty menu rather than a broken one, menu visibility being independent of placement, the two surfaces being unable to drift out of order, and the preview line reading correctly both ways round.
+
 ## [0.19.2] - 2026-09-08
 
 ### Added
@@ -474,6 +492,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.20.0]: https://github.com/user216/obsidian-tag-relations/compare/0.19.2...0.20.0
 [0.19.2]: https://github.com/user216/obsidian-tag-relations/compare/0.19.1...0.19.2
 [0.19.1]: https://github.com/user216/obsidian-tag-relations/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/user216/obsidian-tag-relations/compare/0.18.1...0.19.0

@@ -237,6 +237,7 @@ export default class TagRelationsPlugin extends Plugin {
 		if (!Array.isArray(this.settings.collapsedGroups)) {
 			this.settings.collapsedGroups = [];
 		}
+		if (!this.settings.hiddenMenuActions) this.settings.hiddenMenuActions = {};
 		if (!Array.isArray(this.settings.collapsedBands)) {
 			this.settings.collapsedBands = [];
 		}

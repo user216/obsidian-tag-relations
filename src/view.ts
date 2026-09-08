@@ -27,12 +27,13 @@ import { TagGroups } from "./groups";
 import {
 	ACTION_GROUP_LABELS,
 	ACTION_GROUP_ORDER,
+	ActionGroup,
 	ActionHost,
 	TAG_ACTIONS,
 	TagAction,
 	iconFor,
 } from "./actions";
-import { actionsForSurface } from "./actionLayout";
+import { actionsForSurface, menuActions } from "./actionLayout";
 import { BandId } from "./bands";
 import { PlexRenderer, plexDepthMenu } from "./plexView";
 import { PLEX_DEPTH_LABELS } from "./plex";
@@ -202,6 +203,14 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		else collapsed.push(tag);
 		void this.plugin.saveSettings();
 		this.renderActiveMode();
+	}
+
+	get plexPreviewOn(): boolean {
+		return this.settings.plexPreviewNotes;
+	}
+
+	togglePlexPreview(): void {
+		void this.plugin.togglePlexPreview();
 	}
 
 	isBandCollapsed(id: BandId): boolean {
@@ -449,24 +458,36 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		const ctx = { tag, host: this as ActionHost };
 
 		// Built from the same registry the button bar uses, so the two can
-		// never offer different capabilities (ADR 0010).
-		let firstGroup = true;
-		for (const group of ACTION_GROUP_ORDER) {
-			const available = TAG_ACTIONS.filter(
-				(action) => action.group === group && action.isEnabled(ctx)
-			);
-			if (available.length === 0) continue;
-			if (!firstGroup) menu.addSeparator();
-			firstGroup = false;
-			for (const action of available) {
-				menu.addItem((item) => {
-					item
-						.setTitle(action.label(ctx))
-						.setIcon(iconFor(action, this.settings.actionIcons))
-						.onClick(() => action.run(ctx));
-					if (action.destructive) item.setWarning(true);
-				});
+		// never offer different capabilities (ADR 0010) — and in the same
+		// user-chosen order, so a line keeps its place relative to the button
+		// for the same action. Separators fall wherever that order crosses
+		// from one group of actions into another.
+		const lines = menuActions(
+			TAG_ACTIONS,
+			this.settings.actionOrder,
+			this.settings.hiddenMenuActions
+		).filter((action) => action.isEnabled(ctx));
+
+		let previousGroup: ActionGroup | null = null;
+		for (const action of lines) {
+			if (previousGroup !== null && action.group !== previousGroup) {
+				menu.addSeparator();
 			}
+			previousGroup = action.group;
+			menu.addItem((item) => {
+				item
+					.setTitle(action.label(ctx))
+					.setIcon(iconFor(action, this.settings.actionIcons))
+					.onClick(() => action.run(ctx));
+				if (action.destructive) item.setWarning(true);
+			});
+		}
+		if (lines.length === 0) {
+			menu.addItem((item) =>
+				item
+					.setTitle("Every menu line is turned off (Settings → Buttons)")
+					.setDisabled(true)
+			);
 		}
 		menu.showAtMouseEvent(event);
 	}

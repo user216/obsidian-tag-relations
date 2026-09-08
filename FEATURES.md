@@ -137,6 +137,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Actions added by later versions append to a saved layout rather than vanishing
 - Context menu and button bar are generated from one shared registry, so they can never offer different capabilities
 
+- Right-click menu lines individually switchable, in the same shared order as the buttons
+- "Preview tagged notes" available as a menu line, a button, a command or a setting
 ## Removing relations
 
 - Remove one relation to a chosen tag — takes the horizontal link and any containment together, leaving nothing half-joined
@@ -248,5 +250,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 526 tests across 93 suites (`npm test`)
+- 533 tests across 93 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

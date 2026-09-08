@@ -78,6 +78,10 @@ export interface ActionHost {
 	promptAssignTagToNotesOf(tag: string): void;
 	promptRemoveTagFromNotes(tag: string): void;
 	copyTag(tag: string): void;
+
+	/** The plex's note preview — a view switch rather than a tag operation. */
+	plexPreviewOn: boolean;
+	togglePlexPreview(): void;
 }
 
 export interface ActionContext {
@@ -106,6 +110,21 @@ function hasTag(ctx: ActionContext): boolean {
 }
 
 export const TAG_ACTIONS: TagAction[] = [
+	// --- notes ---
+	{
+		id: "toggle-plex-preview",
+		group: "notes",
+		defaultIcon: "file-text",
+		label: (ctx) =>
+			ctx.host.plexPreviewOn
+				? "Hide the note preview"
+				: "Preview tagged notes",
+		// Needs no tag: it turns a view switch on and off rather than doing
+		// something to whatever was right-clicked.
+		isEnabled: () => true,
+		run: (ctx) => ctx.host.togglePlexPreview(),
+	},
+
 	// --- selection ---
 	{
 		id: "select-only",

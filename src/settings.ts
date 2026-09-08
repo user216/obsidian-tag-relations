@@ -31,6 +31,7 @@ import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import {
 	ActionPlacement,
 	PLACEMENT_LABELS,
+	isInMenu,
 	moveInOrder,
 	orderedActions,
 	placementOf,
@@ -118,6 +119,8 @@ export interface TagRelationsSettings {
 	actionOrder: string[];
 	/** Built-in toolbar controls turned off, keyed by control id. */
 	hiddenToolbarControls: Record<string, boolean>;
+	/** Right-click menu lines turned off, by action id. */
+	hiddenMenuActions: Record<string, boolean>;
 
 	/**
 	 * Zen mode: chrome hidden, the view itself untouched. A presentation
@@ -218,6 +221,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	actionPlacement: {},
 	actionOrder: [],
 	hiddenToolbarControls: {},
+	hiddenMenuActions: {},
 
 	zenMode: false,
 	fontScale: FONT_SCALE_DEFAULT,
@@ -984,7 +988,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("p", {
 			cls: "tr-settings-empty",
-			text: "Every action can go on the toolbar, on the action bar, on both, or nowhere — and be arranged in whatever order you like. Both surfaces share one order, so a button keeps the same relative place wherever you put it.",
+			text: "Every action can go on the toolbar, on the action bar, on both, or on neither — and separately be offered as a right-click menu line. All three surfaces share one order, so an action keeps the same relative place wherever it appears, and the right-click menu draws its separators wherever that order crosses from one kind of action into the next.",
 		});
 
 		new Setting(containerEl)
@@ -1009,6 +1013,7 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 					settings.actionOrder = [];
 					settings.actionIcons = {};
 					settings.hiddenToolbarControls = {};
+					settings.hiddenMenuActions = {};
 					await this.plugin.saveSettings();
 					this.plugin.rebuildViews();
 					this.display();
@@ -1040,7 +1045,11 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 				);
 		}
 
-		new Setting(containerEl).setName("Tag action buttons").setHeading();
+		new Setting(containerEl).setName("Tag actions").setHeading();
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Per row: the icon, where its button goes, whether it offers a right-click menu line, and its place in the shared order. Turning every menu line off is allowed — the menu then says where to turn them back on.",
+		});
 
 		// Shown as one list in the arranged order rather than grouped by kind:
 		// the order is what is being edited here, so any other arrangement
@@ -1054,7 +1063,13 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 				action.label({ tag: "#tag", host: previewHost(this.plugin) })
 			);
 			setting.settingEl.toggleClass("tr-button-row", true);
-			setting.settingEl.toggleClass("is-hidden-action", placement === "hidden");
+			// Greyed only when it is nowhere at all — no button *and* no menu
+			// line — rather than whenever it merely has no button.
+			setting.settingEl.toggleClass(
+				"is-hidden-action",
+				placement === "hidden" &&
+					!isInMenu(action.id, settings.hiddenMenuActions)
+			);
 
 			const preview = setting.controlEl.createDiv({ cls: "tr-icon-preview" });
 			const paint = (name: string) => {
@@ -1092,6 +1107,21 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 					this.display();
 				});
 			});
+
+			// The menu is its own switch rather than another placement value:
+			// three surfaces would need eight combinations in one dropdown.
+			setting.addToggle((toggle) =>
+				toggle
+					.setTooltip("Offer this as a right-click menu line")
+					.setValue(isInMenu(action.id, settings.hiddenMenuActions))
+					.onChange(async (value) => {
+						if (value) delete settings.hiddenMenuActions[action.id];
+						else settings.hiddenMenuActions[action.id] = true;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+						this.display();
+					})
+			);
 
 			setting.addExtraButton((button) =>
 				button
@@ -1571,5 +1601,8 @@ function previewHost(plugin: TagRelationsPlugin): ActionHost {
 		promptAssignTagToNotesOf: noop,
 		promptRemoveTagFromNotes: noop,
 		copyTag: noop,
+		// Read, not run: the label says "Preview" or "Hide" depending on it.
+		plexPreviewOn: plugin.settings.plexPreviewNotes,
+		togglePlexPreview: noop,
 	};
 }

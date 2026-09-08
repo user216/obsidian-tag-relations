@@ -2,8 +2,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
 	DEFAULT_PLACEMENTS,
+	PLACEMENT_LABELS,
 	actionsForSurface,
+	isInMenu,
 	isOn,
+	menuActions,
 	moveInOrder,
 	orderedActions,
 	placementOf,
@@ -49,9 +52,12 @@ describe("placement", () => {
 
 	test("the defaults reproduce the layout that predated this setting", () => {
 		// new-note and clear-selection were hard-coded toolbar buttons.
+		// toggle-plex-preview defaults to no button because it already has a
+		// dedicated, mode-aware one on the toolbar.
 		assert.deepEqual(Object.keys(DEFAULT_PLACEMENTS).sort(), [
 			"clear-selection",
 			"new-note",
+			"toggle-plex-preview",
 		]);
 	});
 });
@@ -170,4 +176,55 @@ describe("moving a button", () => {
 		const moved = moveInOrder(order, "b", 1);
 		assert.deepEqual(moved.slice().sort(), order.slice().sort());
 	});
+});
+
+// --- right-click menu lines ---------------------------------------------
+
+test("menu lines are shown unless explicitly turned off", () => {
+	// A line added by a later version must appear, not wait to be found.
+	assert.ok(isInMenu("anything", {}));
+	assert.ok(isInMenu("pin", { rename: true }));
+	assert.ok(!isInMenu("pin", { pin: true }));
+	assert.ok(isInMenu("pin", { pin: false }));
+});
+
+test("menuActions follows the shared order, not the registry order", () => {
+	const actions = [fake("a"), fake("b"), fake("c")];
+	assert.deepEqual(
+		menuActions(actions, ["c", "a", "b"], {}).map((entry) => entry.id),
+		["c", "a", "b"]
+	);
+});
+
+test("menuActions drops the lines that are turned off", () => {
+	const actions = [fake("a"), fake("b"), fake("c")];
+	assert.deepEqual(
+		menuActions(actions, [], { b: true }).map((entry) => entry.id),
+		["a", "c"]
+	);
+});
+
+test("turning off every line leaves an empty menu, not a broken one", () => {
+	const actions = [fake("a"), fake("b")];
+	assert.deepEqual(menuActions(actions, [], { a: true, b: true }), []);
+});
+
+test("menu visibility is independent of where the button goes", () => {
+	// The two controls are separate on purpose: an action with no button is
+	// not thereby out of reach, which is why the placement reads "No button".
+	const actions = [fake("a")];
+	assert.deepEqual(
+		menuActions(actions, [], {}).map((entry) => entry.id),
+		["a"]
+	);
+	assert.deepEqual(actionsForSurface("bar", actions, [], { a: "hidden" }), []);
+	assert.equal(PLACEMENT_LABELS.hidden, "No button");
+});
+
+test("the menu and the buttons cannot drift out of order", () => {
+	const actions = [fake("a"), fake("b"), fake("c")];
+	const order = ["b", "c", "a"];
+	const bar = actionsForSurface("bar", actions, order, {}).map((e) => e.id);
+	const menu = menuActions(actions, order, {}).map((e) => e.id);
+	assert.deepEqual(bar, menu);
 });

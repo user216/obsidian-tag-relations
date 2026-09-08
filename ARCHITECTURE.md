@@ -416,6 +416,8 @@ For everything sized by the theme rather than by count — tree rows, the detail
 
 `TAG_ACTIONS` (`src/actions.ts`) defines every tag action once: its id, group, default icon, a label that may depend on state, whether it is currently enabled, and what it does. Three surfaces read it — the context menu, the button bar, and the icon-customisation settings — rather than each maintaining a list.
 
+All three surfaces — the toolbar, the action bar and the right-click menu — read one shared order, so an action keeps its relative place wherever it appears. The menu's on/off state is a separate map rather than a fourth `ActionPlacement` value: three surfaces would need eight placement combinations in a single dropdown, and the menu is a different sort of surface anyway, a list of labelled lines whose only meaningful controls are presence and position. Its separators are derived from where the shared order crosses between action groups, rather than being fixed by the registry.
+
 That consolidation is the point. Three hand-written copies of "what can you do to a tag" drift within a release or two, and an action reachable from one surface but not another is invisible until someone goes looking. The same reasoning produced `describeRelation` after the identical bug was found in three renderers.
 
 Actions reach the app through `ActionHost`, a deliberately narrow interface — an action needing something outside it is a prompt to reconsider whether it belongs here, mirroring the `ViewHost` constraint (ADR 0003).
@@ -445,7 +447,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-526 tests across 93 suites:
+533 tests across 93 suites:
 
 | Suite | Covers |
 | --- | --- |

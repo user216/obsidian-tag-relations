@@ -11,7 +11,9 @@ import { TagAction } from "./actions";
 export type ActionPlacement = "hidden" | "bar" | "toolbar" | "both";
 
 export const PLACEMENT_LABELS: Record<ActionPlacement, string> = {
-	hidden: "Hidden",
+	// Not "Hidden": the right-click menu is controlled separately, so an
+	// action with no button is not thereby out of reach.
+	hidden: "No button",
 	bar: "Action bar",
 	toolbar: "Toolbar",
 	both: "Both",
@@ -27,6 +29,10 @@ export type ActionSurface = "bar" | "toolbar";
 export const DEFAULT_PLACEMENTS: Record<string, ActionPlacement> = {
 	"new-note": "toolbar",
 	"clear-selection": "toolbar",
+	// This one already has a dedicated toolbar button that knows to appear
+	// only in the plex; a second, mode-blind copy on the bar by default would
+	// be two controls for one switch.
+	"toggle-plex-preview": "hidden",
 };
 
 export function placementOf(
@@ -85,6 +91,35 @@ export function actionsForSurface(
  * order, so a stored order that is partial or empty still moves sensibly
  * rather than needing to be materialised first by the caller.
  */
+/**
+ * Whether an action offers a line in the right-click menu.
+ *
+ * The menu is kept as its own on/off map rather than becoming a fourth value
+ * of `ActionPlacement`. Three surfaces would need eight placement values to
+ * express every combination, which is a dropdown nobody can read; and the menu
+ * is a different sort of surface anyway — a list of labelled lines, where the
+ * only meaningful controls are whether a line is there and where it sits.
+ * Order is still shared with the buttons, for the reason above: one order
+ * means an action keeps its relative place wherever it appears.
+ *
+ * Lines are shown unless explicitly turned off, so a menu entry added by a
+ * later version appears rather than needing to be found and enabled.
+ */
+export function isInMenu(id: string, hidden: Record<string, boolean>): boolean {
+	return hidden[id] !== true;
+}
+
+/** The menu's lines, in the shared order. */
+export function menuActions(
+	actions: TagAction[],
+	order: string[],
+	hidden: Record<string, boolean>
+): TagAction[] {
+	return orderedActions(actions, order).filter((action) =>
+		isInMenu(action.id, hidden)
+	);
+}
+
 export function moveInOrder(
 	allIds: string[],
 	id: string,

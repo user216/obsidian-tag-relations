@@ -219,14 +219,15 @@ describe("the action registry", () => {
 		const needsTag = TAG_ACTIONS.filter((a) => !a.isEnabled(ctx));
 		assert.ok(needsTag.length > 0);
 		// The only actions that work without a tag are the ones about the
-		// whole structure rather than one tag in it. clear-selection and
-		// show-notes are additionally gated on there being a selection, so
-		// with an empty one they stay disabled here.
+		// whole structure, or about the view, rather than one tag in it.
+		// clear-selection and show-notes are additionally gated on there
+		// being a selection, so with an empty one they stay disabled here.
 		const tagless = TAG_ACTIONS.filter((a) => a.isEnabled(ctx)).map((a) => a.id);
 		assert.deepEqual(tagless.sort(), [
 			"export-relations",
 			"import-relations",
 			"new-note",
+			"toggle-plex-preview",
 		]);
 	});
 
@@ -306,5 +307,19 @@ function fakeHost(): any {
 		promptAssignTagToNotesOf: noop,
 		promptRemoveTagFromNotes: noop,
 		copyTag: noop,
+		plexPreviewOn: false,
+		togglePlexPreview: noop,
 	};
 }
+
+test("the plex preview line reads as a switch, both ways round", () => {
+	const action = actionById("toggle-plex-preview")!;
+	const off = { tag: null, host: { ...fakeHost(), plexPreviewOn: false } };
+	const on = { tag: null, host: { ...fakeHost(), plexPreviewOn: true } };
+	assert.equal(action.label(off), "Preview tagged notes");
+	assert.equal(action.label(on), "Hide the note preview");
+	// It acts on the view, not on whatever was right-clicked, so it is never
+	// greyed out for want of a tag.
+	assert.equal(action.isEnabled(off), true);
+	assert.equal(action.destructive, undefined);
+});

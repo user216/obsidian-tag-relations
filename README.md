@@ -123,6 +123,12 @@ The same screen also shows or hides the toolbar's **own** controls — view swit
 
 Both surfaces share a single order, so a button keeps the same relative position wherever you place it. The toolbar's *New note* and *Clear selection* are just ordinary actions that happen to default there, so they can be moved or hidden like anything else.
 
+### Managing the buttons and the menu
+
+**Settings → Buttons** controls every action's icon, where its button goes (toolbar, action bar, both, or no button), whether it offers a **right-click menu line**, and its place in the order. All three surfaces share that one order, so an action keeps the same relative place wherever it appears, and the right-click menu draws its separators wherever the order crosses from one kind of action into the next.
+
+Menu visibility is a separate switch rather than another value in the placement dropdown — three surfaces would need eight combinations in one list, and the menu is a different sort of thing anyway. Turning every line off is allowed; the menu then tells you where to turn them back on.
+
 ## Removing relations
 
 Three removals, and the difference between them matters:
