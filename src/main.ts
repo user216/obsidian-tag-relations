@@ -207,6 +207,12 @@ export default class TagRelationsPlugin extends Plugin {
 		if (!Array.isArray(this.settings.collapsedSections)) {
 			this.settings.collapsedSections = [];
 		}
+		if (
+			!this.settings.hiddenToolbarControls ||
+			typeof this.settings.hiddenToolbarControls !== "object"
+		) {
+			this.settings.hiddenToolbarControls = {};
+		}
 	}
 
 	async saveSettings(): Promise<void> {
@@ -231,6 +237,14 @@ export default class TagRelationsPlugin extends Plugin {
 
 	refreshViews(): void {
 		for (const view of this.views()) view.requestRender();
+	}
+
+	/**
+	 * Rebuild views from scratch. The toolbar is constructed once when a view
+	 * opens, so changing which controls it contains needs more than a render.
+	 */
+	rebuildViews(): void {
+		for (const view of this.views()) void view.rebuild();
 	}
 
 	private views(): TagRelationsView[] {

@@ -119,6 +119,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Every button placeable on the toolbar, the action bar, both, or hidden
 - Buttons reorderable, with one shared order across both surfaces
 - Reset returns every button to its default place, order and icon
+- Each of the toolbar's ten built-in controls can be shown or hidden
+- Every hide toggle explains what it costs and where the equivalent lives
 - Actions added by later versions append to a saved layout rather than vanishing
 - Context menu and button bar are generated from one shared registry, so they can never offer different capabilities
 
@@ -200,5 +202,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 435 tests across 84 suites (`npm test`)
+- 442 tests across 86 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

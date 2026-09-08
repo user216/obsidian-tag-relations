@@ -81,6 +81,8 @@ Buttons act on the **last tag you selected**, named at the left of the bar so th
 
 **Settings → Buttons** controls the whole layout. Each action can sit on the **toolbar**, the **action bar**, **both**, or **nowhere**, and be moved up or down into whatever order suits you. Icons are set there too — any [Lucide](https://lucide.dev) icon name, with a live preview as you type — and one **Reset** puts everything back.
 
+The same screen also shows or hides the toolbar's **own** controls — view switcher, filter box, sort, the toggles, view options, rescan — so you can strip it back to just what you use. Each toggle says what hiding it costs; nothing becomes unreachable, since every control has an equivalent in settings or the command palette.
+
 Both surfaces share a single order, so a button keeps the same relative position wherever you place it. The toolbar's *New note* and *Clear selection* are just ordinary actions that happen to default there, so they can be moved or hidden like anything else.
 
 ## Removing relations

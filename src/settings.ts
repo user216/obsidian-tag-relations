@@ -1,5 +1,10 @@
 import { App, PluginSettingTab, Setting, Notice, setIcon } from "obsidian";
 import { ActionHost, TAG_ACTIONS, iconFor } from "./actions";
+import {
+	TOOLBAR_CONTROLS,
+	ToolbarControlId,
+	isControlVisible,
+} from "./toolbarControls";
 import type TagRelationsPlugin from "./main";
 import { AddLocation } from "./edit";
 import {
@@ -85,6 +90,8 @@ export interface TagRelationsSettings {
 	actionPlacement: Record<string, ActionPlacement>;
 	/** Action ids in display order; anything missing keeps registry order. */
 	actionOrder: string[];
+	/** Built-in toolbar controls turned off, keyed by control id. */
+	hiddenToolbarControls: Record<string, boolean>;
 
 	// Cloud presentation
 	cloudLayout: CloudLayout;
@@ -165,6 +172,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	actionIcons: {},
 	actionPlacement: {},
 	actionOrder: [],
+	hiddenToolbarControls: {},
 
 	cloudLayout: "icons",
 	cloudZoom: 1,
@@ -784,17 +792,47 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Reset the layout")
-			.setDesc("Put every button back to its default place, order and icon.")
+			.setDesc(
+				"Put every button and toolbar control back to its default place, order, icon and visibility."
+			)
 			.addButton((button) =>
 				button.setButtonText("Reset").onClick(async () => {
 					settings.actionPlacement = {};
 					settings.actionOrder = [];
 					settings.actionIcons = {};
+					settings.hiddenToolbarControls = {};
 					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
+					this.plugin.rebuildViews();
 					this.display();
 				})
 			);
+
+		new Setting(containerEl).setName("Toolbar controls").setHeading();
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "The toolbar's own controls, as opposed to the tag actions below. Turn off whatever you do not reach for — nothing becomes unreachable, since each has an equivalent in settings or the command palette, and this list is always here.",
+		});
+
+		for (const control of TOOLBAR_CONTROLS) {
+			new Setting(containerEl)
+				.setName(control.label)
+				.setDesc(control.description)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(
+							isControlVisible(control.id, settings.hiddenToolbarControls)
+						)
+						.onChange(async (value) => {
+							if (value) delete settings.hiddenToolbarControls[control.id];
+							else settings.hiddenToolbarControls[control.id] = true;
+							await this.plugin.saveSettings();
+							// The toolbar is built once, so it has to be rebuilt.
+							this.plugin.rebuildViews();
+						})
+				);
+		}
+
+		new Setting(containerEl).setName("Tag action buttons").setHeading();
 
 		// Shown as one list in the arranged order rather than grouped by kind:
 		// the order is what is being edited here, so any other arrangement

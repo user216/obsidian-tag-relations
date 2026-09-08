@@ -30,6 +30,7 @@ import {
 	iconFor,
 } from "./actions";
 import { actionsForSurface } from "./actionLayout";
+import { ToolbarControlId, isControlVisible } from "./toolbarControls";
 import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import { TagSuggestModal } from "./modals";
 import {
@@ -294,6 +295,14 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.notesEl = column.createDiv({ cls: "tr-notes-panel" });
 		this.inspectorEl = body.createDiv({ cls: "tr-inspector" });
 		this.renderAll();
+	}
+
+	/** Tear down and re-create the whole view, toolbar included. */
+	async rebuild(): Promise<void> {
+		this.renderer?.destroy();
+		this.renderer = null;
+		this.rendererMode = null;
+		await this.onOpen();
 	}
 
 	async onClose(): Promise<void> {
@@ -593,153 +602,178 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.renderAll();
 	}
 
+	/** Whether a built-in toolbar control is turned on. */
+	private showsControl(id: ToolbarControlId): boolean {
+		return isControlVisible(id, this.settings.hiddenToolbarControls);
+	}
+
 	private buildToolbar(): void {
 		const toolbar = this.contentEl.createDiv({ cls: "tr-toolbar" });
 
-		const modes = toolbar.createDiv({ cls: "tr-modes" });
-		for (const meta of MODE_META) {
-			const button = modes.createDiv({ cls: "tr-mode-button" });
-			setIcon(button.createSpan({ cls: "tr-mode-icon" }), meta.icon);
-			button.createSpan({ cls: "tr-mode-label", text: meta.label });
-			setTooltip(button, `${meta.label} view`, { placement: "bottom" });
-			button.addEventListener("click", () => void this.setMode(meta.mode));
-			this.modeButtons.set(meta.mode, button);
-		}
-
-		const search = toolbar.createDiv({ cls: "tr-search" });
-		setIcon(search.createSpan({ cls: "tr-search-icon" }), "search");
-		this.searchInput = search.createEl("input", {
-			type: "text",
-			placeholder: "Filter tags…",
-			cls: "tr-search-input",
-		});
-		const applyFilter = debounce(
-			(value: string) => {
-				this.filter = value.trim().toLowerCase();
-				this.renderActiveMode();
-			},
-			150,
-			true
-		);
-		this.searchInput.addEventListener("input", () =>
-			applyFilter(this.searchInput.value)
-		);
-		this.searchInput.addEventListener("keydown", (event) => {
-			if (event.key === "Escape") {
-				this.searchInput.value = "";
-				this.filter = "";
-				this.renderActiveMode();
+		if (this.showsControl("modes")) {
+			const modes = toolbar.createDiv({ cls: "tr-modes" });
+			for (const meta of MODE_META) {
+				const button = modes.createDiv({ cls: "tr-mode-button" });
+				setIcon(button.createSpan({ cls: "tr-mode-icon" }), meta.icon);
+				button.createSpan({ cls: "tr-mode-label", text: meta.label });
+				setTooltip(button, `${meta.label} view`, { placement: "bottom" });
+				button.addEventListener("click", () => void this.setMode(meta.mode));
+				this.modeButtons.set(meta.mode, button);
 			}
-		});
-
-		const sortSelect = toolbar.createEl("select", { cls: "tr-sort dropdown" });
-		for (const key of Object.keys(SORT_LABELS) as SortMode[]) {
-			sortSelect.createEl("option", { value: key, text: SORT_LABELS[key] });
 		}
-		sortSelect.value = this.sort;
-		sortSelect.addEventListener("change", () => {
-			this.plugin.settings.sort = sortSelect.value as SortMode;
-			void this.plugin.saveSettings();
-			this.renderActiveMode();
-		});
 
-		this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });
-		setIcon(this.editButton, "pencil");
-		setTooltip(
-			this.editButton,
-			"Edit mode — show inline rename controls on tags",
-			{ placement: "bottom" }
-		);
-		this.editButton.addEventListener("click", () => {
-			this.settings.editMode = !this.settings.editMode;
-			void this.plugin.saveSettings();
-			this.syncToolbar();
-			this.renderActiveMode();
-			this.renderInspector();
-		});
-
-		this.stickyButton = toolbar.createDiv({ cls: "tr-icon-button" });
-		setIcon(this.stickyButton, "list-checks");
-		setTooltip(
-			this.stickyButton,
-			"Sticky multi-select — every click adds or removes a tag (Ctrl/Cmd or Shift click does this anyway)",
-			{ placement: "bottom" }
-		);
-		this.stickyButton.addEventListener("click", () => {
-			this.settings.stickyMultiSelect = !this.settings.stickyMultiSelect;
-			void this.plugin.saveSettings();
-			this.syncToolbar();
-		});
-
-		const notesGroup = toolbar.createDiv({ cls: "tr-notes-group" });
-		this.matchSelect = notesGroup.createEl("select", {
-			cls: "tr-match dropdown",
-		});
-		for (const key of Object.keys(MATCH_LABELS) as NoteMatchMode[]) {
-			this.matchSelect.createEl("option", {
-				value: key,
-				text: MATCH_LABELS[key],
+		if (this.showsControl("search")) {
+			const search = toolbar.createDiv({ cls: "tr-search" });
+			setIcon(search.createSpan({ cls: "tr-search-icon" }), "search");
+			this.searchInput = search.createEl("input", {
+				type: "text",
+				placeholder: "Filter tags…",
+				cls: "tr-search-input",
+			});
+			const applyFilter = debounce(
+				(value: string) => {
+					this.filter = value.trim().toLowerCase();
+					this.renderActiveMode();
+				},
+				150,
+				true
+			);
+			this.searchInput.addEventListener("input", () =>
+				applyFilter(this.searchInput.value)
+			);
+			this.searchInput.addEventListener("keydown", (event) => {
+				if (event.key === "Escape") {
+					this.searchInput.value = "";
+					this.filter = "";
+					this.renderActiveMode();
+				}
 			});
 		}
-		this.matchSelect.value = this.settings.noteMatchMode;
-		setTooltip(
-			this.matchSelect,
-			"Whether a note must carry every selected tag or just one",
-			{ placement: "bottom" }
-		);
-		this.matchSelect.addEventListener("change", () => {
-			this.settings.noteMatchMode = this.matchSelect.value as NoteMatchMode;
-			void this.plugin.saveSettings();
-			// Existing results stay frozen; they just flag themselves stale.
-			this.renderNotesPanel();
-		});
 
-		const showNotes = notesGroup.createEl("button", {
-			cls: "tr-show-notes mod-cta",
-			text: "Show notes",
-		});
-		setTooltip(showNotes, "List the notes matching the selected tags", {
-			placement: "bottom",
-		});
-		showNotes.addEventListener("click", () => this.showNotes());
+		if (this.showsControl("sort")) {
+			const sortSelect = toolbar.createEl("select", { cls: "tr-sort dropdown" });
+			for (const key of Object.keys(SORT_LABELS) as SortMode[]) {
+				sortSelect.createEl("option", { value: key, text: SORT_LABELS[key] });
+			}
+			sortSelect.value = this.sort;
+			sortSelect.addEventListener("change", () => {
+				this.plugin.settings.sort = sortSelect.value as SortMode;
+				void this.plugin.saveSettings();
+				this.renderActiveMode();
+			});
+		}
 
-		this.actionBarButton = toolbar.createDiv({ cls: "tr-icon-button" });
-		setIcon(this.actionBarButton, "wand-2");
-		setTooltip(this.actionBarButton, "Show the action bar", {
-			placement: "bottom",
-		});
-		this.actionBarButton.addEventListener("click", async () => {
-			this.settings.showActionBar = !this.settings.showActionBar;
-			await this.plugin.saveSettings();
-			this.syncToolbar();
-			this.renderActionBar();
-		});
+		if (this.showsControl("editMode")) {
+			this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });
+			setIcon(this.editButton, "pencil");
+			setTooltip(
+				this.editButton,
+				"Edit mode — show inline rename controls on tags",
+				{ placement: "bottom" }
+			);
+			this.editButton.addEventListener("click", () => {
+				this.settings.editMode = !this.settings.editMode;
+				void this.plugin.saveSettings();
+				this.syncToolbar();
+				this.renderActiveMode();
+				this.renderInspector();
+			});
+		}
 
-		const optionsButton = toolbar.createDiv({ cls: "tr-icon-button" });
-		setIcon(optionsButton, "sliders-horizontal");
-		setTooltip(optionsButton, "View options", { placement: "bottom" });
-		optionsButton.addEventListener("click", (event) =>
-			this.openViewOptions(event)
-		);
+		if (this.showsControl("stickySelect")) {
+			this.stickyButton = toolbar.createDiv({ cls: "tr-icon-button" });
+			setIcon(this.stickyButton, "list-checks");
+			setTooltip(
+				this.stickyButton,
+				"Sticky multi-select — every click adds or removes a tag (Ctrl/Cmd or Shift click does this anyway)",
+				{ placement: "bottom" }
+			);
+			this.stickyButton.addEventListener("click", () => {
+				this.settings.stickyMultiSelect = !this.settings.stickyMultiSelect;
+				void this.plugin.saveSettings();
+				this.syncToolbar();
+			});
+		}
+
+		if (this.showsControl("notes")) {
+			const notesGroup = toolbar.createDiv({ cls: "tr-notes-group" });
+			this.matchSelect = notesGroup.createEl("select", {
+				cls: "tr-match dropdown",
+			});
+			for (const key of Object.keys(MATCH_LABELS) as NoteMatchMode[]) {
+				this.matchSelect.createEl("option", {
+					value: key,
+					text: MATCH_LABELS[key],
+				});
+			}
+			this.matchSelect.value = this.settings.noteMatchMode;
+			setTooltip(
+				this.matchSelect,
+				"Whether a note must carry every selected tag or just one",
+				{ placement: "bottom" }
+			);
+			this.matchSelect.addEventListener("change", () => {
+				this.settings.noteMatchMode = this.matchSelect.value as NoteMatchMode;
+				void this.plugin.saveSettings();
+				// Existing results stay frozen; they just flag themselves stale.
+				this.renderNotesPanel();
+			});
+
+			const showNotes = notesGroup.createEl("button", {
+				cls: "tr-show-notes mod-cta",
+				text: "Show notes",
+			});
+			setTooltip(showNotes, "List the notes matching the selected tags", {
+				placement: "bottom",
+			});
+			showNotes.addEventListener("click", () => this.showNotes());
+		}
+
+		if (this.showsControl("actionBarToggle")) {
+			this.actionBarButton = toolbar.createDiv({ cls: "tr-icon-button" });
+			setIcon(this.actionBarButton, "wand-2");
+			setTooltip(this.actionBarButton, "Show the action bar", {
+				placement: "bottom",
+			});
+			this.actionBarButton.addEventListener("click", async () => {
+				this.settings.showActionBar = !this.settings.showActionBar;
+				await this.plugin.saveSettings();
+				this.syncToolbar();
+				this.renderActionBar();
+			});
+		}
+
+		if (this.showsControl("viewOptions")) {
+			const optionsButton = toolbar.createDiv({ cls: "tr-icon-button" });
+			setIcon(optionsButton, "sliders-horizontal");
+			setTooltip(optionsButton, "View options", { placement: "bottom" });
+			optionsButton.addEventListener("click", (event) =>
+				this.openViewOptions(event)
+			);
+		}
 
 		// Whichever actions the user placed on the toolbar, in their order.
 		this.toolbarActionsEl = toolbar.createDiv({ cls: "tr-toolbar-actions" });
 
 		const actions = toolbar.createDiv({ cls: "tr-actions" });
-		const inspectorButton = actions.createDiv({ cls: "tr-icon-button" });
-		setIcon(inspectorButton, "panel-right");
-		setTooltip(inspectorButton, "Toggle details panel", { placement: "bottom" });
-		inspectorButton.addEventListener("click", () => {
-			this.plugin.settings.showInspector = !this.plugin.settings.showInspector;
-			void this.plugin.saveSettings();
-			this.renderInspector();
-			this.syncToolbar();
-		});
+		if (this.showsControl("inspectorToggle")) {
+			const inspectorButton = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(inspectorButton, "panel-right");
+			setTooltip(inspectorButton, "Toggle details panel", { placement: "bottom" });
+			inspectorButton.addEventListener("click", () => {
+				this.plugin.settings.showInspector = !this.plugin.settings.showInspector;
+				void this.plugin.saveSettings();
+				this.renderInspector();
+				this.syncToolbar();
+			});
+		}
 
-		const refreshButton = actions.createDiv({ cls: "tr-icon-button" });
-		setIcon(refreshButton, "refresh-cw");
-		setTooltip(refreshButton, "Rescan vault", { placement: "bottom" });
-		refreshButton.addEventListener("click", () => this.plugin.rebuildGraph());
+		if (this.showsControl("refresh")) {
+			const refreshButton = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(refreshButton, "refresh-cw");
+			setTooltip(refreshButton, "Rescan vault", { placement: "bottom" });
+			refreshButton.addEventListener("click", () => this.plugin.rebuildGraph());
+		}
 	}
 
 	/**

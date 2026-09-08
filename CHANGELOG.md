@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-08
+
+### Added
+
+- **Show or hide each of the toolbar's own controls** in **Settings → Buttons**: the view switcher, filter box, sort dropdown, edit-mode and sticky-select toggles, the match mode and Show notes pair, the action-bar toggle, the view-options menu, the side-panel toggle and the rescan button.
+  - Tag actions already had this through the **Hidden** option in their placement dropdown; these ten built-in controls had no way to be turned off at all, so a toolbar carrying everything left little room for the buttons you actually reach for.
+  - Each toggle says what hiding it costs and where the equivalent lives. Nothing becomes unreachable: every control has a counterpart in settings or the command palette, and the list itself is always in settings.
+  - **Reset the layout** now also restores control visibility.
+
+### Tests
+
+- 7 new tests: default visibility, hiding one without disturbing others, hiding everything, ignoring stale keys from an old settings file, and that every control carries a description explaining the cost of hiding it.
+
 ## [0.11.1] - 2026-09-08
 
 ### Fixed
@@ -304,7 +317,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/user216/obsidian-tag-relations/compare/0.11.1...0.12.0
 [0.11.1]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...0.11.1
 [0.11.0]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...0.10.0
