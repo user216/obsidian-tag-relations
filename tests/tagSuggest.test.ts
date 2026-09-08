@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { tagSuggestions } from "../src/tagSuggest";
+import { parseTagList, tagSuggestions } from "../src/tagSuggest";
 
 const TAGS = ["#alpha", "#beta", "#alphabet", "#Gamma"];
 const names = (list: { tag: string }[]) => list.map((s) => s.tag);
@@ -117,5 +117,84 @@ describe("tagSuggestions — limit", () => {
 
 	test("no limit returns everything", () => {
 		assert.equal(tagSuggestions("", TAGS).length, TAGS.length);
+	});
+});
+
+describe("parseTagList — when it is a list", () => {
+	test("a single name is not a list, so normal typing is untouched", () => {
+		assert.equal(parseTagList("alpha", TAGS).isList, false);
+		assert.equal(parseTagList("  alpha  ", TAGS).isList, false);
+		assert.equal(parseTagList("", TAGS).isList, false);
+	});
+
+	test("two or more names is a list", () => {
+		assert.equal(parseTagList("alpha beta", TAGS).isList, true);
+		assert.equal(parseTagList("alpha,beta,gamma", TAGS).isList, true);
+	});
+
+	test("commas, semicolons and spaces all separate", () => {
+		for (const query of ["a b", "a,b", "a;b", "a, b", "a ;  b"]) {
+			assert.deepEqual(
+				names(parseTagList(query, []).valid),
+				["#a", "#b"],
+				query
+			);
+		}
+	});
+
+	test("a leading hash on each name is accepted", () => {
+		assert.deepEqual(names(parseTagList("#one #two", []).valid), ["#one", "#two"]);
+	});
+});
+
+describe("parseTagList — classifying the names", () => {
+	test("marks which names are new and which already exist", () => {
+		const parsed = parseTagList("alpha brandnew", TAGS);
+		assert.deepEqual(parsed.valid, [
+			{ tag: "#alpha", isNew: false },
+			{ tag: "#brandnew", isNew: true },
+		]);
+	});
+
+	test("several new tags can be created at once", () => {
+		const parsed = parseTagList("one two three", TAGS);
+		assert.deepEqual(names(parsed.valid), ["#one", "#two", "#three"]);
+		assert.ok(parsed.valid.every((entry) => entry.isNew));
+	});
+
+	test("typed order is preserved", () => {
+		assert.deepEqual(names(parseTagList("zebra apple mango", []).valid), [
+			"#zebra",
+			"#apple",
+			"#mango",
+		]);
+	});
+
+	test("unusable names are collected rather than silently dropped", () => {
+		const parsed = parseTagList("good 2024 alsogood", TAGS);
+		assert.deepEqual(names(parsed.valid), ["#good", "#alsogood"]);
+		assert.deepEqual(parsed.invalid, ["2024"]);
+	});
+
+	test("already-chosen names are reported as duplicates, not re-added", () => {
+		const parsed = parseTagList("alpha beta", TAGS, { exclude: ["#alpha"] });
+		assert.deepEqual(names(parsed.valid), ["#beta"]);
+		assert.deepEqual(parsed.duplicates, ["alpha"]);
+	});
+
+	test("duplicate detection ignores case", () => {
+		const parsed = parseTagList("ALPHA beta", TAGS, { exclude: ["#alpha"] });
+		assert.deepEqual(parsed.duplicates, ["ALPHA"]);
+	});
+
+	test("the same name twice in one list is added once", () => {
+		const parsed = parseTagList("dup dup other", []);
+		assert.deepEqual(names(parsed.valid), ["#dup", "#other"]);
+	});
+
+	test("a list of only unusable names yields nothing to add", () => {
+		const parsed = parseTagList("2024 2025", TAGS);
+		assert.deepEqual(parsed.valid, []);
+		assert.deepEqual(parsed.invalid, ["2024", "2025"]);
 	});
 });

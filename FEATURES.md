@@ -93,6 +93,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - New note button in the toolbar, plus a command; the whole feature is toggleable
 - A dialog for choosing the new note's tags, pre-filled from the current selection
 - Add any number of tags, existing or newly created, shown as removable chips
+- Type several names at once (spaces, commas or semicolons) to add and create them in one go
+- Skipped names — unusable, or already added — are listed rather than dropped quietly
 - Live preview of the filename the note will get
 - Keyboard-first: arrows to move, Enter to add, Backspace to undo, Enter on an empty box to create
 - A tag left typed in the box is added when you press Create, not discarded
@@ -168,5 +170,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 356 tests across 68 suites (`npm test`)
+- 368 tests across 70 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

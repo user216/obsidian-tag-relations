@@ -1478,3 +1478,13 @@
 	font-size: var(--font-ui-smaller);
 	color: var(--text-faint);
 }
+
+.tr-new-note-bulk {
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.tr-new-note-bulk .tr-choice-name {
+	white-space: normal;
+	line-height: 1.4;
+}

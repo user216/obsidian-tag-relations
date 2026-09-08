@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-08
+
+### Added
+
+- **Create several tags at once in the new-note dialog.** Typing more than one name — separated by spaces, commas or semicolons — switches the suggestion list for an "Add N tags" row that adds them all, creating whichever don't exist yet. Spaces are safe as separators because a tag name can never contain one, so `alpha beta` is unambiguously two tags.
+  - The row says how many are new before you commit to them.
+  - Names that aren't usable as tags, and names already added, are **listed explicitly as skipped** rather than dropped quietly.
+  - A single name behaves exactly as before, so one-at-a-time typing is untouched.
+
+### Tests
+
+- 12 new tests for list parsing: what counts as a list, each separator, new-versus-existing classification, order preservation, unusable names, case-insensitive duplicate detection, and repeats within one list.
+
 ## [0.7.1] - 2026-09-08
 
 Two bugs in the new-note dialog, both found in real use.
@@ -221,7 +234,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...0.6.0

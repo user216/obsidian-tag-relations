@@ -1,6 +1,11 @@
 import { App, Modal, Setting, setIcon, setTooltip } from "obsidian";
 import { tagLabel } from "./graph";
-import { TagSuggestion, tagSuggestions } from "./tagSuggest";
+import {
+	ParsedTagList,
+	TagSuggestion,
+	parseTagList,
+	tagSuggestions,
+} from "./tagSuggest";
 
 export interface NewNoteModalOptions {
 	/** Tags the note starts with — usually the current selection. */
@@ -39,6 +44,8 @@ export class NewNoteModal extends Modal {
 	/** Index into the currently rendered suggestions, or -1 for none. */
 	private highlighted = 0;
 	private suggestions: TagSuggestion[] = [];
+	/** Set when several names have been typed at once, instead of suggestions. */
+	private bulk: ParsedTagList | null = null;
 
 	private chipsEl!: HTMLElement;
 	private inputEl!: HTMLInputElement;
@@ -67,7 +74,8 @@ export class NewNoteModal extends Modal {
 		this.inputEl = search.createEl("input", {
 			cls: "tr-search-input",
 			type: "text",
-			placeholder: "Type to find a tag, or a new name to create one…",
+			placeholder:
+				"Find a tag, or type new names — several at once, separated by spaces or commas",
 		});
 		this.inputEl.addEventListener("input", () => {
 			this.query = this.inputEl.value;
@@ -140,11 +148,26 @@ export class NewNoteModal extends Modal {
 	}
 
 	private renderSuggestions(): void {
+		this.listEl.empty();
+
+		// Several names typed at once take over from the suggestion list —
+		// picking one row out of a list makes no sense when the input already
+		// names all of them.
+		const parsed = parseTagList(this.query, this.options.allTags, {
+			exclude: this.chosen,
+		});
+		if (parsed.isList) {
+			this.bulk = parsed;
+			this.suggestions = [];
+			this.renderBulk(parsed);
+			return;
+		}
+
+		this.bulk = null;
 		this.suggestions = tagSuggestions(this.query, this.options.allTags, {
 			exclude: this.chosen,
 			limit: MAX_RENDERED_SUGGESTIONS,
 		});
-		this.listEl.empty();
 
 		if (this.suggestions.length === 0) {
 			this.listEl.createDiv({
@@ -182,6 +205,78 @@ export class NewNoteModal extends Modal {
 				this.updateHighlight();
 			});
 		});
+	}
+
+	/** The "add all of these" panel shown when the input names several tags. */
+	private renderBulk(parsed: ParsedTagList): void {
+		if (parsed.valid.length === 0) {
+			this.listEl.createDiv({
+				cls: "tr-new-note-empty",
+				text:
+					parsed.duplicates.length > 0
+						? "Those tags are already added."
+						: "None of those are usable tag names.",
+			});
+			this.renderBulkNotes(parsed);
+			return;
+		}
+
+		const newCount = parsed.valid.filter((entry) => entry.isNew).length;
+		const row = this.listEl.createDiv({
+			cls: "tr-new-note-suggestion tr-new-note-bulk is-highlighted",
+		});
+		const icon = row.createSpan({ cls: "tr-choice-icon" });
+		setIcon(icon, "list-plus");
+		row.createSpan({
+			cls: "tr-choice-name",
+			text: `Add ${parsed.valid.length} tags: ${parsed.valid
+				.map((entry) => tagLabel(entry.tag))
+				.join(", ")}`,
+		});
+		if (newCount > 0) {
+			row.createSpan({
+				cls: "tr-choice-sub",
+				text: `${newCount} new`,
+			});
+		}
+		row.addEventListener("click", () => this.addAll(parsed));
+
+		this.renderBulkNotes(parsed);
+	}
+
+	/** Names the fragments that will be skipped, rather than dropping them quietly. */
+	private renderBulkNotes(parsed: ParsedTagList): void {
+		if (parsed.invalid.length > 0) {
+			this.listEl.createDiv({
+				cls: "tr-new-note-empty",
+				text: `Not usable as tag names, and will be skipped: ${parsed.invalid.join(", ")}`,
+			});
+		}
+		if (parsed.duplicates.length > 0 && parsed.valid.length > 0) {
+			this.listEl.createDiv({
+				cls: "tr-new-note-empty",
+				text: `Already added: ${parsed.duplicates.join(", ")}`,
+			});
+		}
+	}
+
+	private addAll(parsed: ParsedTagList): void {
+		for (const entry of parsed.valid) {
+			if (
+				!this.chosen.some(
+					(existing) => existing.toLowerCase() === entry.tag.toLowerCase()
+				)
+			) {
+				this.chosen.push(entry.tag);
+			}
+		}
+		this.query = "";
+		this.inputEl.value = "";
+		this.highlighted = 0;
+		this.renderPreview();
+		this.renderChips();
+		this.renderSuggestions();
+		this.inputEl.focus();
 	}
 
 	/** Cheaper than a full re-render when only the highlight moved. */
@@ -241,6 +336,10 @@ export class NewNoteModal extends Modal {
 				this.submit();
 				return;
 			}
+			if (this.bulk) {
+				if (this.bulk.valid.length > 0) this.addAll(this.bulk);
+				return;
+			}
 			const suggestion = this.suggestions[this.highlighted];
 			if (suggestion) this.addTag(suggestion.tag);
 			// An empty box with nothing to add means "I am done".
@@ -272,6 +371,10 @@ export class NewNoteModal extends Modal {
 	/** Add whatever the box currently points at, if anything. */
 	private commitPending(): void {
 		if (this.query.trim().length === 0) return;
+		if (this.bulk) {
+			if (this.bulk.valid.length > 0) this.addAll(this.bulk);
+			return;
+		}
 		const pending =
 			this.suggestions[this.highlighted] ?? this.suggestions[0] ?? null;
 		if (pending) this.addTag(pending.tag);

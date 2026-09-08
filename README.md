@@ -123,6 +123,8 @@ A **new note** button in the toolbar creates a note named after the current date
 
 Pressing it opens a dialog for choosing the note's tags, pre-filled with whatever you have selected. Type to find a tag, or type a name that doesn't exist yet to create it — the same gesture as adding a tag to a main-tag. Added tags appear as removable chips, and the dialog shows the filename it's about to create.
 
+**Several tags at once:** type more than one name — separated by spaces, commas or semicolons — and the list becomes a single "Add N tags" row that adds them all, creating whichever don't exist. It tells you how many are new, and names anything it will skip (unusable names, or ones already added) rather than dropping them quietly.
+
 It's built for the keyboard: **↑/↓** move, **Enter** adds the highlighted tag, **Backspace** on an empty box takes the last one back off, and **Enter on an empty box** (or **Ctrl/Cmd+Enter** anywhere) creates the note. So the common case — create with the tags already selected — is still a single keystroke. Turn the dialog off in settings if you'd rather the button create immediately.
 
 | Setting | What it does |
