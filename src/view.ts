@@ -38,6 +38,10 @@ import { BandId } from "./bands";
 import { PlexRenderer, plexDepthMenu } from "./plexView";
 import { PLEX_DEPTH_LABELS } from "./plex";
 import { EXCERPT_STOPS, excerptStopLabel } from "./excerpt";
+import { tagSuggestions } from "./tagSuggest";
+
+/** Rows the find box shows before you are better off typing more. */
+const MAX_FIND_RESULTS = 40;
 import { ToolbarControlId, isControlVisible } from "./toolbarControls";
 import {
 	FONT_SCALE_DEFAULT,
@@ -214,6 +218,12 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	togglePlexPreview(): void {
 		void this.plugin.togglePlexPreview();
+	}
+
+	togglePlexLauncher(): void {
+		this.settings.plexLauncherOpen = !this.settings.plexLauncherOpen;
+		void this.plugin.saveSettings();
+		this.renderActiveMode();
 	}
 
 	isBandCollapsed(id: BandId): boolean {
@@ -757,6 +767,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			});
 		}
 
+		if (this.showsControl("tagFind")) {
+			this.buildTagFind(toolbar);
+		}
+
 		if (this.showsControl("sort")) {
 			const sortSelect = toolbar.createEl("select", { cls: "tr-sort dropdown" });
 			for (const key of Object.keys(SORT_LABELS) as SortMode[]) {
@@ -1113,6 +1127,119 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		setTooltip(button, action.label(ctx), { placement: "bottom" });
 		if (!enabled) return;
 		button.addEventListener("click", () => action.run(ctx));
+	}
+
+	/**
+	 * "Find a tag", beside the filter box and doing the opposite thing.
+	 *
+	 * The filter *narrows*: it hides everything that does not match, and what
+	 * you are looking for arrives by elimination. This *jumps*: it searches
+	 * every tag in the vault, hides nothing, and selecting a result makes that
+	 * tag the one you are working on — the centre of the plex, the root of the
+	 * tree. Two boxes side by side is worth it because the two intentions are
+	 * genuinely different, and doing one with the other is clumsy: filtering
+	 * to reach one tag leaves the whole view narrowed afterwards.
+	 */
+	private buildTagFind(toolbar: HTMLElement): void {
+		const wrap = toolbar.createDiv({ cls: "tr-search tr-tag-find" });
+		setIcon(wrap.createSpan({ cls: "tr-search-icon" }), "locate-fixed");
+		const input = wrap.createEl("input", {
+			type: "text",
+			placeholder: "Find a tag…",
+			cls: "tr-search-input",
+		});
+		const results = wrap.createDiv({ cls: "tr-tag-find-results" });
+		results.hidden = true;
+
+		let active = -1;
+		const close = () => {
+			results.hidden = true;
+			results.empty();
+			active = -1;
+		};
+		const choose = (tag: string) => {
+			input.value = "";
+			close();
+			this.select(tag, "replace");
+		};
+
+		const paint = () => {
+			const query = input.value.trim();
+			results.empty();
+			active = -1;
+			if (query.length === 0) {
+				results.hidden = true;
+				return;
+			}
+			// Searches every tag, not the filtered set: this is how you reach
+			// something the current filter is hiding.
+			const found = tagSuggestions(query, this.graph.tagList, {
+				allowNew: false,
+				limit: MAX_FIND_RESULTS,
+			});
+			results.hidden = false;
+			if (found.length === 0) {
+				results.createDiv({ cls: "tr-empty", text: "No tag matches." });
+				return;
+			}
+			for (const [index, suggestion] of found.entries()) {
+				const row = results.createDiv({ cls: "tr-tag-find-row" });
+				row.createSpan({ text: tagLabel(suggestion.tag) });
+				row.createSpan({
+					cls: "tr-pill-count",
+					text: String(this.graph.countOf(suggestion.tag)),
+				});
+				row.addEventListener("mousedown", (event) => {
+					// mousedown, not click: blur would close the list first.
+					event.preventDefault();
+					choose(suggestion.tag);
+				});
+				row.addEventListener("mouseenter", () => {
+					active = index;
+					highlight();
+				});
+			}
+		};
+
+		const rows = () =>
+			Array.from(results.querySelectorAll(".tr-tag-find-row")) as HTMLElement[];
+		const highlight = () => {
+			rows().forEach((row, index) => row.toggleClass("is-active", index === active));
+		};
+		const step = (delta: number) => {
+			const list = rows();
+			if (list.length === 0) return;
+			active = (active + delta + list.length) % list.length;
+			highlight();
+			list[active].scrollIntoView({ block: "nearest" });
+		};
+
+		input.addEventListener("input", paint);
+		input.addEventListener("focus", paint);
+		input.addEventListener("blur", () => window.setTimeout(close, 120));
+		input.addEventListener("keydown", (event) => {
+			if (event.key === "ArrowDown") {
+				event.preventDefault();
+				step(1);
+			} else if (event.key === "ArrowUp") {
+				event.preventDefault();
+				step(-1);
+			} else if (event.key === "Enter") {
+				const list = rows();
+				// With nothing highlighted the first result is the obvious
+				// intent, so Enter takes it rather than doing nothing.
+				const pick = list[active >= 0 ? active : 0];
+				if (pick) {
+					event.preventDefault();
+					pick.dispatchEvent(new MouseEvent("mousedown"));
+				}
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				if (input.value) input.value = "";
+				else input.blur();
+				close();
+			}
+		});
 	}
 
 	private syncToolbar(): void {

@@ -239,3 +239,34 @@ describe("explaining why a name is refused", () => {
 		assert.equal(hintFor(rejection!), null);
 	});
 });
+
+// --- the toolbar's "find a tag" box uses the same matching --------------
+
+test("finding a tag never offers to create one", () => {
+	// The find box jumps to something that exists; creating from it would be
+	// a different intention wearing the same control.
+	const found = tagSuggestions("brand-new", ["#work"], { allowNew: false });
+	assert.deepEqual(found, []);
+});
+
+test("finding searches every tag, including ones a filter would hide", () => {
+	const all = ["#work", "#home", "#urgent"];
+	assert.deepEqual(
+		tagSuggestions("home", all, { allowNew: false }).map((s) => s.tag),
+		["#home"]
+	);
+});
+
+test("the find box's result list is capped", () => {
+	const many = Array.from({ length: 200 }, (_, i) => `#tag${i}`);
+	assert.equal(
+		tagSuggestions("tag", many, { allowNew: false, limit: 40 }).length,
+		40
+	);
+});
+
+test("an empty query matches everything, so the box shows nothing until typed", () => {
+	// The renderer checks for an empty query itself; this pins why it must.
+	const all = ["#work", "#home"];
+	assert.equal(tagSuggestions("", all, { allowNew: false }).length, 2);
+});

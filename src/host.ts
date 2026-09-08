@@ -58,6 +58,8 @@ export interface ViewHost {
 	isGroupCollapsed(tag: string): boolean;
 	toggleGroupCollapsed(tag: string): void;
 	/** Whether a band heading is folded shut, hiding its tags. */
+	/** Show or hide the plex's starting-point list. */
+	togglePlexLauncher(): void;
 	isBandCollapsed(id: BandId): boolean;
 	toggleBandCollapsed(id: BandId): void;
 	/** Ask the user which tag to put inside `parent`. */

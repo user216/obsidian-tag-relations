@@ -12,6 +12,7 @@ import {
 } from "./host";
 import { tagLabel } from "./graph";
 import { MAX_EXCERPT_LINES, excerptLines } from "./excerpt";
+import { splitIntoBands } from "./bands";
 import { levelCss, visibleLevels } from "./levels";
 import { PanZoom } from "./panzoom";
 import {
@@ -54,11 +55,14 @@ export class PlexRenderer implements ModeRenderer {
 	private excerpts = new Map<string, { mtime: number; lines: string[] }>();
 	/** Bumped every render, so a late read knows it is stale. */
 	private excerptToken = 0;
+	private launcherEl!: HTMLElement;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
 		this.root = container.createDiv({ cls: "tr-plex" });
-		this.panzoom = new PanZoom(this.root, {
+		const canvas = this.root.createDiv({ cls: "tr-plex-canvas" });
+		this.launcherEl = this.root.createDiv({ cls: "tr-plex-launcher" });
+		this.panzoom = new PanZoom(canvas, {
 			onChange: (state) => host.onZoomChanged(state.scale),
 		});
 		this.panzoom.restoreScale(host.settings.cloudZoom);
@@ -79,6 +83,8 @@ export class PlexRenderer implements ModeRenderer {
 			visible: host.visibleTags(),
 			degreeOf: (tag) => host.graph.neighbors(tag).length,
 		});
+
+		this.renderLauncher(active);
 
 		if (!active) {
 			body.empty();
@@ -187,6 +193,79 @@ export class PlexRenderer implements ModeRenderer {
 				cls: "tr-note-more",
 				text: `+ ${preview.hidden} more (raise the count in settings)`,
 			});
+		}
+	}
+
+	/**
+	 * The starting-point panel: every tag, to pick a centre from.
+	 *
+	 * A plex is only ever showing one neighbourhood, which makes it excellent
+	 * for walking and useless for arriving — with nothing selected you are
+	 * dropped somewhere reasonable but arbitrary. This is the way in: the
+	 * whole vocabulary in one scrollable list, pinned and bookmarked first,
+	 * one click to centre on any of it.
+	 */
+	private renderLauncher(active: string | null): void {
+		const { host } = this;
+		const el = this.launcherEl;
+		el.empty();
+		const open = host.settings.plexLauncherOpen;
+		el.toggleClass("is-collapsed", !open);
+
+		const header = el.createDiv({ cls: "tr-plex-launcher-head" });
+		const twisty = header.createSpan({ cls: "tr-twisty" });
+		setIcon(twisty, "chevron-right");
+		twisty.toggleClass("is-open", open);
+		header.createSpan({ text: open ? "Start from" : "" });
+		setTooltip(header, open ? "Collapse the tag list" : "Show the tag list", {
+			placement: "left",
+		});
+		header.addEventListener("click", () => void host.togglePlexLauncher());
+		if (!open) return;
+
+		const list = el.createDiv({ cls: "tr-plex-launcher-list" });
+		const tags = host.visibleTags();
+		if (tags.length === 0) {
+			list.createDiv({
+				cls: "tr-empty",
+				text: host.filter ? "No tags match." : "No tags yet.",
+			});
+			return;
+		}
+
+		for (const band of splitIntoBands(tags, {
+			pinned: host.settings.pinnedTags,
+			bookmarked: host.bookmarkedTags(),
+			showPinned: host.settings.showPinnedBand,
+			showBookmarked: host.settings.showBookmarkedBand,
+			bookmarkedPosition: host.settings.bookmarkedBandPosition,
+		})) {
+			if (band.label) {
+				list.createDiv({
+					cls: "tr-band-label",
+					text: `${band.label} (${band.tags.length})`,
+				});
+			}
+			for (const tag of band.tags) {
+				const row = list.createDiv({ cls: "tr-plex-launcher-row" });
+				row.toggleClass("is-active", tag === active);
+				row.createSpan({ cls: "tr-note-name", text: tagLabel(tag) });
+				row.createSpan({
+					cls: "tr-pill-count",
+					text: String(host.graph.countOf(tag)),
+				});
+				setTooltip(row, `Centre the plex on ${tagLabel(tag)}`, {
+					placement: "left",
+				});
+				row.addEventListener("click", (event) => {
+					event.stopPropagation();
+					host.selectFromEvent(tag, event);
+				});
+				row.addEventListener("contextmenu", (event) => {
+					event.preventDefault();
+					host.openContextMenu(tag, event);
+				});
+			}
 		}
 	}
 

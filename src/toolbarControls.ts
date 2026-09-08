@@ -21,6 +21,7 @@ export interface ToolbarControl {
 export type ToolbarControlId =
 	| "modes"
 	| "search"
+	| "tagFind"
 	| "sort"
 	| "editMode"
 	| "stickySelect"
@@ -46,6 +47,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		id: "search",
 		label: "Filter box",
 		description: "Narrows every view to matching tags as you type.",
+	},
+	{
+		id: "tagFind",
+		label: "Find a tag box",
+		description:
+			"Jumps straight to a tag without narrowing anything, unlike the filter beside it. Also the “Focus a tag” command.",
 	},
 	{
 		id: "sort",

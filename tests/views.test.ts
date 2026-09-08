@@ -500,11 +500,15 @@ describe("treeRoots — pinned tags lead, without hiding the rest", () => {
 		);
 	});
 
-	test("a pinned tag absent from the visible list still leads", () => {
-		// Filtering the view should not drop something deliberately pinned.
+	test("a pinned tag absent from the visible list is dropped", () => {
+		// This rule used to run the other way, on the reasoning that a filter
+		// should not drop something deliberately pinned. In use that read as
+		// the filter box being broken: every other view narrows completely,
+		// so a tree that kept showing pins regardless looked like a bug. A
+		// text filter is an explicit "show me only these", and it wins.
 		assert.deepEqual(
 			treeRoots({ visible: ["#a"], pinned: ["#hidden"], selection: [] }),
-			["#hidden", "#a"]
+			["#a"]
 		);
 	});
 
@@ -731,4 +735,68 @@ test("folding is independent of hiding: a hidden band has no row to fold", () =>
 		["bookmarked"]
 	);
 	assert.equal(rows[0].collapsed, true);
+});
+
+// --- the tree's roots honour the filter ---------------------------------
+
+test("a filter narrows the tree's roots even with a tag selected", () => {
+	// This is the bug: the selection returned early, so the filtered list was
+	// never consulted and typing in the filter box did nothing at all.
+	const roots = treeRoots({
+		selection: ["#work"],
+		pinned: [],
+		visible: ["#urgent"],
+	});
+	assert.deepEqual(roots, []);
+});
+
+test("a selected tag that matches the filter is still the root", () => {
+	assert.deepEqual(
+		treeRoots({
+			selection: ["#work"],
+			pinned: [],
+			visible: ["#work", "#workshop"],
+		}),
+		["#work"]
+	);
+});
+
+test("pinned tags do not survive a filter they fail", () => {
+	assert.deepEqual(
+		treeRoots({ selection: [], pinned: ["#home"], visible: ["#work"] }),
+		["#work"]
+	);
+});
+
+test("pinned tags that match the filter still lead", () => {
+	assert.deepEqual(
+		treeRoots({
+			selection: [],
+			pinned: ["#workshop"],
+			visible: ["#work", "#workshop"],
+		}),
+		["#workshop", "#work"]
+	);
+});
+
+test("with no filter every tag is still a root, pins first", () => {
+	assert.deepEqual(
+		treeRoots({
+			selection: [],
+			pinned: ["#b"],
+			visible: ["#a", "#b", "#c"],
+		}),
+		["#b", "#a", "#c"]
+	);
+});
+
+test("a pin and a selection cannot put the same tag in twice", () => {
+	assert.deepEqual(
+		treeRoots({
+			selection: ["#a"],
+			pinned: ["#a"],
+			visible: ["#a", "#b"],
+		}),
+		["#a"]
+	);
 });

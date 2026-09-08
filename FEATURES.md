@@ -78,6 +78,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Click any tag to walk to it: it becomes the centre and its own relatives fan out, animated
 - Three depths on a toolbar button: immediate, plus siblings, plus a faint outer ring
 - Opens on a pinned tag, falling back to the most connected one
+- Starting-point column listing every tag, collapsible, one click to centre
 - Per-row cap with an honest `+N more` count
 - Optional note preview under the plex, following the centre as you walk — toolbar button, command, or Settings → Views
 - Preview shows each note's opening lines: name only, 3, 5, 10, or any exact count up to 20
@@ -238,6 +239,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Rescan-vault action
 - View mode, sort, match mode and panel state persist between sessions
 
+- Filter box narrows every view; separate "Find a tag" box jumps to any tag without narrowing
 ## Commands
 
 - Open tag relations · Open tag relations in sidebar · Toggle zen mode
@@ -252,5 +254,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 553 tests across 93 suites (`npm test`)
+- 563 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

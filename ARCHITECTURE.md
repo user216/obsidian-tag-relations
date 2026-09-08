@@ -405,6 +405,12 @@ Folding is the one place in this plugin that is allowed to hide tags. Everywhere
 
 The mind-map cannot follow that model literally. Removing nodes from a graph strands the edges that make it a graph, so there "folded" means the row stops reserving space and its tags rejoin the cluster — visible, just not lifted out. `bandRows` stacks upward by accumulating offsets rather than multiplying a uniform gap, so a folded row costs a heading's worth of height instead of a row's, and `bandRowAnchors` skips it entirely. The heading is still drawn, and its world-space box is recorded during the draw so a click can hit-test against exactly what was painted.
 
+### Filtering versus finding
+
+The toolbar carries two text boxes that look alike and mean opposite things. The **filter** narrows: it hides everything that does not match, every view honours it completely, and you arrive at a tag by elimination — leaving the view narrowed afterwards. **Find a tag** jumps: it searches the whole vocabulary, hides nothing, and picking a result makes that tag the one being worked on. Doing either job with the other control is clumsy, which is why both exist.
+
+The tree was for a long time the one view that honoured the filter only partly — pinned roots bypassed it by design, and branch children were never filtered at all. The intention was that a filter should not drop something deliberately pinned. In use that read as the box being broken rather than as a considered exception, because every other view narrows completely. The lesson is worth recording: a control that works everywhere except in one place is not perceived as a nuanced rule, it is perceived as a bug.
+
 ### Font zoom is a different thing, on purpose
 
 `src/fontZoom.ts` scales the *type*, not the layer, and the distinction is the reason both exist. A transform magnifies spacing, borders and text together and the layout does not reflow, so zooming in means scrolling around a larger copy of the same arrangement. Changing the font size makes the browser lay the tags out again: they rewrap to the available width, so zooming out fits more of them on screen and zooming in keeps them readable without panning. The two compose — a zoomed-in transform over larger type behaves as you would expect.
@@ -450,7 +456,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-553 tests across 93 suites:
+563 tests across 92 suites:
 
 | Suite | Covers |
 | --- | --- |

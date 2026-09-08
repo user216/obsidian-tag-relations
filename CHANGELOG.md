@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-09-08
+
+### Fixed
+
+- **The filter box did nothing in the tree view.** Two causes, both mine:
+  - `treeRoots` returned early whenever a tag was selected, so the filtered list — the only filtered input it had — was never consulted at all.
+  - Pinned tags were added ahead of it unconditionally, so they survived any filter. That was deliberate, and there was even a test asserting it, on the reasoning that a filter should not drop something you had pinned. In use it read as the filter being broken: every other view narrows completely, so the one that kept showing pins regardless looked wrong rather than principled. A text filter is an explicit "show me only these", and it now wins.
+  - Branch children are filtered too, for the same reason. Filtering only the top level and then showing every relation underneath is what made the box look inert.
+
+### Added
+
+- **A starting-point column in the plex.** A plex shows one neighbourhood at a time, which makes it good for walking and poor for arriving — with nothing selected you land somewhere reasonable but arbitrary. The new column beside it lists every tag, pinned and bookmarked first, one click to centre on any of them. Collapsible from its own heading, and switchable in Settings → Views → Plex.
+- **A "Find a tag" box beside the filter,** doing the opposite thing. The filter *narrows* — it hides what does not match, and you arrive by elimination, leaving the whole view narrowed afterwards. This *jumps* — it searches every tag in the vault, hides nothing, and picking a result makes that tag the one you are working on: the centre of the plex, the root of the tree. It reaches tags the current filter is hiding. Arrow keys and Enter work; Escape clears then closes. Hideable like every other toolbar control, with the "Focus a tag" command as its equivalent.
+
+### Tests
+
+- 10 new tests: the tree's roots honouring the filter with and without a selection, pinned tags no longer bypassing it, and the find box matching every tag while never offering to create one.
+
 ## [0.21.0] - 2026-09-08
 
 ### Added
@@ -509,6 +527,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.22.0]: https://github.com/user216/obsidian-tag-relations/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/user216/obsidian-tag-relations/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/user216/obsidian-tag-relations/compare/0.19.2...0.20.0
 [0.19.2]: https://github.com/user216/obsidian-tag-relations/compare/0.19.1...0.19.2

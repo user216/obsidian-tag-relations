@@ -96,6 +96,8 @@ export interface TagRelationsSettings {
 	plexPreviewCount: number;
 	/** Lines of each note's opening to show; 0 shows just the name. */
 	plexPreviewLines: number;
+	/** Whether the plex's starting-point tag list is expanded. */
+	plexLauncherOpen: boolean;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -208,6 +210,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	plexPreviewNotes: false,
 	plexPreviewCount: 6,
 	plexPreviewLines: 0,
+	plexLauncherOpen: true,
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -700,6 +703,21 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.plexPreviewCount = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show the starting-point list")
+			.setDesc(
+				"A column of every tag beside the plex, to pick a centre from. A plex shows one neighbourhood at a time, which makes it good for walking and poor for arriving — this is the way in. Collapsible from its own heading."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.plexLauncherOpen)
+					.onChange(async (value) => {
+						this.plugin.settings.plexLauncherOpen = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshViews();
 					})

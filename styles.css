@@ -2175,3 +2175,115 @@
 	font-style: italic;
 	color: var(--text-faint);
 }
+
+/* ------------------------------------------- plex starting-point column */
+
+.tr-plex-canvas {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+.tr-plex-launcher {
+	display: flex;
+	flex-direction: column;
+	flex: 0 0 190px;
+	min-height: 0;
+	border-left: 1px solid var(--background-modifier-border);
+	background-color: var(--background-secondary);
+}
+
+/* Collapsed it keeps only the twisty, so the way back is always visible. */
+.tr-plex-launcher.is-collapsed {
+	flex-basis: 26px;
+}
+
+.tr-plex-launcher-head {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 8px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-plex-launcher-head:hover {
+	color: var(--text-muted);
+}
+
+.tr-plex-launcher-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 0 4px 8px;
+}
+
+.tr-plex-launcher-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 2px 6px;
+	border-radius: var(--radius-s);
+	font-size: calc(var(--font-ui-smaller) * var(--tr-font-scale, 1));
+	cursor: pointer;
+}
+
+.tr-plex-launcher-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-plex-launcher-row.is-active {
+	background-color: var(--background-modifier-active-hover);
+	color: var(--text-accent);
+	font-weight: 600;
+}
+
+.tr-plex-launcher-row .tr-note-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* --------------------------------------------------------- find a tag */
+
+.tr-tag-find {
+	position: relative;
+}
+
+.tr-tag-find-results {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	z-index: 30;
+	min-width: 100%;
+	max-height: 320px;
+	overflow-y: auto;
+	padding: 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-primary);
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+
+.tr-tag-find-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 3px 8px;
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-small);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tr-tag-find-row.is-active {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-accent);
+}

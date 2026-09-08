@@ -24,6 +24,8 @@ export class TreeRenderer implements ModeRenderer {
 	private lastRootsKey: string | null = null;
 	/** Path key of the row being renamed in place, if any. */
 	private renaming: string | null = null;
+	/** The filtered tag set for this render, so each branch does not rebuild it. */
+	private visible: Set<string> | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -38,6 +40,7 @@ export class TreeRenderer implements ModeRenderer {
 		const { host } = this;
 		this.container.empty();
 
+		this.visible = host.filter ? new Set(host.visibleTags()) : null;
 		const roots = this.roots();
 		if (roots.length === 0) {
 			this.container.createDiv({
@@ -65,7 +68,15 @@ export class TreeRenderer implements ModeRenderer {
 		const pinnedRoots = host.settings.pinnedTags.filter((tag) =>
 			host.graph.nodes.has(tag)
 		);
-		if (host.selection.length === 0) {
+		if (host.filter) {
+			this.container.createDiv({
+				cls: "tr-tree-hint",
+				// Said out loud because it is a real limit: the branches are a
+				// tag's strongest relations, and filtering those would turn
+				// the tree into a flat list of matches.
+				text: "Filtered. Branches show only the relations that match too — clear the filter to explore outward from a match.",
+			});
+		} else if (host.selection.length === 0) {
 			this.container.createDiv({
 				cls: "tr-tree-hint",
 				text:
@@ -136,11 +147,19 @@ export class TreeRenderer implements ModeRenderer {
 	}
 
 	private childrenOf(path: string[]): string[] {
-		return branchChildren(
+		const children = branchChildren(
 			this.host.graph,
 			path,
 			this.host.settings.treeMaxChildren
 		);
+		// A filter applies to the whole tree, branches included. Filtering
+		// only the roots is what made this view look as though the filter box
+		// did nothing: every other view narrows completely, so a tree that
+		// narrowed its top level and then showed every relation underneath
+		// read as broken rather than as a deliberate difference.
+		if (!this.host.filter) return children;
+		const present = this.visible ?? new Set(this.host.visibleTags());
+		return children.filter((tag) => present.has(tag));
 	}
 
 	private renderRenameInput(container: HTMLElement, tag: string): void {
@@ -263,15 +282,22 @@ export interface TreeRootOptions {
  * still follows, because the tree is an index of the vault and pinning should
  * promote a few tags rather than hide the rest.
  *
- * A selection is the one thing that does narrow the list: picking a tag means
- * "show me this one", so the tree focuses on it (with pins still above, so
- * they stay reachable).
+ * A selection narrows the list: picking a tag means "show me this one", so the
+ * tree focuses on it, with pins still above so they stay reachable.
+ *
+ * Everything is drawn from `visible`, which is the filtered, sorted list.
+ * Pins and the selection *promote* tags out of it rather than being added on
+ * top of it — the filter box previously did nothing at all in this view
+ * whenever a tag was selected, because the selection returned early and the
+ * only filtered input was never consulted, and pinned tags survived any filter
+ * for the same reason.
  */
 export function treeRoots(options: TreeRootOptions): string[] {
 	const roots: string[] = [];
 	const seen = new Set<string>();
+	const present = new Set(options.visible);
 	const push = (tag: string) => {
-		if (seen.has(tag)) return;
+		if (seen.has(tag) || !present.has(tag)) return;
 		seen.add(tag);
 		roots.push(tag);
 	};

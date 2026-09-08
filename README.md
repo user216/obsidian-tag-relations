@@ -62,6 +62,8 @@ Turn on **preview tagged notes** — the toolbar button beside the depth button,
 
 Four buttons choose how much of each note to show: **name only, 3, 5 or 10 lines** (any exact count up to 20 is settable). "The first three lines of the file" is almost never what you mean — a note usually opens with frontmatter, a blank line, a title, and often a line of nothing but tags. So the preview drops the frontmatter, skips blank lines, tag-only lines and horizontal rules, and trims `###` and `>` markers. What you get is the first lines of the *note*. It's not the Show notes panel — that one deliberately freezes a result so bulk edits can act on exactly that list. This one is always live and carries no actions, so the two can't be mistaken for each other.
 
+Beside the plex is a **starting-point column** listing every tag, pinned and bookmarked first. A plex only ever shows one neighbourhood, which makes it good for walking and poor for arriving — this is the way in. Collapse it from its own heading, or turn it off in Settings → Views → Plex.
+
 With nothing selected it opens on a **pinned tag**, falling back to your most-connected one. Each row is capped so one very busy tag can't fill the screen; whatever's left out is counted (`+18 more`) rather than dropped quietly.
 
 ## Tag groups
@@ -169,6 +171,17 @@ This is a different thing from the cloud's pan-and-zoom, and both are useful:
 They compose, so a zoomed-in canvas over larger type works as you'd expect. Font zoom applies to the cloud, list and details layouts, the tree, the groups view and the mind-map's labels, including the Pinned and Bookmarked headings.
 
 It's also three commands (**Increase / Decrease / Reset tag font size**) and a slider in **Settings → Views → Font zoom**, so hiding the buttons costs you nothing.
+
+## Filtering versus finding
+
+The toolbar has two text boxes that look alike and do opposite things:
+
+| Box | What it does |
+| --- | --- |
+| **Filter tags…** | Narrows every view to matching tags. You arrive by elimination, and the view stays narrowed until you clear it |
+| **Find a tag…** | Searches every tag, hides nothing, and jumps: picking a result makes that tag the one you're working on — the centre of the plex, the root of the tree |
+
+Find reaches tags the current filter is hiding. Arrow keys move, Enter takes the highlighted result (or the first one), Escape clears and then closes.
 
 ## Selecting tags
 
