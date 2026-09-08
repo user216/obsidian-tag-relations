@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-08
+
+### Added
+
+- **The plex — a fifth view, arranged the way TheBrain arranges thoughts.** One tag sits in the middle and its relatives are placed by *what they are to it*, so a tag's position tells you its relation without your reading a label:
+  - **Main-tags above** (what contains it) and **sub-tags below** (what it contains).
+  - **Left: tags it shares notes with.** **Right: tags joined to it by a horizontal link.** The two side bands are split by where the relation lives — the left one is a fact about the vault and cannot be removed from here, the right one is a decision someone made. Mixing them in one band would hide the difference between an observation and a choice. The connectors differ too: dashed for shared notes, accented for links.
+  - **Clicking any surrounding tag walks to it** — it becomes the new centre and its own relatives fan out, animated so the tag visibly travels rather than the whole view blinking. Clicking the centre does nothing, because you are already there. Modifier-clicks still add to the selection as they do everywhere else.
+  - Only the immediate neighbourhood is drawn. That is the point: a full graph of a real vault is unreadable, and walking it one step at a time is not.
+- **Three depths, on a toolbar button** (and in Settings → Views → Plex): *immediate relatives*, *relatives and siblings* (the default — siblings being the other members of the same main-tag), and *relatives, siblings and beyond*, which adds the level above the main-tags and below the sub-tags, drawn faintly. The button appears only while the plex is open.
+- The plex opens on **a pinned tag** when nothing is selected, falling back to the most connected tag — pinning is the one signal that says "this is where I work".
+- **A per-row cap** so one very busy tag cannot fill the screen. Anything left out is counted (`+18 more`), never dropped silently.
+
+### Tests
+
+- 21 new tests: the axes, sibling derivation, each depth, a tag appearing in exactly one place, hierarchy beating the side bands and declared links beating observed ones, caps reporting what they trimmed, and where the view opens.
+
 ## [0.18.1] - 2026-09-08
 
 ### Fixed
@@ -433,6 +450,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.19.0]: https://github.com/user216/obsidian-tag-relations/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/user216/obsidian-tag-relations/compare/0.18.0...0.18.1
 [0.18.0]: https://github.com/user216/obsidian-tag-relations/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/user216/obsidian-tag-relations/compare/0.16.0...0.17.0

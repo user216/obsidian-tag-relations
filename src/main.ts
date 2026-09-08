@@ -20,6 +20,7 @@ import {
 	serializeExport,
 } from "./transfer";
 import { TagGroups } from "./groups";
+import { PLEX_DEPTH_LABELS } from "./plex";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
 import {
@@ -233,6 +234,9 @@ export default class TagRelationsPlugin extends Plugin {
 		}
 		if (!Array.isArray(this.settings.collapsedBands)) {
 			this.settings.collapsedBands = [];
+		}
+		if (!(this.settings.plexDepth in PLEX_DEPTH_LABELS)) {
+			this.settings.plexDepth = DEFAULT_SETTINGS.plexDepth;
 		}
 		if (!Array.isArray(this.settings.bookmarkLinks)) {
 			this.settings.bookmarkLinks = [];

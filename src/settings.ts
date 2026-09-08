@@ -8,6 +8,11 @@ import {
 	FONT_SCALE_STEP,
 } from "./fontZoom";
 import {
+	PLEX_DEPTH_DESCRIPTIONS,
+	PLEX_DEPTH_LABELS,
+	PlexDepth,
+} from "./plex";
+import {
 	TOOLBAR_CONTROLS,
 	ToolbarControlId,
 	isControlVisible,
@@ -79,6 +84,10 @@ export interface TagRelationsSettings {
 	 * not four.
 	 */
 	collapsedBands: string[];
+	/** How far out from the active tag the plex reaches. */
+	plexDepth: PlexDepth;
+	/** Most tags in any one plex row or side band; 0 lifts the limit. */
+	plexRowCap: number;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -184,6 +193,8 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	groupLinks: [],
 	collapsedGroups: [],
 	collapsedBands: [],
+	plexDepth: "siblings",
+	plexRowCap: 24,
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -294,6 +305,7 @@ const SETTINGS_TABS: SettingsTab[] = [
 			tab.displayCloud(el);
 			tab.displayMap(el);
 			tab.displayTree(el);
+			tab.displayPlex(el);
 		},
 	},
 	{ id: "editing", label: "Editing", render: (tab, el) => tab.displayEditing(el) },
@@ -616,6 +628,51 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.notesMaxResults = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+	}
+
+	displayPlex(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Plex").setHeading();
+
+		new Setting(containerEl)
+			.setName("How far it reaches")
+			.setDesc(
+				"Main-tags sit above the active tag, sub-tags below, shared-note relations on the left and horizontal links on the right. This chooses how much context is drawn around that ring. Also a toolbar button while the plex is open."
+			)
+			.addDropdown((drop) => {
+				for (const depth of Object.keys(PLEX_DEPTH_LABELS) as PlexDepth[]) {
+					drop.addOption(depth, PLEX_DEPTH_LABELS[depth]);
+				}
+				drop
+					.setValue(this.plugin.settings.plexDepth)
+					.onChange(async (value) => {
+						this.plugin.settings.plexDepth = value as PlexDepth;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+						this.display();
+					});
+			});
+
+		containerEl.createDiv({
+			cls: "setting-item-description tr-settings-note",
+			text: PLEX_DEPTH_DESCRIPTIONS[this.plugin.settings.plexDepth],
+		});
+
+		new Setting(containerEl)
+			.setName("Most tags per row")
+			.setDesc(
+				"Caps each row and side band so one very busy tag cannot fill the screen. Anything left out is counted, never dropped silently."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(4, 100, 2)
+					.setValue(this.plugin.settings.plexRowCap)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.plexRowCap = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshViews();
 					})

@@ -1,4 +1,4 @@
-export type ViewMode = "cloud" | "map" | "tree" | "groups";
+export type ViewMode = "cloud" | "map" | "tree" | "groups" | "plex";
 
 export type SortMode =
 	| "name-asc"

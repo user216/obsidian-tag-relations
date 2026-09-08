@@ -31,6 +31,8 @@ import {
 } from "./actions";
 import { actionsForSurface } from "./actionLayout";
 import { BandId } from "./bands";
+import { PlexRenderer, plexDepthMenu } from "./plexView";
+import { PLEX_DEPTH_LABELS } from "./plex";
 import { ToolbarControlId, isControlVisible } from "./toolbarControls";
 import {
 	FONT_SCALE_DEFAULT,
@@ -69,6 +71,7 @@ const MODE_META: Array<{ mode: ViewMode; icon: string; label: string }> = [
 	{ mode: "map", icon: "git-fork", label: "Mind-map" },
 	{ mode: "tree", icon: "list-tree", label: "Tree" },
 	{ mode: "groups", icon: "folder-tree", label: "Groups" },
+	{ mode: "plex", icon: "focus", label: "Plex" },
 ];
 
 /**
@@ -99,6 +102,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private editButton!: HTMLElement;
 	private toolbarActionsEl!: HTMLElement;
 	private fontScaleLabelEl: HTMLElement | null = null;
+	private plexDepthButton: HTMLElement | null = null;
 	private fontZoomButtons: { smaller: HTMLElement; larger: HTMLElement } | null =
 		null;
 	private actionBarEl!: HTMLElement;
@@ -683,6 +687,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		// point at detached nodes.
 		this.fontScaleLabelEl = null;
 		this.fontZoomButtons = null;
+		this.plexDepthButton = null;
 
 		if (this.showsControl("modes")) {
 			const modes = toolbar.createDiv({ cls: "tr-modes" });
@@ -830,6 +835,19 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.toolbarActionsEl = toolbar.createDiv({ cls: "tr-toolbar-actions" });
 
 		const actions = toolbar.createDiv({ cls: "tr-actions" });
+		if (this.showsControl("plexDepth")) {
+			const depth = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(depth, "layers");
+			this.plexDepthButton = depth;
+			depth.addEventListener("click", (event) =>
+				plexDepthMenu(event, this.settings.plexDepth, (next) => {
+					this.settings.plexDepth = next;
+					void this.plugin.saveSettings();
+					this.renderAll();
+				})
+			);
+		}
+
 		if (this.showsControl("fontZoom")) {
 			const zoom = actions.createDiv({ cls: "tr-font-zoom" });
 
@@ -1053,6 +1071,19 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.actionBarButton?.toggleClass("is-active", this.settings.showActionBar);
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
 
+		if (this.plexDepthButton) {
+			// The control only means something in the plex, so it steps aside
+			// elsewhere rather than sitting there inert.
+			this.plexDepthButton.toggleClass("is-hidden", this.settings.mode !== "plex");
+			setTooltip(
+				this.plexDepthButton,
+				`How far the plex reaches: ${PLEX_DEPTH_LABELS[
+					this.settings.plexDepth
+				].toLowerCase()}`,
+				{ placement: "bottom" }
+			);
+		}
+
 		const scale = this.settings.fontScale;
 		// Published as a custom property so the views that use theme sizes
 		// scale with the ones computing pixel sizes in code.
@@ -1102,6 +1133,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 					? new TreeRenderer(this.mainEl, this)
 					: mode === "groups"
 					? new GroupsRenderer(this.mainEl, this)
+					: mode === "plex"
+					? new PlexRenderer(this.mainEl, this)
 					: new CloudRenderer(this.mainEl, this);
 			this.rendererMode = mode;
 		}

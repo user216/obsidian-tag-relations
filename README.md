@@ -18,7 +18,7 @@ Relation strength uses one of three metrics (Settings → Tag Relations):
 | **Cosine** | shared / √(notes A × notes B) | Similar, a little more forgiving of size differences |
 | **Raw co-occurrence** | shared / most-shared-in-vault | Sheer volume; favours your most-used tags |
 
-## The three views
+## The views
 
 ### Cloud
 Every tag, sized by how many notes carry it. Sort by **name A→Z / Z→A**, note count, or relatedness to the current selection.
@@ -32,6 +32,33 @@ Pan by dragging the background, zoom with the wheel (zooms toward the cursor), d
 
 ### Tree
 The relation graph unfolded as an expandable outline, rooted at the selected tag. Each branch is that tag's strongest relations, and expanding walks one hop further out. A tag never repeats within its own ancestor path, so the walk always moves outward. With nothing selected it lists your most-connected tags as entry points.
+
+### Plex
+TheBrain's arrangement, applied to tags. One tag sits in the middle and everything around it is placed by **what it is to that tag**, so a position tells you a relation without your reading a label:
+
+```
+                #work    #ideas          main-tags — what contains it
+                      \   /
+   shares notes        ┌─────────┐        joined by hand
+   #today  #inbox  ────│ #urgent │────  #meeting  #email
+                       └─────────┘
+                      /   \
+                #bug     #todo           sub-tags — what it contains
+```
+
+The two side bands are split by **where the relation lives**. On the left are tags that share a note with this one: the relation is a fact about your vault, and it can't be removed from a view. On the right are tags joined by a horizontal link you made yourself. Mixing them into one band would hide the difference between an observation and a decision, so they get separate sides and different connectors — dashed for shared notes, accented for links.
+
+**Click any tag to walk to it.** It becomes the new centre and its own relatives fan out, animated so the tag visibly travels rather than the view blinking. Clicking the centre does nothing, because you're already there. Ctrl/Cmd or Shift click still adds to the selection, as everywhere else.
+
+Only the immediate neighbourhood is drawn, and that's the point — a full graph of a real vault is unreadable, and walking it one step at a time isn't. The toolbar's **depth** button (also Settings → Views → Plex) chooses how much context comes with it:
+
+| Depth | Adds |
+| --- | --- |
+| **Immediate relatives** | Nothing — main-tags, sub-tags, the two bands |
+| **Relatives and siblings** *(default)* | The other members of the same main-tag |
+| **Relatives, siblings and beyond** | The level above the main-tags and below the sub-tags, drawn faintly |
+
+With nothing selected it opens on a **pinned tag**, falling back to your most-connected one. Each row is capped so one very busy tag can't fill the screen; whatever's left out is counted (`+18 more`) rather than dropped quietly.
 
 ## Tag groups
 
@@ -135,7 +162,7 @@ It's also three commands (**Increase / Decrease / Reset tag font size**) and a s
 
 ## Selecting tags
 
-Selection works the same way in all three views:
+Selection works the same way in every view:
 
 | Action | Result |
 | --- | --- |
@@ -305,7 +332,7 @@ Not covered: DOM rendering and canvas drawing. Those are exercised by using the 
 
 ## Design decisions
 
-The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
+The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across every view, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
 
 ## Moving to another vault
 

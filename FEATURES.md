@@ -71,6 +71,15 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - With nothing selected, lists every tag in the toolbar's sort order, pinned ones first
 - Inline rename control on each row in edit mode
 
+## Plex view
+
+- One tag in the middle, relatives placed by what they are to it
+- Main-tags above, sub-tags below, shared-note relations left, horizontal links right
+- Click any tag to walk to it: it becomes the centre and its own relatives fan out, animated
+- Three depths on a toolbar button: immediate, plus siblings, plus a faint outer ring
+- Opens on a pinned tag, falling back to the most connected one
+- Per-row cap with an honest `+N more` count
+
 ## Selection
 
 - Works identically in all three views
@@ -237,5 +246,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 500 tests across 92 suites (`npm test`)
+- 521 tests across 93 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

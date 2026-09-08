@@ -57,6 +57,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/actionLayout.ts` | 115 | Button placement, ordering and reordering (pure) |
 | `src/toolbarControls.ts` | 110 | The toolbar's built-in controls and their visibility (pure) |
 | `src/bands.ts` | 100 | Splitting a tag list into pinned/bookmarked/rest bands (pure) |
+| `src/plex.ts` | 240 | The plex arrangement: rows, side bands, depth, where it opens (pure) |
+| `src/plexView.ts` | 340 | The plex renderer: pills, SVG connectors, walking animation |
 | `src/fontZoom.ts` | 78 | Font-zoom stops, stepping and labelling (pure) |
 | `src/transfer.ts` | 300 | Export payloads, import validation, merge planning (pure) |
 | `src/transferModals.ts` | 220 | The import dialog, showing a plan before applying |
@@ -370,6 +372,18 @@ Bookmarks reuse `TagGroups` wholesale — the same DAG, the same three-level inv
 
 The one deliberate difference is that bookmarks produce **no graph edges**. A bookmark says "keep this within reach", not "these two tags are related", so putting it in the relation graph would make a navigation choice look like a claim about the vault. That separation is what lets bookmarks be used alongside grouping or instead of it.
 
+## 8c-ter. The plex
+
+The plex is TheBrain's arrangement applied to tags. One tag sits in the middle; everything around it is placed by what it *is* to that tag, so position carries meaning and no legend is needed: main-tags above, sub-tags below, and the two side bands split by **where the relation lives** — tags sharing a note on the left, tags joined by a horizontal link on the right. That split is the one the rest of the plugin turns on. A shared-note relation is an observation about the vault and cannot be removed from a view; a horizontal link is a decision someone made and can. Putting them in one band would hide the difference.
+
+Because position is the meaning, a tag appears in exactly one place, and the precedence runs hierarchy → linked → shared. A tag drawn both above and to the side would turn the arrangement into two overlapping lists, and you could no longer read a relation off a position. The same reasoning governs the pinned/bookmarked bands.
+
+`buildPlex` (`src/plex.ts`) is pure and takes its inputs as five plain queries, so the interesting rules — sibling derivation, the claiming order, what each depth adds — are testable without a graph or a DOM. One decision worth recording: siblings are derived from the *unfiltered* parents, so hiding a main-tag does not dissolve the sibling relation beneath it. The row label explains the relation; the shared parent does not have to be on screen for it to hold.
+
+The renderer is DOM rather than canvas, unlike the mind-map. The pills here are the same pills as everywhere else — inline rename, context menu, pin and bookmark marks — and reimplementing that against a canvas would be a second copy of behaviour already got right once. The mind-map is canvas because it simulates hundreds of nodes; a plex draws one neighbourhood. Connectors are an SVG layer measured after layout, so a line always meets the pill it belongs to however the row wrapped.
+
+Walking is the whole interaction, so it takes the plainest gesture: a click makes that tag the centre. Two consequences had to be handled. Clicking the centre is a no-op — the shared "clicking the only selected tag clears it" rule would otherwise empty the selection and send the plex to some other tag entirely. And the surviving pills are FLIPped between renders, so a tag clicked in the sub-tag row visibly travels to the middle. That continuity is what makes stepping through a graph feel like moving rather than like loading pages.
+
 ## 8d. Pan and zoom
 
 The mind-map draws to canvas and owns its own camera. The cloud, groups and tree views are real DOM — they need inline renaming, text selection and the FLIP animation — so rather than rewriting them onto canvas, `PanZoom` (`src/panzoom.ts`) wraps their content in a CSS-transformed layer. The browser still lays tags out normally; the transform moves and scales the result.
@@ -429,7 +443,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-500 tests across 92 suites:
+521 tests across 93 suites:
 
 | Suite | Covers |
 | --- | --- |

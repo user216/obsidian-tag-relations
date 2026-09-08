@@ -30,7 +30,8 @@ export type ToolbarControlId =
 	| "inspectorToggle"
 	| "refresh"
 	| "zen"
-	| "fontZoom";
+	| "fontZoom"
+	| "plexDepth";
 
 export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 	{
@@ -82,6 +83,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		id: "inspectorToggle",
 		label: "Side panel toggle",
 		description: "Shows or hides the panel of pinned tags, bookmarks and groups.",
+	},
+	{
+		id: "plexDepth",
+		label: "Plex depth button",
+		description:
+			"Chooses how far the plex reaches around the active tag. Only appears in the plex view; the same choice is in Settings → Views.",
 	},
 	{
 		id: "fontZoom",
