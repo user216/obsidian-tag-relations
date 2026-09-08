@@ -134,6 +134,11 @@ export class MapRenderer implements ModeRenderer {
 		);
 		this.truncated = whole ? Math.max(0, pool.size - ordered.length) : 0;
 
+		// A pinned tag is always on the map, whatever the depth limit or the
+		// node cap would otherwise have done with it — that is what pinning
+		// is for, and dropping it here made pinning look cloud-only.
+		withPinned(ordered, host.settings.pinnedTags, host.graph);
+
 		const live = new Set(ordered.map((entry) => entry.tag));
 		for (const tag of Array.from(this.particles.keys())) {
 			if (!live.has(tag)) this.particles.delete(tag);
@@ -384,7 +389,9 @@ export class MapRenderer implements ModeRenderer {
 			const isSelected = this.host.isSelected(p.tag);
 			const isNeighbor = this.neighborsOfSelected.has(p.tag);
 			const isHovered = this.hovered === p;
-			const dimmed = hasSelection && !isSelected && !isNeighbor;
+			const isPinned = this.host.isPinned(p.tag);
+			// A pinned tag never dims — it is meant to stay findable.
+			const dimmed = hasSelection && !isSelected && !isNeighbor && !isPinned;
 
 			ctx.globalAlpha = dimmed ? 0.3 : 1;
 			ctx.beginPath();
@@ -400,6 +407,14 @@ export class MapRenderer implements ModeRenderer {
 				ctx.lineWidth = 2 / scale;
 				ctx.strokeStyle = palette.accent;
 				ctx.stroke();
+			} else if (isPinned) {
+				// A ring rather than a fill, so a pin reads as a marker on the
+				// node instead of changing what the node itself means.
+				ctx.beginPath();
+				ctx.arc(p.x, p.y, p.r + 3 / scale, 0, Math.PI * 2);
+				ctx.lineWidth = 1.5 / scale;
+				ctx.strokeStyle = palette.accent;
+				ctx.stroke();
 			}
 			ctx.globalAlpha = 1;
 		}
@@ -412,6 +427,7 @@ export class MapRenderer implements ModeRenderer {
 			const isHovered = this.hovered === p;
 			const showLabel =
 				this.host.settings.mapShowAllLabels ||
+				this.host.isPinned(p.tag) ||
 				isSelected ||
 				isHovered ||
 				isNeighbor ||
@@ -714,4 +730,22 @@ export function anchorPositions(
 		});
 	}
 	return anchors;
+}
+
+/**
+ * Make sure every pinned tag is in the node list, appending any the depth or
+ * cap left out. Mutates in place because the caller owns the array.
+ */
+export function withPinned(
+	nodes: MapNodeRef[],
+	pinned: string[],
+	graph: TagGraph
+): MapNodeRef[] {
+	const present = new Set(nodes.map((node) => node.tag));
+	for (const tag of pinned) {
+		if (present.has(tag) || !graph.nodes.has(tag)) continue;
+		present.add(tag);
+		nodes.push({ tag, hop: 1 });
+	}
+	return nodes;
 }

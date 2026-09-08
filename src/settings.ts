@@ -69,6 +69,13 @@ export interface TagRelationsSettings {
 	showGroupConnections: boolean;
 	connectionColors: Record<ConnectionKind, string>;
 
+	// Bookmarks — a second, independent containment structure
+	bookmarkLinks: GroupLink[];
+	/** Tags bookmarked at the top level, with no bookmark folder above them. */
+	bookmarkRoots: string[];
+	/** Collapsed state for inspector sections and bookmark folders. */
+	collapsedSections: string[];
+
 	// Action bar
 	showActionBar: boolean;
 	/** Per-action Lucide icon overrides, keyed by action id. */
@@ -144,6 +151,10 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	levelStyles: LEVEL_STYLE_PRESETS.balanced,
 	showGroupConnections: true,
 	connectionColors: { ...DEFAULT_CONNECTION_COLORS },
+
+	bookmarkLinks: [],
+	bookmarkRoots: [],
+	collapsedSections: [],
 
 	showActionBar: false,
 	actionIcons: {},
@@ -1249,10 +1260,13 @@ function previewHost(plugin: TagRelationsPlugin): ActionHost {
 		selection: [],
 		isSelected: () => false,
 		isPinned: () => false,
+		isBookmarked: () => false,
 		removableRelationCount: () => 0,
 		select: noop,
 		clearSelection: noop,
 		togglePin: noop,
+		toggleBookmark: noop,
+		promptBookmarkInside: noop,
 		openTagSearch: noop,
 		showNotes: noop,
 		createNote: noop,

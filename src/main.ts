@@ -198,6 +198,15 @@ export default class TagRelationsPlugin extends Plugin {
 		if (!Array.isArray(this.settings.collapsedGroups)) {
 			this.settings.collapsedGroups = [];
 		}
+		if (!Array.isArray(this.settings.bookmarkLinks)) {
+			this.settings.bookmarkLinks = [];
+		}
+		if (!Array.isArray(this.settings.bookmarkRoots)) {
+			this.settings.bookmarkRoots = [];
+		}
+		if (!Array.isArray(this.settings.collapsedSections)) {
+			this.settings.collapsedSections = [];
+		}
 	}
 
 	async saveSettings(): Promise<void> {
@@ -389,6 +398,102 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings.pinnedTags = result.pinned;
 		await this.saveSettings();
 		this.refreshViews();
+	}
+
+	// --- Bookmarks ---------------------------------------------------------
+
+	/**
+	 * Bookmarks reuse the group structure wholesale — same DAG, same
+	 * three-level invariant, same rename handling — but in their own store.
+	 * They deliberately create no graph edges: a bookmark says "keep this
+	 * within reach", not "these two tags are related", so it is navigation
+	 * rather than a claim about the vault.
+	 */
+	bookmarks(): TagGroups {
+		return new TagGroups(this.settings.bookmarkLinks);
+	}
+
+	isBookmarked(tag: string): boolean {
+		if (this.settings.bookmarkRoots.includes(tag)) return true;
+		const marks = this.bookmarks();
+		return marks.hasParents(tag) || marks.hasChildren(tag);
+	}
+
+	async toggleBookmark(tag: string): Promise<void> {
+		if (this.isBookmarked(tag)) {
+			this.settings.bookmarkRoots = this.settings.bookmarkRoots.filter(
+				(other) => other !== tag
+			);
+			const marks = this.bookmarks();
+			if (marks.removeTag(tag)) this.settings.bookmarkLinks = marks.all;
+			await this.saveSettings();
+			this.refreshViews();
+			new Notice(`Removed ${tagLabel(tag)} from bookmarks.`);
+			return;
+		}
+		this.settings.bookmarkRoots.push(tag);
+		await this.saveSettings();
+		this.refreshViews();
+		new Notice(`Bookmarked ${tagLabel(tag)}.`);
+	}
+
+	/** Put a tag inside a bookmark folder, creating the nesting. */
+	async addToBookmark(parent: string, child: string): Promise<void> {
+		const marks = this.bookmarks();
+		const result = marks.add(parent, child);
+		if (!result.ok) {
+			new Notice(result.reason ?? "That bookmark nesting is not allowed.");
+			return;
+		}
+		this.settings.bookmarkLinks = marks.all;
+		// A tag held by a bookmark folder no longer needs its own top-level
+		// entry; it is reachable through the folder.
+		this.settings.bookmarkRoots = this.settings.bookmarkRoots.filter(
+			(tag) => tag !== child
+		);
+		if (!this.settings.bookmarkRoots.includes(parent) && !marks.hasParents(parent)) {
+			this.settings.bookmarkRoots.push(parent);
+		}
+		await this.saveSettings();
+		this.refreshViews();
+		new Notice(`${tagLabel(child)} bookmarked under ${tagLabel(parent)}.`);
+	}
+
+	promptBookmarkInside(child: string): void {
+		const marks = this.bookmarks();
+		const candidates = this.allKnownTags().filter(
+			(tag) => tag !== child && marks.canAdd(tag, child).ok
+		);
+		if (candidates.length === 0) {
+			new Notice("There is nowhere to file that bookmark right now.");
+			return;
+		}
+		new TagChoiceModal(
+			this.app,
+			candidates,
+			`Bookmark ${tagLabel(child)} under…`,
+			(parent) => void this.addToBookmark(parent, child)
+		).open();
+	}
+
+	async removeFromBookmark(parent: string, child: string): Promise<void> {
+		const marks = this.bookmarks();
+		if (!marks.remove(parent, child)) return;
+		this.settings.bookmarkLinks = marks.all;
+		await this.saveSettings();
+		this.refreshViews();
+	}
+
+	/** Top-level bookmark entries, in the order they were added. */
+	bookmarkTopLevel(): string[] {
+		const marks = this.bookmarks();
+		const roots = this.settings.bookmarkRoots.filter(
+			(tag) => !marks.hasParents(tag)
+		);
+		for (const tag of marks.mainGroups()) {
+			if (!roots.includes(tag)) roots.push(tag);
+		}
+		return roots;
 	}
 
 	// --- Export and import -------------------------------------------------
@@ -838,6 +943,14 @@ export default class TagRelationsPlugin extends Plugin {
 	private remapGroupsAndPins(from: string, to: string): void {
 		const groups = new TagGroups(this.settings.groupLinks);
 		if (groups.renameTag(from, to)) this.settings.groupLinks = groups.all;
+
+		const marks = this.bookmarks();
+		if (marks.renameTag(from, to)) this.settings.bookmarkLinks = marks.all;
+		if (this.settings.bookmarkRoots.includes(from)) {
+			this.settings.bookmarkRoots = Array.from(
+				new Set(this.settings.bookmarkRoots.map((tag) => (tag === from ? to : tag)))
+			);
+		}
 
 		const pins = this.settings.pinnedTags;
 		if (pins.includes(from)) {

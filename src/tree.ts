@@ -56,10 +56,18 @@ export class TreeRenderer implements ModeRenderer {
 			}
 		}
 
-		if (host.selection.length === 0) {
+		const pinnedRoots = host.settings.pinnedTags.filter((tag) =>
+			host.graph.nodes.has(tag)
+		);
+		if (host.selection.length === 0 && pinnedRoots.length === 0) {
 			this.container.createDiv({
 				cls: "tr-tree-hint",
 				text: "Pick a tag to grow the tree from it. Showing the most connected tags:",
+			});
+		} else if (host.selection.length === 0) {
+			this.container.createDiv({
+				cls: "tr-tree-hint",
+				text: "Your pinned tags. Pick any tag to grow the tree from it instead.",
 			});
 		}
 
@@ -71,20 +79,15 @@ export class TreeRenderer implements ModeRenderer {
 
 	private roots(): string[] {
 		const { host } = this;
-		// Every selected tag becomes its own root, so a multi-tag selection
-		// grows one tree per tag rather than merging into an arbitrary root.
-		if (host.selection.length > 0) return host.selection.slice();
-		const visible = host.visibleTags();
-		// No selection yet: offer the best entry points — the most connected tags.
-		return visible
-			.slice()
-			.sort(
-				(a, b) =>
-					host.graph.neighbors(b).length - host.graph.neighbors(a).length ||
-					host.graph.countOf(b) - host.graph.countOf(a) ||
-					a.localeCompare(b)
-			)
-			.slice(0, 20);
+		return treeRoots({
+			selection: host.selection,
+			pinned: host.settings.pinnedTags.filter((tag) =>
+				host.graph.nodes.has(tag)
+			),
+			visible: host.visibleTags(),
+			degreeOf: (tag) => host.graph.neighbors(tag).length,
+			countOf: (tag) => host.graph.countOf(tag),
+		});
 	}
 
 	private autoExpand(path: string[], remaining: number): void {
@@ -207,6 +210,46 @@ export class TreeRenderer implements ModeRenderer {
 			}
 		}
 	}
+}
+
+export interface TreeRootOptions {
+	selection: string[];
+	pinned: string[];
+	visible: string[];
+	degreeOf(tag: string): number;
+	countOf(tag: string): number;
+}
+
+/**
+ * Which tags the tree grows from.
+ *
+ * Pinned tags lead, always — a pin means "keep this to hand", and a view that
+ * ignored it would make pinning look like a cloud-only decoration. After them
+ * come the selected tags, then, only when there is nothing else, the
+ * best-connected tags as a starting point.
+ */
+export function treeRoots(options: TreeRootOptions): string[] {
+	const roots: string[] = [];
+	const seen = new Set<string>();
+	const push = (tag: string) => {
+		if (seen.has(tag)) return;
+		seen.add(tag);
+		roots.push(tag);
+	};
+
+	for (const tag of options.pinned) push(tag);
+	for (const tag of options.selection) push(tag);
+	if (roots.length > 0) return roots;
+
+	return options.visible
+		.slice()
+		.sort(
+			(a, b) =>
+				options.degreeOf(b) - options.degreeOf(a) ||
+				options.countOf(b) - options.countOf(a) ||
+				a.localeCompare(b)
+		)
+		.slice(0, 20);
 }
 
 /**

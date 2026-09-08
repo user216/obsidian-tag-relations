@@ -50,12 +50,15 @@ export interface ActionHost {
 
 	isSelected(tag: string): boolean;
 	isPinned(tag: string): boolean;
+	isBookmarked(tag: string): boolean;
 	/** How many of this tag's relations could actually be removed. */
 	removableRelationCount(tag: string): number;
 
 	select(tag: string, mode: SelectMode): void;
 	clearSelection(): void;
 	togglePin(tag: string): void;
+	toggleBookmark(tag: string): void;
+	promptBookmarkInside(tag: string): void;
 
 	openTagSearch(tag: string): void;
 	showNotes(): void;
@@ -142,6 +145,26 @@ export const TAG_ACTIONS: TagAction[] = [
 			ctx.tag && ctx.host.isPinned(ctx.tag) ? "Unpin" : "Pin to the top",
 		isEnabled: hasTag,
 		run: (ctx) => ctx.tag && ctx.host.togglePin(ctx.tag),
+	},
+
+	{
+		id: "bookmark",
+		group: "selection",
+		defaultIcon: "bookmark",
+		label: (ctx) =>
+			ctx.tag && ctx.host.isBookmarked(ctx.tag)
+				? "Remove bookmark"
+				: "Bookmark this tag",
+		isEnabled: hasTag,
+		run: (ctx) => ctx.tag && ctx.host.toggleBookmark(ctx.tag),
+	},
+	{
+		id: "bookmark-inside",
+		group: "selection",
+		defaultIcon: "folder-symlink",
+		label: () => "Bookmark this under…",
+		isEnabled: hasTag,
+		run: (ctx) => ctx.tag && ctx.host.promptBookmarkInside(ctx.tag),
 	},
 
 	// --- notes ---

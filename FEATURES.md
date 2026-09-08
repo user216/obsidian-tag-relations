@@ -43,7 +43,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Animated re-grouping (FLIP), so tags visibly travel to their new position
 - Inline rename control on each tag in edit mode
 - Three layouts: icons (weighted cloud), list, and a details table (sortable by clicking a column header)
-- Up to 10 pinned tags held at the top in every layout
+- Up to 10 pinned tags held at the top in every layout, and honoured by every view
 - Pan by dragging empty space; Ctrl/Cmd+wheel zooms about the cursor
 - Zoom level remembered between sessions
 
@@ -152,6 +152,21 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Cached positions verified against live text before writing; a stale cache skips rather than corrupts
 - Frontmatter shape preserved: list stays list, string stays string, `#` prefix per entry
 
+## Side panel
+
+- Standing sections above the selection details, independent of what is selected
+- **Pinned**, **Bookmarks** and **Groups**, each collapsible and separately scrollable
+- Groups section lists every main-tag, expandable to its members
+- Every row selects on click and opens the full context menu on right-click
+
+## Bookmarks
+
+- A shortlist you arrange yourself, separate from groups and usable alongside them
+- Two levels of nesting, with the same depth rule as groups
+- Creates no relations and changes nothing about your tags — navigation only
+- Bookmark from the context menu, the action bar, or the panel's + button
+- Follows tag renames, like groups and pins do
+
 ## Details panel
 
 - Note count and relation count for the selection
@@ -181,5 +196,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 396 tests across 77 suites (`npm test`)
+- 411 tests across 80 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

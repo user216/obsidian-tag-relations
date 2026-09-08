@@ -360,6 +360,12 @@ Every rule the cap implies is a case of that arithmetic rather than a separate b
 
 Containment is also a **third edge source** in the graph, after co-occurrence and manual links. Group edges score full strength, skip pruning, and carry a `parent` field so views know the direction of an otherwise undirected edge. Their `kind` names the level pairing, which is what the mind-map colours by.
 
+## 8c-bis. Bookmarks
+
+Bookmarks reuse `TagGroups` wholesale — the same DAG, the same three-level invariant, the same rename propagation — against a separate store (`bookmarkLinks`). Nothing new was written for them.
+
+The one deliberate difference is that bookmarks produce **no graph edges**. A bookmark says "keep this within reach", not "these two tags are related", so putting it in the relation graph would make a navigation choice look like a claim about the vault. That separation is what lets bookmarks be used alongside grouping or instead of it.
+
 ## 8d. Pan and zoom
 
 The mind-map draws to canvas and owns its own camera. The cloud, groups and tree views are real DOM — they need inline renaming, text selection and the FLIP animation — so rather than rewriting them onto canvas, `PanZoom` (`src/panzoom.ts`) wraps their content in a CSS-transformed layer. The browser still lays tags out normally; the transform moves and scales the result.
@@ -401,7 +407,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-396 tests across 77 suites:
+411 tests across 80 suites:
 
 | Suite | Covers |
 | --- | --- |

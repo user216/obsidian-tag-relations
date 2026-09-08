@@ -137,6 +137,32 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		return this.settings.pinnedTags.includes(tag);
 	}
 
+	isBookmarked(tag: string): boolean {
+		return this.plugin.isBookmarked(tag);
+	}
+
+	toggleBookmark(tag: string): void {
+		void this.plugin.toggleBookmark(tag);
+	}
+
+	promptBookmarkInside(tag: string): void {
+		this.plugin.promptBookmarkInside(tag);
+	}
+
+	/** Collapsed state for a sidebar section or bookmark folder. */
+	isSectionCollapsed(id: string): boolean {
+		return this.settings.collapsedSections.includes(id);
+	}
+
+	toggleSection(id: string): void {
+		const collapsed = this.settings.collapsedSections;
+		const index = collapsed.indexOf(id);
+		if (index >= 0) collapsed.splice(index, 1);
+		else collapsed.push(id);
+		void this.plugin.saveSettings();
+		this.renderInspector();
+	}
+
 	togglePin(tag: string): void {
 		void this.plugin.togglePinnedTag(tag);
 	}
@@ -929,36 +955,41 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		el.toggleClass("is-hidden", !this.settings.showInspector);
 		if (!this.settings.showInspector) return;
 
+		// Standing sections first: these do not depend on what is selected,
+		// so they stay put as you click around and remain the reliable way
+		// back to something you keep close.
+		this.renderPinnedSection(el);
+		this.renderBookmarksSection(el);
+		this.renderGroupsSection(el);
+
+		const details = el.createDiv({ cls: "tr-inspector-details" });
 		if (this.selection.length === 0) {
-			el.createDiv({ cls: "tr-inspector-empty" }).setText(
+			details.createDiv({ cls: "tr-inspector-empty" }).setText(
 				"Select a tag to see what it connects to. Ctrl/Cmd or Shift click to select several."
 			);
-			this.renderVaultSummary(el);
+			this.renderVaultSummary(details);
 			return;
 		}
 
-		if (this.selection.length === 1) this.renderSingleSelection(el);
-		else this.renderMultiSelection(el);
+		if (this.selection.length === 1) this.renderSingleSelection(details);
+		else this.renderMultiSelection(details);
 
-		el.createDiv({ cls: "tr-inspector-section", text: "Related tags" });
+		details.createDiv({ cls: "tr-inspector-section", text: "Related tags" });
 		const related = this.graph.relatedToSelection(this.selection);
 		if (related.length === 0) {
-			el.createDiv({
+			details.createDiv({
 				cls: "tr-inspector-empty",
 				text: "No relations yet. Use “Horizontal link to…” to link these tags to another one, or add them to the same note.",
 			});
 			return;
 		}
-		const list = el.createDiv({ cls: "tr-related-list" });
+		const list = details.createDiv({ cls: "tr-related-list" });
 		for (const other of related) {
 			const strength = this.selectionStrength(other);
 			const closest = this.selection.find(
 				(tag) => this.graph.strength(tag, other) === strength
 			);
 			const edge = closest ? this.graph.edgeBetween(closest, other) : undefined;
-			// Described from `other`'s own point of view — this row is about
-			// `other`, so "contains"/"inside" reads correctly regardless of
-			// which of the two tags the graph happened to store as `.parent`.
 			const description = closest
 				? describeRelation(edge, other, closest, strength)
 				: null;
@@ -982,6 +1013,260 @@ export class TagRelationsView extends ItemView implements ViewHost {
 				this.openContextMenu(other, event);
 			});
 		}
+	}
+
+	/**
+	 * A collapsible sidebar section. The header is the whole hit area, and
+	 * collapsed state is persisted per section id.
+	 */
+	private sectionBody(
+		parent: HTMLElement,
+		id: string,
+		label: string,
+		count: number | null,
+		onAdd?: { tooltip: string; run: () => void }
+	): HTMLElement | null {
+		const collapsed = this.isSectionCollapsed(id);
+		const section = parent.createDiv({ cls: "tr-side-section" });
+		const header = section.createDiv({ cls: "tr-side-header" });
+		const twisty = header.createSpan({ cls: "tr-twisty" });
+		setIcon(twisty, "chevron-right");
+		twisty.toggleClass("is-open", !collapsed);
+		header.createSpan({ cls: "tr-side-title", text: label });
+		if (count !== null) {
+			header.createSpan({ cls: "tr-side-count", text: String(count) });
+		}
+		if (onAdd) {
+			const add = header.createSpan({ cls: "tr-side-add" });
+			setIcon(add, "plus");
+			setTooltip(add, onAdd.tooltip, { placement: "left" });
+			add.addEventListener("click", (event) => {
+				event.stopPropagation();
+				onAdd.run();
+			});
+		}
+		header.addEventListener("click", () => this.toggleSection(id));
+		if (collapsed) return null;
+		return section.createDiv({ cls: "tr-side-body" });
+	}
+
+	private renderPinnedSection(el: HTMLElement): void {
+		const pinned = this.settings.pinnedTags;
+		const body = this.sectionBody(el, "pinned", "Pinned", pinned.length);
+		if (!body) return;
+		if (pinned.length === 0) {
+			body.createDiv({
+				cls: "tr-inspector-empty",
+				text: "Nothing pinned. Pin a tag to keep it at the top of every view.",
+			});
+			return;
+		}
+		for (const tag of pinned) {
+			this.renderSideRow(body, tag, {
+				icon: "pin",
+				removeTooltip: `Unpin ${tagLabel(tag)}`,
+				onRemove: () => this.togglePin(tag),
+			});
+		}
+	}
+
+	private renderBookmarksSection(el: HTMLElement): void {
+		const roots = this.plugin.bookmarkTopLevel();
+		const body = this.sectionBody(el, "bookmarks", "Bookmarks", roots.length, {
+			tooltip: "Bookmark a tag",
+			run: () => this.promptBookmarkTag(),
+		});
+		if (!body) return;
+		if (roots.length === 0) {
+			body.createDiv({
+				cls: "tr-inspector-empty",
+				text: "No bookmarks. These are separate from groups — a shortlist you arrange yourself, two levels deep, that changes nothing about your tags.",
+			});
+			return;
+		}
+		const marks = this.plugin.bookmarks();
+		for (const tag of roots) this.renderBookmarkNode(body, marks, tag, 0);
+	}
+
+	private renderBookmarkNode(
+		parent: HTMLElement,
+		marks: TagGroups,
+		tag: string,
+		depth: number
+	): void {
+		const children = marks.childrenOf(tag);
+		const id = `bookmark:${tag}`;
+		const collapsed = this.isSectionCollapsed(id);
+
+		const row = parent.createDiv({ cls: "tr-side-row tr-bookmark-row" });
+		row.style.setProperty("--tr-depth", String(depth));
+		const twisty = row.createSpan({ cls: "tr-twisty" });
+		if (children.length > 0) {
+			setIcon(twisty, "chevron-right");
+			twisty.toggleClass("is-open", !collapsed);
+			twisty.addEventListener("click", (event) => {
+				event.stopPropagation();
+				this.toggleSection(id);
+			});
+		} else {
+			twisty.addClass("is-leaf");
+		}
+
+		const name = row.createSpan({ cls: "tr-side-name", text: tagLabel(tag) });
+		name.toggleClass("is-selected", this.isSelected(tag));
+		const count = this.graph.countOf(tag);
+		row.createSpan({ cls: "tr-side-meta", text: String(count) });
+
+		row.addEventListener("click", (event) => this.selectFromEvent(tag, event));
+		row.addEventListener("contextmenu", (event) => {
+			event.preventDefault();
+			this.openContextMenu(tag, event);
+		});
+
+		const nest = row.createSpan({ cls: "tr-side-action" });
+		setIcon(nest, "corner-down-right");
+		setTooltip(nest, `Bookmark a tag under ${tagLabel(tag)}`, {
+			placement: "left",
+		});
+		nest.addEventListener("click", (event) => {
+			event.stopPropagation();
+			this.promptBookmarkUnder(tag);
+		});
+
+		const remove = row.createSpan({ cls: "tr-side-action" });
+		setIcon(remove, "x");
+		setTooltip(remove, `Remove bookmark`, { placement: "left" });
+		remove.addEventListener("click", (event) => {
+			event.stopPropagation();
+			const parents = marks.parentsOf(tag);
+			if (parents.length > 0) {
+				void this.plugin.removeFromBookmark(parents[0], tag);
+			} else {
+				void this.plugin.toggleBookmark(tag);
+			}
+		});
+
+		if (collapsed || children.length === 0) return;
+		for (const child of children) {
+			this.renderBookmarkNode(parent, marks, child, depth + 1);
+		}
+	}
+
+	private renderGroupsSection(el: HTMLElement): void {
+		const mains = this.groups.mainGroups();
+		const body = this.sectionBody(el, "groups", "Groups", mains.length);
+		if (!body) return;
+		if (mains.length === 0) {
+			body.createDiv({
+				cls: "tr-inspector-empty",
+				text: "No groups yet. Right-click a tag and choose “Make this a main-tag for…”.",
+			});
+			return;
+		}
+		for (const main of mains) {
+			const id = `sidegroup:${main}`;
+			const collapsed = this.isSectionCollapsed(id);
+			const children = this.groups.childrenOf(main);
+
+			const row = body.createDiv({ cls: "tr-side-row" });
+			const twisty = row.createSpan({ cls: "tr-twisty" });
+			setIcon(twisty, "chevron-right");
+			twisty.toggleClass("is-open", !collapsed);
+			twisty.addEventListener("click", (event) => {
+				event.stopPropagation();
+				this.toggleSection(id);
+			});
+			const name = row.createSpan({ cls: "tr-side-name", text: tagLabel(main) });
+			name.toggleClass("is-selected", this.isSelected(main));
+			row.createSpan({ cls: "tr-side-meta", text: String(children.length) });
+			row.addEventListener("click", (event) => this.selectFromEvent(main, event));
+			row.addEventListener("contextmenu", (event) => {
+				event.preventDefault();
+				this.openContextMenu(main, event);
+			});
+
+			if (collapsed) continue;
+			for (const child of children) {
+				const childRow = body.createDiv({ cls: "tr-side-row" });
+				childRow.style.setProperty("--tr-depth", "1");
+				childRow.createSpan({ cls: "tr-twisty is-leaf" });
+				const childName = childRow.createSpan({
+					cls: "tr-side-name",
+					text: tagLabel(child),
+				});
+				childName.toggleClass("is-selected", this.isSelected(child));
+				childRow.createSpan({
+					cls: "tr-side-meta",
+					text: String(this.graph.countOf(child)),
+				});
+				childRow.addEventListener("click", (event) =>
+					this.selectFromEvent(child, event)
+				);
+				childRow.addEventListener("contextmenu", (event) => {
+					event.preventDefault();
+					this.openContextMenu(child, event);
+				});
+			}
+		}
+	}
+
+	/** One clickable tag row with a trailing remove control. */
+	private renderSideRow(
+		parent: HTMLElement,
+		tag: string,
+		options: { icon: string; removeTooltip: string; onRemove: () => void }
+	): void {
+		const row = parent.createDiv({ cls: "tr-side-row" });
+		const icon = row.createSpan({ cls: "tr-side-icon" });
+		setIcon(icon, options.icon);
+		const name = row.createSpan({ cls: "tr-side-name", text: tagLabel(tag) });
+		name.toggleClass("is-selected", this.isSelected(tag));
+		row.createSpan({
+			cls: "tr-side-meta",
+			text: String(this.graph.countOf(tag)),
+		});
+		row.addEventListener("click", (event) => this.selectFromEvent(tag, event));
+		row.addEventListener("contextmenu", (event) => {
+			event.preventDefault();
+			this.openContextMenu(tag, event);
+		});
+		const remove = row.createSpan({ cls: "tr-side-action" });
+		setIcon(remove, "x");
+		setTooltip(remove, options.removeTooltip, { placement: "left" });
+		remove.addEventListener("click", (event) => {
+			event.stopPropagation();
+			options.onRemove();
+		});
+	}
+
+	private promptBookmarkTag(): void {
+		const candidates = this.plugin
+			.allKnownTags()
+			.filter((tag) => !this.plugin.isBookmarked(tag));
+		if (candidates.length === 0) {
+			new Notice("Every tag is already bookmarked.");
+			return;
+		}
+		new TagSuggestModal(this.app, candidates, "Bookmark which tag?", (tag) =>
+			void this.plugin.toggleBookmark(tag)
+		).open();
+	}
+
+	private promptBookmarkUnder(parent: string): void {
+		const marks = this.plugin.bookmarks();
+		const candidates = this.plugin
+			.allKnownTags()
+			.filter((tag) => marks.canAdd(parent, tag).ok);
+		if (candidates.length === 0) {
+			new Notice(`Nothing can be filed under ${tagLabel(parent)}.`);
+			return;
+		}
+		new TagSuggestModal(
+			this.app,
+			candidates,
+			`Bookmark under ${tagLabel(parent)}…`,
+			(tag) => void this.plugin.addToBookmark(parent, tag)
+		).open();
 	}
 
 	private renderSingleSelection(el: HTMLElement): void {

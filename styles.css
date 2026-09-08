@@ -1503,3 +1503,152 @@
 	font-size: var(--font-ui-smaller);
 	resize: vertical;
 }
+
+/* ------------------------------------------------- inspector sections */
+
+.tr-side-section {
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 4px;
+	margin-bottom: 4px;
+}
+
+.tr-side-header {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 2px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-side-header:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-side-title {
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.tr-side-count {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.tr-side-add {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+}
+
+.tr-side-header:hover .tr-side-add {
+	opacity: 1;
+}
+
+.tr-side-add:hover {
+	color: var(--text-accent);
+}
+
+.tr-side-add .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+/* Each standing list scrolls on its own, so a long one cannot push the
+   others off the panel. */
+.tr-side-body {
+	max-height: 220px;
+	overflow-y: auto;
+	padding-left: 2px;
+}
+
+.tr-side-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 4px 2px calc(4px + var(--tr-depth, 0) * 14px);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+}
+
+.tr-side-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.tr-side-icon {
+	display: flex;
+	color: var(--text-faint);
+}
+
+.tr-side-icon .svg-icon {
+	width: 12px;
+	height: 12px;
+}
+
+.tr-side-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tr-side-name.is-selected {
+	color: var(--text-accent);
+	font-weight: 600;
+}
+
+.tr-side-meta {
+	flex: 0 0 auto;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.tr-side-action {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+	border-radius: var(--radius-s);
+}
+
+.tr-side-row:hover .tr-side-action {
+	opacity: 0.7;
+}
+
+.tr-side-action:hover {
+	opacity: 1 !important;
+	color: var(--text-accent);
+}
+
+.tr-side-action .svg-icon {
+	width: 12px;
+	height: 12px;
+}
+
+.tr-side-row .tr-twisty {
+	width: 14px;
+	height: 14px;
+	flex: 0 0 14px;
+}
+
+.tr-side-row .tr-twisty .svg-icon {
+	width: 12px;
+	height: 12px;
+}
+
+.tr-inspector-details {
+	margin-top: 6px;
+}

@@ -58,7 +58,8 @@ Two tags can be related in three different ways. They look similar in the views 
 
 - **Selection** — the tags you have currently picked, in the order you picked them. Ctrl/Cmd or Shift click adds; a plain click replaces.
 - **Target** — the single tag the button bar acts on: the **last** tag you selected. Shown at the left of the bar so it is never ambiguous.
-- **Pinned** — up to ten tags held at the top of the cloud regardless of sort. A shortlist, not a second cloud.
+- **Pinned** — up to ten tags kept to hand. They lead the cloud, are always roots in the tree, and are always drawn on the mind-map regardless of depth or node cap.
+- **Bookmark** — a shortlist you arrange yourself, two levels deep. Structurally identical to a group, but it creates no relations and changes nothing about your tags: it is navigation, not a claim about the vault. Independent of groups, and usable alongside them.
 - **Related to the selection** — related to **any** selected tag (a union, not an intersection — an intersection is empty too often to explore with).
 - **Strength to the selection** — the **strongest single tie** to any selected tag, not a sum or average. A tag is as relevant as its closest connection.
 

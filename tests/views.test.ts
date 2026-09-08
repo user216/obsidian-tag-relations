@@ -2,8 +2,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { TagGraph } from "../src/graph";
 import type { GraphBuildOptions } from "../src/graph";
-import { branchChildren } from "../src/tree";
-import { anchorPositions, collectMapNodes } from "../src/map";
+import { branchChildren, treeRoots } from "../src/tree";
+import { anchorPositions, collectMapNodes, withPinned } from "../src/map";
 import { scaleByCount, hasToggleModifier, describeRelation } from "../src/host";
 import { remapManualLinks } from "../src/links";
 import { splitList, DEFAULT_SETTINGS } from "../src/settings";
@@ -454,5 +454,77 @@ describe("describeRelation", () => {
 	test("otherLabel is stripped of its leading hash", () => {
 		const d = describeRelation(edge({ manual: true }), "#viewer", "#tag-name", 1);
 		assert.doesNotMatch(d.long, /#/);
+	});
+});
+
+describe("treeRoots — pinned tags are always entry points", () => {
+	const base = {
+		visible: ["#a", "#b", "#c"],
+		degreeOf: (tag: string) => ({ "#a": 3, "#b": 2, "#c": 1 })[tag] ?? 0,
+		countOf: () => 0,
+	};
+
+	test("pinned tags lead, ahead of the selection", () => {
+		const roots = treeRoots({ ...base, pinned: ["#pin"], selection: ["#sel"] });
+		assert.deepEqual(roots, ["#pin", "#sel"]);
+	});
+
+	test("pinned alone is enough — no selection needed", () => {
+		assert.deepEqual(
+			treeRoots({ ...base, pinned: ["#pin"], selection: [] }),
+			["#pin"]
+		);
+	});
+
+	test("a tag both pinned and selected appears once", () => {
+		assert.deepEqual(
+			treeRoots({ ...base, pinned: ["#x"], selection: ["#x"] }),
+			["#x"]
+		);
+	});
+
+	test("with neither, it falls back to the best-connected tags", () => {
+		assert.deepEqual(
+			treeRoots({ ...base, pinned: [], selection: [] }),
+			["#a", "#b", "#c"]
+		);
+	});
+
+	test("the fallback is skipped entirely once anything is pinned", () => {
+		const roots = treeRoots({ ...base, pinned: ["#pin"], selection: [] });
+		assert.equal(roots.includes("#a"), false);
+	});
+
+	test("pin order is preserved", () => {
+		assert.deepEqual(
+			treeRoots({ ...base, pinned: ["#z", "#a"], selection: [] }),
+			["#z", "#a"]
+		);
+	});
+});
+
+describe("withPinned — the map always draws pinned tags", () => {
+	test("appends a pinned tag the depth limit left out", () => {
+		const nodes = [{ tag: "#project", hop: 0 }];
+		withPinned(nodes, ["#garden"], GRAPH);
+		assert.deepEqual(nodes.map((n) => n.tag), ["#project", "#garden"]);
+	});
+
+	test("does not duplicate one that is already there", () => {
+		const nodes = [{ tag: "#project", hop: 0 }];
+		withPinned(nodes, ["#project"], GRAPH);
+		assert.equal(nodes.length, 1);
+	});
+
+	test("ignores a pinned tag the vault no longer has", () => {
+		const nodes = [{ tag: "#project", hop: 0 }];
+		withPinned(nodes, ["#deleted"], GRAPH);
+		assert.equal(nodes.length, 1);
+	});
+
+	test("pinning nothing changes nothing", () => {
+		const nodes = [{ tag: "#project", hop: 0 }];
+		withPinned(nodes, [], GRAPH);
+		assert.equal(nodes.length, 1);
 	});
 });

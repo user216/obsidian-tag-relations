@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-08
+
+### Added
+
+- **Standing sections in the side panel**, above the selection details and independent of what is selected — so they stay put as you click around and remain the reliable way back to something you keep close. Each is collapsible and scrolls on its own, so a long list can't push the others off the panel.
+  - **Pinned** — your pinned tags, with unpin in place.
+  - **Bookmarks** — a shortlist you arrange yourself (see below).
+  - **Groups** — every main-tag, each expandable to show its members.
+- **Bookmarks.** A second containment structure, deliberately **independent of groups**: same shape (two levels of nesting, same depth rule), but it creates no relations and changes nothing about your tags. It is navigation — "keep this within reach" — rather than a claim about the vault, which is why it can be used alongside grouping or instead of it. Bookmark from the context menu, the action bar, or the panel's `+`.
+
+### Fixed
+
+- **Pinning now works in the mind-map and tree, not just the cloud.** A pin means "keep this to hand", and two of the three views ignored it entirely, which made pinning look like cloud-only decoration.
+  - **Tree**: pinned tags are always roots, ahead of the selection.
+  - **Mind-map**: pinned tags are always drawn regardless of depth or the node cap, never dim, always keep their label, and carry a ring so a pin reads as a marker on the node rather than changing what the node means.
+
+### Tests
+
+- 10 new tests covering root ordering (pinned ahead of selection, deduplicated, fallback skipped once anything is pinned) and the map's pinned-node inclusion.
+
 ## [0.9.0] - 2026-09-08
 
 ### Added
@@ -255,7 +275,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...0.7.1
