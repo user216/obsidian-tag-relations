@@ -237,5 +237,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 499 tests across 92 suites (`npm test`)
+- 500 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

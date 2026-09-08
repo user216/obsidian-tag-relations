@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { TagGroups, groupSections } from "../src/groups";
+import { TagGroups, UNGROUPED_KEY, groupSections } from "../src/groups";
 import { visibleGroupChildren } from "../src/groupsView";
 import { GroupLink } from "../src/types";
 
@@ -469,4 +469,11 @@ test("every visible tag is covered by a section or by the ungrouped list", () =>
 		visible.filter((tag) => !covered.has(tag)),
 		[]
 	);
+});
+
+test("the Ungrouped key cannot collide with a tag name", () => {
+	// It is stored in the same list as real tags, so it has to be something
+	// no tag can be. Tag names always carry their leading "#".
+	assert.ok(!UNGROUPED_KEY.startsWith("#"));
+	assert.ok(UNGROUPED_KEY.length > 0);
 });

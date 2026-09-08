@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-09-08
+
+### Fixed
+
+- **The Ungrouped section's twisty did nothing.** In the groups view every section is keyed by its tag, but Ungrouped is synthetic and has no tag of its own — so both click handlers were guarded by `if (tag)` and silently did nothing, while the twisty was drawn unconditionally. It now folds on a reserved key that no tag can collide with.
+  - The cloud's Groups layout drew its Ungrouped heading as plain text, with no twisty at all. It now folds too, on the same key, so the two views stay in step.
+
+### Tests
+
+- 1 new test pinning the reserved key apart from any possible tag name.
+
 ## [0.18.0] - 2026-09-08
 
 ### Changed
@@ -422,6 +433,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.18.1]: https://github.com/user216/obsidian-tag-relations/compare/0.18.0...0.18.1
 [0.18.0]: https://github.com/user216/obsidian-tag-relations/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/user216/obsidian-tag-relations/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...0.16.0

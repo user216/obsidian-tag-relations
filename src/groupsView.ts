@@ -11,7 +11,7 @@ import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
 import { levelCss, orderedLevels, separatesLevels, visibleLevels } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
-import { TagGroups } from "./groups";
+import { TagGroups, UNGROUPED_KEY } from "./groups";
 import { splitIntoBands } from "./bands";
 
 /**
@@ -256,7 +256,10 @@ export class GroupsRenderer implements ModeRenderer {
 		const section = parent.createDiv({ cls: "tr-group-section" });
 		section.style.setProperty("--tr-depth", String(depth));
 
-		const collapsed = tag !== null && host.isGroupCollapsed(tag);
+		// The only section without a tag is Ungrouped, which still needs a key
+		// of its own — without one it drew a twisty that did nothing.
+		const key = tag ?? UNGROUPED_KEY;
+		const collapsed = host.isGroupCollapsed(key);
 		const header = section.createDiv({ cls: "tr-group-header" });
 
 		const twisty = header.createSpan({ cls: "tr-twisty" });
@@ -264,7 +267,7 @@ export class GroupsRenderer implements ModeRenderer {
 		twisty.toggleClass("is-open", !collapsed);
 		twisty.addEventListener("click", (event) => {
 			event.stopPropagation();
-			if (tag) host.toggleGroupCollapsed(tag);
+			host.toggleGroupCollapsed(key);
 		});
 
 		if (tag && level && this.renaming === tag) {
@@ -352,7 +355,7 @@ export class GroupsRenderer implements ModeRenderer {
 		}
 
 		header.addEventListener("click", () => {
-			if (tag) host.toggleGroupCollapsed(tag);
+			host.toggleGroupCollapsed(key);
 		});
 
 		if (collapsed) return;

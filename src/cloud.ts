@@ -8,7 +8,7 @@ import {
 	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
-import { GroupSection, groupSections } from "./groups";
+import { GroupSection, UNGROUPED_KEY, groupSections } from "./groups";
 import { PanZoom } from "./panzoom";
 import {
 	DetailsColumn,
@@ -302,11 +302,23 @@ export class CloudRenderer implements ModeRenderer {
 		}
 
 		// Tags no group holds, so the layout still shows everything visible.
+		// It folds on the same key as the Groups view's Ungrouped section, so
+		// the two stay in step.
 		const loose = host.groups
 			.ungrouped(tags)
 			.filter((tag) => !host.groups.isGroup(tag));
 		if (loose.length > 0) {
-			this.appendGroup(field, `Ungrouped (${loose.length})`, loose);
+			const collapsed = host.isGroupCollapsed(UNGROUPED_KEY);
+			renderBandHeader(field, {
+				cls: "tr-cloud-group",
+				label: "Ungrouped",
+				count: loose.length,
+				collapsed,
+				onToggle: () => host.toggleGroupCollapsed(UNGROUPED_KEY),
+			});
+			if (!collapsed) {
+				for (const tag of loose) field.appendChild(this.pillFor(tag));
+			}
 		}
 	}
 

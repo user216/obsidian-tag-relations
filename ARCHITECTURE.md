@@ -429,7 +429,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-499 tests across 92 suites:
+500 tests across 92 suites:
 
 | Suite | Covers |
 | --- | --- |
