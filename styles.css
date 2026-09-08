@@ -612,11 +612,12 @@
 	min-width: 0;
 	overflow: auto;
 	padding: 12px 16px;
+	font-size: calc(var(--font-ui-small) * var(--tr-font-scale, 1));
 }
 
 .tr-tree-hint {
 	margin-bottom: 8px;
-	font-size: var(--font-ui-smaller);
+	font-size: 0.88em;
 	color: var(--text-faint);
 }
 
@@ -686,7 +687,7 @@
 }
 
 .tr-tree-count {
-	font-size: var(--font-ui-smaller);
+	font-size: 0.88em;
 	color: var(--text-faint);
 	font-variant-numeric: tabular-nums;
 }
@@ -959,8 +960,11 @@
 	min-height: 0;
 }
 
-/* Levels scale relative to the size the note count already gave them. */
-.tr-pill[data-level],
+/*
+ * Levels scale relative to the size around them. Tag pills are absent here on
+ * purpose: their size is per-tag, so it is an inline style, and an inline
+ * font-size would beat this rule — `pillFontSize` folds the level scale in.
+ */
 .tr-details-name[data-level],
 .tr-group-name[data-level] {
 	font-size: calc(1em * var(--tr-level-scale, 1));
@@ -1017,7 +1021,7 @@
 .tr-details {
 	width: 100%;
 	border-collapse: collapse;
-	font-size: var(--font-ui-small);
+	font-size: calc(var(--font-ui-small) * var(--tr-font-scale, 1));
 }
 
 .tr-details th {
@@ -1055,7 +1059,7 @@
 
 .tr-details-section td {
 	padding-top: 10px;
-	font-size: var(--font-ui-smaller);
+	font-size: 0.88em;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 	color: var(--text-faint);
@@ -1071,7 +1075,7 @@
 .tr-details-kind,
 .tr-details-groups {
 	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
+	font-size: 0.88em;
 }
 
 .tr-details-pin {
@@ -1685,7 +1689,7 @@
 
 .tr-band-label {
 	margin: 14px 0 4px;
-	font-size: var(--font-ui-smaller);
+	font-size: calc(var(--font-ui-smaller) * var(--tr-font-scale, 1));
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -1762,4 +1766,51 @@
 .tr-root.is-zen:focus,
 .tr-root.is-zen:focus-visible {
 	outline: none;
+}
+
+/* ----------------------------------------------------------- font zoom */
+
+.tr-font-zoom {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 0 2px;
+	border-radius: var(--radius-s);
+	background-color: var(--background-modifier-border);
+}
+
+.tr-font-zoom .tr-icon-button {
+	width: 24px;
+	height: 24px;
+}
+
+.tr-font-zoom-value {
+	min-width: 42px;
+	padding: 0 2px;
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-font-zoom-value:hover {
+	color: var(--text-normal);
+	text-decoration: underline;
+}
+
+/* At 100% there is nothing to reset, so the reading is quieter. */
+.tr-font-zoom-value.is-default {
+	color: var(--text-faint);
+}
+
+.tr-icon-button.is-disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.tr-icon-button.is-disabled:hover {
+	background-color: transparent;
+	color: var(--text-muted);
 }

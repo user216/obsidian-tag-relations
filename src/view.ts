@@ -31,6 +31,12 @@ import {
 } from "./actions";
 import { actionsForSurface } from "./actionLayout";
 import { ToolbarControlId, isControlVisible } from "./toolbarControls";
+import {
+	FONT_SCALE_DEFAULT,
+	fontScaleLabel,
+	isAtMaximum,
+	isAtMinimum,
+} from "./fontZoom";
 import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import { TagSuggestModal } from "./modals";
 import {
@@ -91,6 +97,9 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private stickyButton!: HTMLElement;
 	private editButton!: HTMLElement;
 	private toolbarActionsEl!: HTMLElement;
+	private fontScaleLabelEl: HTMLElement | null = null;
+	private fontZoomButtons: { smaller: HTMLElement; larger: HTMLElement } | null =
+		null;
 	private actionBarEl!: HTMLElement;
 	private actionBarButton!: HTMLElement;
 	private matchSelect!: HTMLSelectElement;
@@ -654,6 +663,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	private buildToolbar(): void {
 		const toolbar = this.contentEl.createDiv({ cls: "tr-toolbar" });
+		// A rebuild empties the shell, so any references from the last build
+		// point at detached nodes.
+		this.fontScaleLabelEl = null;
+		this.fontZoomButtons = null;
 
 		if (this.showsControl("modes")) {
 			const modes = toolbar.createDiv({ cls: "tr-modes" });
@@ -801,6 +814,32 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.toolbarActionsEl = toolbar.createDiv({ cls: "tr-toolbar-actions" });
 
 		const actions = toolbar.createDiv({ cls: "tr-actions" });
+		if (this.showsControl("fontZoom")) {
+			const zoom = actions.createDiv({ cls: "tr-font-zoom" });
+
+			const smaller = zoom.createDiv({ cls: "tr-icon-button" });
+			setIcon(smaller, "minus");
+			setTooltip(smaller, "Smaller tags", { placement: "bottom" });
+			smaller.addEventListener("click", () => void this.plugin.stepFont(-1));
+
+			// The percentage doubles as the reset button, so the group stays
+			// three slots wide instead of four.
+			this.fontScaleLabelEl = zoom.createDiv({ cls: "tr-font-zoom-value" });
+			setTooltip(this.fontScaleLabelEl, "Reset the tag font size", {
+				placement: "bottom",
+			});
+			this.fontScaleLabelEl.addEventListener("click", () =>
+				void this.plugin.setFontScale(FONT_SCALE_DEFAULT)
+			);
+
+			const larger = zoom.createDiv({ cls: "tr-icon-button" });
+			setIcon(larger, "plus");
+			setTooltip(larger, "Larger tags", { placement: "bottom" });
+			larger.addEventListener("click", () => void this.plugin.stepFont(1));
+
+			this.fontZoomButtons = { smaller, larger };
+		}
+
 		if (this.showsControl("zen")) {
 			const zenButton = actions.createDiv({ cls: "tr-icon-button" });
 			setIcon(zenButton, "maximize-2");
@@ -997,6 +1036,17 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.editButton?.toggleClass("is-active", this.settings.editMode);
 		this.actionBarButton?.toggleClass("is-active", this.settings.showActionBar);
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
+
+		const scale = this.settings.fontScale;
+		// Published as a custom property so the views that use theme sizes
+		// scale with the ones computing pixel sizes in code.
+		this.contentEl.style.setProperty("--tr-font-scale", String(scale));
+		if (this.fontScaleLabelEl) {
+			this.fontScaleLabelEl.setText(fontScaleLabel(scale));
+			this.fontScaleLabelEl.toggleClass("is-default", scale === FONT_SCALE_DEFAULT);
+		}
+		this.fontZoomButtons?.smaller.toggleClass("is-disabled", isAtMinimum(scale));
+		this.fontZoomButtons?.larger.toggleClass("is-disabled", isAtMaximum(scale));
 	}
 
 	/** The toolbar's configurable action strip. */

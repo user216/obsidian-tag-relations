@@ -4,11 +4,11 @@ import {
 	ViewHost,
 	applyLevelStyle,
 	attachRenameInput,
-	scaleByCount,
+	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
-import { orderedLevels, separatesLevels, visibleLevels } from "./levels";
+import { levelCss, orderedLevels, separatesLevels, visibleLevels } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
 import { TagGroups } from "./groups";
 
@@ -312,10 +312,14 @@ export class GroupsRenderer implements ModeRenderer {
 
 		const pill = parent.createSpan({ cls: "tr-pill tr-group-pill" });
 		applyLevelStyle(pill, level, host.levelStyles);
-		const size =
-			host.settings.cloudMinFontSize +
-			(host.settings.cloudMaxFontSize - host.settings.cloudMinFontSize) *
-				scaleByCount(count, host.graph.maxCount);
+		const size = pillFontSize({
+			count,
+			maxCount: host.graph.maxCount,
+			minSize: host.settings.cloudMinFontSize,
+			maxSize: host.settings.cloudMaxFontSize,
+			levelScale: levelCss(host.levelStyles[level]).fontScale,
+			fontScale: host.settings.fontScale,
+		});
 		pill.style.fontSize = size.toFixed(1) + "px";
 
 		if (this.renaming === tag) {

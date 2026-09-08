@@ -57,6 +57,7 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/actionLayout.ts` | 115 | Button placement, ordering and reordering (pure) |
 | `src/toolbarControls.ts` | 110 | The toolbar's built-in controls and their visibility (pure) |
 | `src/bands.ts` | 100 | Splitting a tag list into pinned/bookmarked/rest bands (pure) |
+| `src/fontZoom.ts` | 42 | Font-zoom bounds, stepping and labelling (pure) |
 | `src/transfer.ts` | 300 | Export payloads, import validation, merge planning (pure) |
 | `src/transferModals.ts` | 220 | The import dialog, showing a plan before applying |
 | `src/newNoteModal.ts` | 250 | The multi-tag picker shown when creating a note |
@@ -377,6 +378,14 @@ The mind-map draws to canvas and owns its own camera. The cloud, groups and tree
 
 One interaction worth noting: FLIP measures `getBoundingClientRect`, which is in screen pixels, but the pill's own transform lives *inside* the scaled layer — so the measured delta is divided by the current scale before being applied.
 
+### Font zoom is a different thing, on purpose
+
+`src/fontZoom.ts` scales the *type*, not the layer, and the distinction is the reason both exist. A transform magnifies spacing, borders and text together and the layout does not reflow, so zooming in means scrolling around a larger copy of the same arrangement. Changing the font size makes the browser lay the tags out again: they rewrap to the available width, so zooming out fits more of them on screen and zooming in keeps them readable without panning. The two compose — a zoomed-in transform over larger type behaves as you would expect.
+
+Three factors decide a tag pill's size: its note count, its level (main-tag, sub-tag, plain) and the font zoom. They are multiplied in `pillFontSize` (`src/host.ts`) rather than split between code and CSS, because the count-based size differs per tag and must therefore be an inline style — and an inline `font-size` beats any stylesheet rule. The level scale had in fact been living in CSS as `--tr-level-scale` and was being silently discarded on every pill; the views that *don't* set an inline size (the details table, group names) still read that property, which is why it remains.
+
+For everything sized by the theme rather than by count — tree rows, the details table, band headings — the view publishes `--tr-font-scale` on its root and the stylesheet multiplies. That keeps one scale driving both halves.
+
 ## 8e. The action registry
 
 `TAG_ACTIONS` (`src/actions.ts`) defines every tag action once: its id, group, default icon, a label that may depend on state, whether it is currently enabled, and what it does. Three surfaces read it — the context menu, the button bar, and the icon-customisation settings — rather than each maintaining a list.
@@ -410,7 +419,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-467 tests across 92 suites:
+483 tests across 92 suites:
 
 | Suite | Covers |
 | --- | --- |

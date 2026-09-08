@@ -29,7 +29,8 @@ export type ToolbarControlId =
 	| "viewOptions"
 	| "inspectorToggle"
 	| "refresh"
-	| "zen";
+	| "zen"
+	| "fontZoom";
 
 export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 	{
@@ -81,6 +82,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		id: "inspectorToggle",
 		label: "Side panel toggle",
 		description: "Shows or hides the panel of pinned tags, bookmarks and groups.",
+	},
+	{
+		id: "fontZoom",
+		label: "Font zoom buttons",
+		description:
+			"Makes the tags larger or smaller, reflowing the layout. Separate from the cloud's pan-and-zoom, which magnifies without reflowing. Also available as commands.",
 	},
 	{
 		id: "zen",

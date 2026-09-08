@@ -191,6 +191,14 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Bookmark from the context menu, the action bar, or the panel's + button
 - Follows tag renames, like groups and pins do
 
+## Font zoom
+
+- Smaller / percentage / larger buttons scaling the type in every view, 60% to 250%
+- Distinct from the cloud's pan-and-zoom: the type size changes, so tags **reflow** instead of the layout being magnified
+- Covers the cloud, list, details, tree, groups and the mind-map's labels, band headings included
+- The percentage doubles as the reset button; the arrows dim at the bounds
+- Also three commands and a slider in Settings → Views
+
 ## Details panel
 
 - Note count and relation count for the selection
@@ -211,6 +219,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 ## Commands
 
 - Open tag relations · Open tag relations in sidebar · Toggle zen mode
+- Increase / decrease / reset tag font size
 - Focus a tag · Connect two tags · Create a new note
 - Rename a tag
 - Add a tag to the active note · Remove a tag from the active note
@@ -220,5 +229,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 467 tests across 92 suites (`npm test`)
+- 483 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

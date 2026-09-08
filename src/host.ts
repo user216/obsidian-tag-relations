@@ -4,6 +4,7 @@ import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
 import { TagGroups } from "./groups";
 import { levelCss } from "./levels";
+import { clampFontScale } from "./fontZoom";
 import { LevelStyles, SelectMode, SortMode, TagLevel } from "./types";
 
 /**
@@ -82,6 +83,39 @@ export interface ModeRenderer {
 export function scaleByCount(count: number, maxCount: number): number {
 	if (maxCount <= 1) return count > 0 ? 1 : 0;
 	return Math.log(count + 1) / Math.log(maxCount + 1);
+}
+
+export interface PillSizeOptions {
+	count: number;
+	maxCount: number;
+	/** The cloud's configured size range, in pixels. */
+	minSize: number;
+	maxSize: number;
+	/** The level's own multiplier, from `levelCss`. */
+	levelScale: number;
+	/** The font zoom multiplier. */
+	fontScale: number;
+}
+
+/**
+ * The type size for a tag pill, in pixels.
+ *
+ * All three factors are combined here rather than split between code and CSS.
+ * The count-based size has to be an inline style — it differs per tag — and an
+ * inline `font-size` beats any stylesheet rule, so a `--tr-level-scale` applied
+ * in CSS could never actually reach a pill. Doing the multiplication in one
+ * place also keeps the cloud and groups views from drifting apart.
+ */
+export function pillFontSize(options: PillSizeOptions): number {
+	const base =
+		options.minSize +
+		(options.maxSize - options.minSize) *
+			scaleByCount(options.count, options.maxCount);
+	const size = base * options.levelScale * clampFontScale(options.fontScale);
+	// A stored range or level style could be anything; never return a size a
+	// browser would reject or a person could not read.
+	if (!Number.isFinite(size)) return options.minSize;
+	return Math.max(1, size);
 }
 
 /** A modifier-click always means "add/remove", regardless of sticky mode. */

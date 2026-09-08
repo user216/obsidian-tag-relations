@@ -4,13 +4,14 @@ import {
 	ViewHost,
 	applyLevelStyle,
 	describeRelation,
-	scaleByCount,
+	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
 import {
 	DetailsColumn,
 	DETAILS_COLUMNS,
+	levelCss,
 	orderedLevels,
 	separatesLevels,
 	sortDetailsRows,
@@ -383,12 +384,15 @@ export class CloudRenderer implements ModeRenderer {
 		const node = host.graph.node(tag);
 		const count = node?.count ?? 0;
 		const level = host.levelOf(tag);
-		const size = scaleByCount(count, host.graph.maxCount);
-		const { cloudMinFontSize, cloudMaxFontSize } = host.settings;
-		pill.style.fontSize =
-			(cloudMinFontSize + (cloudMaxFontSize - cloudMinFontSize) * size).toFixed(
-				1
-			) + "px";
+		const size = pillFontSize({
+			count,
+			maxCount: host.graph.maxCount,
+			minSize: host.settings.cloudMinFontSize,
+			maxSize: host.settings.cloudMaxFontSize,
+			levelScale: levelCss(host.levelStyles[level]).fontScale,
+			fontScale: host.settings.fontScale,
+		});
+		pill.style.fontSize = size.toFixed(1) + "px";
 		applyLevelStyle(pill, level, host.levelStyles);
 
 		pill.empty();

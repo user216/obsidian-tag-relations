@@ -1,5 +1,6 @@
 import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost, describeRelation, scaleByCount } from "./host";
+import { clampFontScale } from "./fontZoom";
 import { TagEdge, TagGraph, tagLabel } from "./graph";
 
 interface Particle {
@@ -502,7 +503,12 @@ export class MapRenderer implements ModeRenderer {
 				this.active.length <= 40;
 			if (!showLabel) continue;
 
-			const size = (isSelected ? 14 : 12) / scale;
+			// Font zoom applies to canvas labels too, so the map does not stay
+			// small while every other view has been scaled up.
+			const size =
+				((isSelected ? 14 : 12) *
+					clampFontScale(this.host.settings.fontScale)) /
+				scale;
 			ctx.font = `${isSelected ? "600 " : ""}${size}px ${FONT_STACK}`;
 			ctx.globalAlpha = hasSelection && !isSelected && !isNeighbor ? 0.35 : 1;
 			// A contrasting halo keeps labels readable over edges.

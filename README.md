@@ -107,6 +107,21 @@ There are **three ways out** — a floating exit button that stays visible while
 
 It's a presentation override, not a settings change: nothing it hides is actually turned off, so leaving restores exactly the toolbar, bar and panel you had. The notes panel stays put — it only exists because you asked for it, and has its own close button, so hiding it would be discarding a result rather than removing clutter.
 
+## Font zoom, and why it isn't the same as zooming
+
+Three toolbar buttons — **−**, a percentage, **+** — scale the type in every view between 60% and 250%. The percentage is also the reset button, so the group takes three slots instead of four, and the arrows dim when there's nowhere further to go.
+
+This is a different thing from the cloud's pan-and-zoom, and both are useful:
+
+| | What it does | What you get |
+| --- | --- | --- |
+| **Pan and zoom** (drag, wheel) | Magnifies the whole layout as a picture | The arrangement stays put; you scroll around a bigger copy |
+| **Font zoom** (− / +) | Changes the type size | The tags **reflow** — more fit when you zoom out, and they stay readable when you zoom in |
+
+They compose, so a zoomed-in canvas over larger type works as you'd expect. Font zoom applies to the cloud, list and details layouts, the tree, the groups view and the mind-map's labels, including the Pinned and Bookmarked headings.
+
+It's also three commands (**Increase / Decrease / Reset tag font size**) and a slider in **Settings → Views → Font zoom**, so hiding the buttons costs you nothing.
+
 ## Selecting tags
 
 Selection works the same way in all three views:
@@ -184,6 +199,8 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 - Create a new note
 - Rename a tag
 - Add a tag to the active note / Remove a tag from the active note
+- Toggle zen mode
+- Increase / Decrease / Reset tag font size
 - Rescan vault for tags
 
 ## Settings worth knowing
@@ -198,6 +215,7 @@ Under the hood, edits use the tag positions Obsidian's own parser recorded, so c
 - **Write new tags to** — frontmatter (default) or the end of the note body.
 - **Confirm bulk edits** — show the affected notes before writing to more than one. Removals always ask regardless.
 - **Edit mode** — show inline rename controls on tags; also on the view's toolbar.
+- **Tag font size** — the same scale the toolbar's − / + buttons set, from 60% to 250%.
 - **New note** — enable the button, and set its title format, timezone, folder, whether selected tags are applied, and whether the note opens.
 
 ## Install

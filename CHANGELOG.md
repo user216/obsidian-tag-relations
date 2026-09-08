@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-08
+
+### Added
+
+- **Font zoom.** Three toolbar buttons — smaller, a percentage, larger — scale the type in every view from 60% to 250% in 10% steps. The percentage is also the reset button, so the group stays three slots wide.
+  - This is deliberately **not** the cloud's pan-and-zoom. Pan-and-zoom is a transform: it magnifies spacing, borders and text together, the layout does not reflow, and zooming in means scrolling around. Font zoom changes the type size, so tags rewrap to fill the width — more of them fit when you zoom out, and they stay readable when you zoom in. Both are worth having, and they compose.
+  - Applies to the cloud, list and details layouts, the tree, the groups view and the mind-map's canvas labels, plus the band headings so a zoomed-in view does not leave its labels tiny.
+  - Three commands (`Increase` / `Decrease` / `Reset tag font size`), a slider in **Settings → Views → Font zoom**, and a show/hide switch alongside the other toolbar controls.
+  - The buttons dim at the bounds rather than disappearing, so the range is visible rather than guessed at.
+
+### Fixed
+
+- **Level font scaling never reached a tag pill.** Main-tags and sub-tags were meant to render larger via a `--tr-level-scale` custom property, but a pill's count-based size is necessarily an inline style, and an inline `font-size` beats any stylesheet rule — so the level scale was silently discarded in the cloud and groups views. The three factors (note count, level, font zoom) are now multiplied in one place, `pillFontSize`, which both views call.
+
+### Tests
+
+- 16 new tests: clamping, stepping to clean values, both bounds reachable, junk values falling back to 100%, label formatting, and the shared pill-sizing helper.
+
 ## [0.15.0] - 2026-09-08
 
 ### Fixed
@@ -368,6 +386,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.16.0]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/user216/obsidian-tag-relations/compare/0.12.0...0.13.0

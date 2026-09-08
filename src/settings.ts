@@ -2,6 +2,12 @@ import { App, PluginSettingTab, Setting, Notice, setIcon } from "obsidian";
 import { ActionHost, TAG_ACTIONS, iconFor } from "./actions";
 import { BAND_POSITION_LABELS, BandPosition } from "./bands";
 import {
+	FONT_SCALE_DEFAULT,
+	FONT_SCALE_MAX,
+	FONT_SCALE_MIN,
+	FONT_SCALE_STEP,
+} from "./fontZoom";
+import {
 	TOOLBAR_CONTROLS,
 	ToolbarControlId,
 	isControlVisible,
@@ -100,6 +106,8 @@ export interface TagRelationsSettings {
 	 * leaving it restores exactly what was there.
 	 */
 	zenMode: boolean;
+	/** Multiplier on the type size in the views. */
+	fontScale: number;
 
 	// Bands
 	showPinnedBand: boolean;
@@ -188,6 +196,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	hiddenToolbarControls: {},
 
 	zenMode: false,
+	fontScale: FONT_SCALE_DEFAULT,
 
 	showPinnedBand: true,
 	showBookmarkedBand: true,
@@ -273,6 +282,7 @@ const SETTINGS_TABS: SettingsTab[] = [
 		id: "views",
 		label: "Views",
 		render: (tab, el) => {
+			tab.displayFontZoom(el);
 			tab.displaySelectionNotes(el);
 			tab.displayCloud(el);
 			tab.displayMap(el);
@@ -601,6 +611,39 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 						this.plugin.settings.notesMaxResults = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshViews();
+					})
+			);
+	}
+
+	displayFontZoom(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Font zoom").setHeading();
+
+		new Setting(containerEl)
+			.setName("Tag font size")
+			.setDesc(
+				"Scales the type in every view, so the tags reflow. Separate from the cloud's pan-and-zoom, which magnifies the layout without reflowing it. Also on the toolbar and in the command palette."
+			)
+			.addSlider((slider) =>
+				slider
+					// Percentages, so the slider reads the same as the toolbar.
+					.setLimits(
+						Math.round(FONT_SCALE_MIN * 100),
+						Math.round(FONT_SCALE_MAX * 100),
+						Math.round(FONT_SCALE_STEP * 100)
+					)
+					.setValue(Math.round(this.plugin.settings.fontScale * 100))
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						await this.plugin.setFontScale(value / 100);
+					})
+			)
+			.addExtraButton((button) =>
+				button
+					.setIcon("rotate-ccw")
+					.setTooltip("Reset to 100%")
+					.onClick(async () => {
+						await this.plugin.setFontScale(FONT_SCALE_DEFAULT);
+						this.display();
 					})
 			);
 	}

@@ -23,6 +23,11 @@ import { TagGroups } from "./groups";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
 import {
+	FONT_SCALE_DEFAULT,
+	clampFontScale,
+	stepFontScale,
+} from "./fontZoom";
+import {
 	RelationStore,
 	countRemovable,
 	describeRemovable,
@@ -143,6 +148,21 @@ export default class TagRelationsPlugin extends Plugin {
 			callback: () => this.promptCreateNote(this.selectionFromViews()),
 		});
 		this.addCommand({
+			id: "font-zoom-in",
+			name: "Increase tag font size",
+			callback: () => void this.stepFont(1),
+		});
+		this.addCommand({
+			id: "font-zoom-out",
+			name: "Decrease tag font size",
+			callback: () => void this.stepFont(-1),
+		});
+		this.addCommand({
+			id: "font-zoom-reset",
+			name: "Reset tag font size",
+			callback: () => void this.setFontScale(FONT_SCALE_DEFAULT),
+		});
+		this.addCommand({
 			id: "toggle-zen-mode",
 			name: "Toggle zen mode",
 			callback: () => {
@@ -246,6 +266,18 @@ export default class TagRelationsPlugin extends Plugin {
 			showGroupConnections: this.settings.showGroupConnections,
 		});
 		for (const view of this.views()) view.onGraphChanged();
+	}
+
+	async stepFont(direction: number): Promise<void> {
+		await this.setFontScale(stepFontScale(this.settings.fontScale, direction));
+	}
+
+	async setFontScale(scale: number): Promise<void> {
+		const next = clampFontScale(scale);
+		if (next === this.settings.fontScale) return;
+		this.settings.fontScale = next;
+		await this.saveSettings();
+		this.refreshViews();
 	}
 
 	refreshViews(): void {
