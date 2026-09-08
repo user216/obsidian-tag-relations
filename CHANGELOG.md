@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-09-08
+
+### Added
+
+- **A toolbar button for the note preview.** It sits beside the plex depth button, lights up while the preview is on, and appears only in the plex view — a control that means nothing in the current view steps aside rather than sitting there inert.
+- **A command, "Toggle the plex note preview".** It works whether or not the view is open, because this is a plain setting rather than a per-view presentation override like zen mode. The button can therefore be hidden (Settings → Buttons) without losing the feature, which is the rule every hideable control here follows.
+
 ## [0.19.1] - 2026-09-08
 
 ### Added
@@ -467,6 +474,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.19.2]: https://github.com/user216/obsidian-tag-relations/compare/0.19.1...0.19.2
 [0.19.1]: https://github.com/user216/obsidian-tag-relations/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/user216/obsidian-tag-relations/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/user216/obsidian-tag-relations/compare/0.18.0...0.18.1

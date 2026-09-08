@@ -149,6 +149,11 @@ export default class TagRelationsPlugin extends Plugin {
 			callback: () => this.promptCreateNote(this.selectionFromViews()),
 		});
 		this.addCommand({
+			id: "toggle-plex-preview",
+			name: "Toggle the plex note preview",
+			callback: () => void this.togglePlexPreview(),
+		});
+		this.addCommand({
 			id: "font-zoom-in",
 			name: "Increase tag font size",
 			callback: () => void this.stepFont(1),
@@ -273,6 +278,16 @@ export default class TagRelationsPlugin extends Plugin {
 			showGroupConnections: this.settings.showGroupConnections,
 		});
 		for (const view of this.views()) view.onGraphChanged();
+	}
+
+	/**
+	 * A plain setting, unlike zen mode, so this works whether or not a view is
+	 * open — there is nothing to toggle *on* a view.
+	 */
+	async togglePlexPreview(): Promise<void> {
+		this.settings.plexPreviewNotes = !this.settings.plexPreviewNotes;
+		await this.saveSettings();
+		this.refreshViews();
 	}
 
 	async stepFont(direction: number): Promise<void> {

@@ -79,7 +79,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Three depths on a toolbar button: immediate, plus siblings, plus a faint outer ring
 - Opens on a pinned tag, falling back to the most connected one
 - Per-row cap with an honest `+N more` count
-- Optional note preview under the plex, following the centre as you walk (Settings → Views → Plex)
+- Optional note preview under the plex, following the centre as you walk — toolbar button, command, or Settings → Views
 
 ## Selection
 
@@ -238,6 +238,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Open tag relations · Open tag relations in sidebar · Toggle zen mode
 - Increase / decrease / reset tag font size
+- Toggle the plex note preview
 - Focus a tag · Connect two tags · Create a new note
 - Rename a tag
 - Add a tag to the active note · Remove a tag from the active note

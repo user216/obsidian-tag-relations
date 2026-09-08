@@ -106,6 +106,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private toolbarActionsEl!: HTMLElement;
 	private fontScaleLabelEl: HTMLElement | null = null;
 	private plexDepthButton: HTMLElement | null = null;
+	private plexPreviewButton: HTMLElement | null = null;
 	private fontZoomButtons: { smaller: HTMLElement; larger: HTMLElement } | null =
 		null;
 	private actionBarEl!: HTMLElement;
@@ -688,6 +689,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.fontScaleLabelEl = null;
 		this.fontZoomButtons = null;
 		this.plexDepthButton = null;
+		this.plexPreviewButton = null;
 
 		if (this.showsControl("modes")) {
 			const modes = toolbar.createDiv({ cls: "tr-modes" });
@@ -845,6 +847,15 @@ export class TagRelationsView extends ItemView implements ViewHost {
 					void this.plugin.saveSettings();
 					this.renderAll();
 				})
+			);
+		}
+
+		if (this.showsControl("plexPreview")) {
+			const preview = actions.createDiv({ cls: "tr-icon-button" });
+			setIcon(preview, "file-text");
+			this.plexPreviewButton = preview;
+			preview.addEventListener("click", () =>
+				void this.plugin.togglePlexPreview()
 			);
 		}
 
@@ -1070,6 +1081,22 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.editButton?.toggleClass("is-active", this.settings.editMode);
 		this.actionBarButton?.toggleClass("is-active", this.settings.showActionBar);
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
+
+		if (this.plexPreviewButton) {
+			const on = this.settings.plexPreviewNotes;
+			this.plexPreviewButton.toggleClass("is-active", on);
+			this.plexPreviewButton.toggleClass(
+				"is-hidden",
+				this.settings.mode !== "plex"
+			);
+			setTooltip(
+				this.plexPreviewButton,
+				on
+					? "Hide the notes under the plex"
+					: "Preview the notes carrying the centre tag",
+				{ placement: "bottom" }
+			);
+		}
 
 		if (this.plexDepthButton) {
 			// The control only means something in the plex, so it steps aside

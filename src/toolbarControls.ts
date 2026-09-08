@@ -31,7 +31,8 @@ export type ToolbarControlId =
 	| "refresh"
 	| "zen"
 	| "fontZoom"
-	| "plexDepth";
+	| "plexDepth"
+	| "plexPreview";
 
 export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 	{
@@ -89,6 +90,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		label: "Plex depth button",
 		description:
 			"Chooses how far the plex reaches around the active tag. Only appears in the plex view; the same choice is in Settings → Views.",
+	},
+	{
+		id: "plexPreview",
+		label: "Plex note preview button",
+		description:
+			"Shows or hides the list of notes under the plex. Only appears in the plex view; also a command and a switch in Settings → Views.",
 	},
 	{
 		id: "fontZoom",
