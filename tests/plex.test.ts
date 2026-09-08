@@ -254,3 +254,43 @@ test("an empty vault has nowhere to open", () => {
 		null
 	);
 });
+
+// --- the note preview ---------------------------------------------------
+
+import { previewNotes } from "../src/plex";
+
+test("the preview heading counts every note, not just the listed ones", () => {
+	// A preview reading "6 notes" for a tag carrying ninety would be worse
+	// than no preview at all.
+	const paths = Array.from({ length: 90 }, (_, i) => `notes/n${i}.md`);
+	const preview = previewNotes("#urgent", paths, 6);
+	assert.equal(preview.paths.length, 6);
+	assert.equal(preview.hidden, 84);
+	assert.equal(preview.heading, "90 notes tagged #urgent");
+});
+
+test("one note reads in the singular", () => {
+	const preview = previewNotes("#urgent", ["a.md"], 6);
+	assert.equal(preview.heading, "1 note tagged #urgent");
+	assert.equal(preview.hidden, 0);
+});
+
+test("a tag no note carries says so plainly", () => {
+	const preview = previewNotes("#urgent", [], 6);
+	assert.equal(preview.heading, "No notes carry #urgent");
+	assert.deepEqual(preview.paths, []);
+	assert.equal(preview.hidden, 0);
+});
+
+test("the heading always shows the tag with its hash", () => {
+	assert.match(previewNotes("urgent", ["a.md"], 6).heading, /#urgent/);
+	assert.match(previewNotes("#urgent", ["a.md"], 6).heading, /#urgent/);
+	assert.ok(!previewNotes("#urgent", ["a.md"], 6).heading.includes("##"));
+});
+
+test("a preview count of zero lists everything rather than nothing", () => {
+	const paths = ["a.md", "b.md", "c.md"];
+	const preview = previewNotes("#urgent", paths, 0);
+	assert.deepEqual(preview.paths, paths);
+	assert.equal(preview.hidden, 0);
+});

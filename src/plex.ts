@@ -238,6 +238,39 @@ function unique(tags: string[]): string[] {
 	return kept;
 }
 
+export interface NotePreview {
+	/** Paths to list, already capped. */
+	paths: string[];
+	/** How many the cap left out. */
+	hidden: number;
+	/** The heading, which says what is being previewed and how much of it. */
+	heading: string;
+}
+
+/**
+ * What the note preview under the plex should show for the active tag.
+ *
+ * Pure, because the interesting part is the counting: a preview that says
+ * "6 notes" while the tag has ninety would be worse than no preview, so the
+ * total is always in the heading and the remainder is always counted.
+ */
+export function previewNotes(
+	tag: string,
+	paths: string[],
+	cap: number
+): NotePreview {
+	const shown = cap > 0 ? paths.slice(0, cap) : paths;
+	const label = tag.startsWith("#") ? tag : `#${tag}`;
+	return {
+		paths: shown,
+		hidden: paths.length - shown.length,
+		heading:
+			paths.length === 0
+				? `No notes carry ${label}`
+				: `${paths.length} note${paths.length === 1 ? "" : "s"} tagged ${label}`,
+	};
+}
+
 /**
  * Where the plex opens when nothing is selected.
  *

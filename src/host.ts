@@ -1,4 +1,4 @@
-import { App, setIcon, setTooltip } from "obsidian";
+import { App, TFile, setIcon, setTooltip } from "obsidian";
 import { TagEdge, tagLabel } from "./graph";
 import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
@@ -121,6 +121,32 @@ export function pillFontSize(options: PillSizeOptions): number {
 	// browser would reject or a person could not read.
 	if (!Number.isFinite(size)) return options.minSize;
 	return Math.max(1, size);
+}
+
+/** A note's display name, without its folder or the .md suffix. */
+export function noteName(path: string): string {
+	const name = path.slice(path.lastIndexOf("/") + 1);
+	return name.endsWith(".md") ? name.slice(0, -3) : name;
+}
+
+export function noteFolder(path: string): string {
+	const index = path.lastIndexOf("/");
+	return index < 0 ? "" : path.slice(0, index);
+}
+
+/**
+ * Open a note from a view. Ctrl/Cmd opens it in a new tab, matching the
+ * modifier convention Obsidian uses everywhere else.
+ *
+ * Shared so the notes panel and the plex preview cannot drift apart on what a
+ * click does — two hand-written copies of "open this file" is exactly how one
+ * of them ends up not honouring the modifier.
+ */
+export function openNote(app: App, path: string, event: MouseEvent): void {
+	const file = app.vault.getAbstractFileByPath(path);
+	if (!(file instanceof TFile)) return;
+	const newTab = event.ctrlKey || event.metaKey;
+	void app.workspace.getLeaf(newTab ? "tab" : false).openFile(file);
 }
 
 export interface BandHeaderOptions {

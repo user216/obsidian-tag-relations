@@ -58,6 +58,8 @@ Only the immediate neighbourhood is drawn, and that's the point — a full graph
 | **Relatives and siblings** *(default)* | The other members of the same main-tag |
 | **Relatives, siblings and beyond** | The level above the main-tags and below the sub-tags, drawn faintly |
 
+Turn on **preview tagged notes** (Settings → Views → Plex) and the notes carrying the centre tag are listed underneath, following you as you walk. It's not the Show notes panel — that one deliberately freezes a result so bulk edits can act on exactly that list. This one is always live and carries no actions, so the two can't be mistaken for each other.
+
 With nothing selected it opens on a **pinned tag**, falling back to your most-connected one. Each row is capped so one very busy tag can't fill the screen; whatever's left out is counted (`+18 more`) rather than dropped quietly.
 
 ## Tag groups

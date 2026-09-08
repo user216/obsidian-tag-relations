@@ -88,6 +88,10 @@ export interface TagRelationsSettings {
 	plexDepth: PlexDepth;
 	/** Most tags in any one plex row or side band; 0 lifts the limit. */
 	plexRowCap: number;
+	/** Show the notes carrying the plex's active tag, beneath it. */
+	plexPreviewNotes: boolean;
+	/** How many of those notes to list. */
+	plexPreviewCount: number;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -195,6 +199,8 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	collapsedBands: [],
 	plexDepth: "siblings",
 	plexRowCap: 24,
+	plexPreviewNotes: false,
+	plexPreviewCount: 6,
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -660,6 +666,36 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			cls: "setting-item-description tr-settings-note",
 			text: PLEX_DEPTH_DESCRIPTIONS[this.plugin.settings.plexDepth],
 		});
+
+		new Setting(containerEl)
+			.setName("Preview tagged notes")
+			.setDesc(
+				"Lists the notes carrying the tag in the middle, under the plex. Unlike the Show notes panel, which freezes a result you asked for, this follows the centre as you walk."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.plexPreviewNotes)
+					.onChange(async (value) => {
+						this.plugin.settings.plexPreviewNotes = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Notes to preview")
+			.setDesc("How many to list before the rest are counted.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 30, 1)
+					.setValue(this.plugin.settings.plexPreviewCount)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.plexPreviewCount = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("Most tags per row")

@@ -15,6 +15,9 @@ import {
 	ViewHost,
 	describeRelation,
 	hasToggleModifier,
+	noteFolder,
+	noteName,
+	openNote,
 } from "./host";
 import { CloudRenderer } from "./cloud";
 import { MapRenderer } from "./map";
@@ -601,8 +604,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		const cap = this.settings.notesMaxResults;
 		for (const match of snapshot.matches.slice(0, cap)) {
 			const row = list.createDiv({ cls: "tr-note-row" });
-			row.createSpan({ cls: "tr-note-name", text: basename(match.path) });
-			const folder = dirname(match.path);
+			row.createSpan({ cls: "tr-note-name", text: noteName(match.path) });
+			const folder = noteFolder(match.path);
 			if (folder) row.createSpan({ cls: "tr-note-folder", text: folder });
 			// Under "all" every note matches every tag, so the count says nothing.
 			if (snapshot.mode === "any" && snapshot.tags.length > 1) {
@@ -612,12 +615,9 @@ export class TagRelationsView extends ItemView implements ViewHost {
 				});
 			}
 			setTooltip(row, match.path, { placement: "top" });
-			row.addEventListener("click", (event) => {
-				const file = this.app.vault.getAbstractFileByPath(match.path);
-				if (!(file instanceof TFile)) return;
-				const newTab = event.ctrlKey || event.metaKey;
-				void this.app.workspace.getLeaf(newTab ? "tab" : false).openFile(file);
-			});
+			row.addEventListener("click", (event) =>
+				openNote(this.app, match.path, event)
+			);
 		}
 		if (total > cap) {
 			list.createDiv({
@@ -1656,16 +1656,6 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			subtitles
 		).open();
 	}
-}
-
-function basename(path: string): string {
-	const name = path.slice(path.lastIndexOf("/") + 1);
-	return name.endsWith(".md") ? name.slice(0, -3) : name;
-}
-
-function dirname(path: string): string {
-	const index = path.lastIndexOf("/");
-	return index < 0 ? "" : path.slice(0, index);
 }
 
 interface InternalPluginHost {

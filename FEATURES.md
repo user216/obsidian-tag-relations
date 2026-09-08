@@ -79,6 +79,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Three depths on a toolbar button: immediate, plus siblings, plus a faint outer ring
 - Opens on a pinned tag, falling back to the most connected one
 - Per-row cap with an honest `+N more` count
+- Optional note preview under the plex, following the centre as you walk (Settings → Views → Plex)
 
 ## Selection
 
@@ -246,5 +247,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 521 tests across 93 suites (`npm test`)
+- 526 tests across 93 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

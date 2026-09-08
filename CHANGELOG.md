@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-09-08
+
+### Added
+
+- **A note preview in the plex,** off by default and enabled in **Settings → Views → Plex**. It lists the notes carrying the tag in the middle, under the plex, and follows the centre as you walk. Click to open, Ctrl/Cmd-click for a new tab.
+  - Deliberately **not** the Show notes panel. That one freezes a result you asked for, flags itself stale when the vault moves on, and offers bulk edits over exactly that frozen list — it has to look like a saved thing. The preview is the opposite job: always live, never actionable, so it can never be mistaken for a result you could act on.
+  - The heading counts **every** matching note, not just the listed ones, and the remainder is counted rather than dropped. A preview reading "6 notes" for a tag carrying ninety would be worse than no preview.
+  - How many to list is configurable (1–30).
+
+### Changed
+
+- The notes panel and the plex preview now share one `openNote` helper and one pair of path helpers, rather than each having its own copy. Two hand-written versions of "open this file" is how one of them ends up not honouring Ctrl/Cmd-click.
+
+### Tests
+
+- 5 new tests for the preview counting and its heading.
+
 ## [0.19.0] - 2026-09-08
 
 ### Added
@@ -450,6 +467,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.19.1]: https://github.com/user216/obsidian-tag-relations/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/user216/obsidian-tag-relations/compare/0.18.1...0.19.0
 [0.18.1]: https://github.com/user216/obsidian-tag-relations/compare/0.18.0...0.18.1
 [0.18.0]: https://github.com/user216/obsidian-tag-relations/compare/0.17.0...0.18.0

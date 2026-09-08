@@ -2058,3 +2058,42 @@
 	margin: -6px 0 12px;
 	color: var(--text-faint);
 }
+
+/*
+ * The note preview under the plex. It is not the Show notes panel: that one
+ * freezes a result you asked for and offers bulk edits over exactly that list,
+ * so it must look like a saved thing. This follows the centre as you walk, so
+ * it is quieter and carries no actions at all.
+ */
+.tr-plex-preview {
+	position: relative;
+	z-index: 1;
+	width: min(100%, 460px);
+	margin-top: 6px;
+	padding-top: 10px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.tr-plex-preview-head {
+	margin-bottom: 4px;
+	text-align: center;
+	font-size: calc(var(--font-ui-smaller) * var(--tr-font-scale, 1));
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.tr-plex-preview-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.tr-plex-preview .tr-note-row {
+	border-radius: var(--radius-s);
+}
+
+.tr-plex-preview .tr-note-more {
+	text-align: center;
+}

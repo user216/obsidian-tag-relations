@@ -5,6 +5,9 @@ import {
 	applyLevelStyle,
 	attachRenameInput,
 	hasToggleModifier,
+	noteFolder,
+	noteName,
+	openNote,
 	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
@@ -17,6 +20,7 @@ import {
 	PlexRow,
 	PlexSideBand,
 	buildPlex,
+	previewNotes,
 	startingTag,
 } from "./plex";
 
@@ -95,6 +99,8 @@ export class PlexRenderer implements ModeRenderer {
 		this.renderMiddle(stage, layout);
 		for (const row of layout.below) this.renderRow(stage, row);
 
+		if (host.settings.plexPreviewNotes) this.renderPreview(stage, active);
+
 		if (layout.isolated) {
 			stage.createDiv({
 				cls: "tr-plex-hint",
@@ -108,6 +114,50 @@ export class PlexRenderer implements ModeRenderer {
 		// rows happened to wrap.
 		window.requestAnimationFrame(() => this.drawConnectors(lines, stage, layout));
 		this.animateFrom(before, active);
+	}
+
+	/**
+	 * The notes carrying the active tag, under the plex.
+	 *
+	 * Deliberately live rather than a snapshot: the Show notes panel freezes a
+	 * result you asked for and flags itself stale when the world moves on,
+	 * because bulk edits act on exactly that frozen list. This is the opposite
+	 * job — it follows the centre as you walk, so it is never something you
+	 * could act on by mistake, and it never claims to be a saved result.
+	 */
+	private renderPreview(stage: HTMLElement, active: string): void {
+		const { host } = this;
+		const matches = host.graph.matchNotes([active], "any");
+		const preview = previewNotes(
+			active,
+			matches.map((match) => match.path),
+			host.settings.plexPreviewCount
+		);
+
+		const panel = stage.createDiv({ cls: "tr-plex-preview" });
+		panel.createDiv({ cls: "tr-plex-preview-head", text: preview.heading });
+		if (preview.paths.length === 0) return;
+
+		const list = panel.createDiv({ cls: "tr-plex-preview-list" });
+		for (const path of preview.paths) {
+			const row = list.createDiv({ cls: "tr-note-row" });
+			row.createSpan({ cls: "tr-note-name", text: noteName(path) });
+			const folder = noteFolder(path);
+			if (folder) row.createSpan({ cls: "tr-note-folder", text: folder });
+			setTooltip(row, `${path}\nClick to open, Ctrl/Cmd-click for a new tab`, {
+				placement: "top",
+			});
+			row.addEventListener("click", (event) => {
+				event.stopPropagation();
+				openNote(host.app, path, event);
+			});
+		}
+		if (preview.hidden > 0) {
+			list.createDiv({
+				cls: "tr-note-more",
+				text: `+ ${preview.hidden} more (raise the count in settings)`,
+			});
+		}
 	}
 
 	/** The graph and the group DAG, behind the plex's plain queries. */

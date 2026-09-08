@@ -382,6 +382,8 @@ Because position is the meaning, a tag appears in exactly one place, and the pre
 
 The renderer is DOM rather than canvas, unlike the mind-map. The pills here are the same pills as everywhere else — inline rename, context menu, pin and bookmark marks — and reimplementing that against a canvas would be a second copy of behaviour already got right once. The mind-map is canvas because it simulates hundreds of nodes; a plex draws one neighbourhood. Connectors are an SVG layer measured after layout, so a line always meets the pill it belongs to however the row wrapped.
 
+The optional note preview under the plex is live, which is the one place the plugin has two different answers to "show me some notes". The Show notes panel is a *snapshot*: it freezes what matched when you asked, flags itself stale when the world moves on, and offers bulk edits over exactly that frozen list — the freezing is what makes those edits safe. The preview follows the centre as you walk and carries no actions at all, so the two can never be confused for one another.
+
 Walking is the whole interaction, so it takes the plainest gesture: a click makes that tag the centre. Two consequences had to be handled. Clicking the centre is a no-op — the shared "clicking the only selected tag clears it" rule would otherwise empty the selection and send the plex to some other tag entirely. And the surviving pills are FLIPped between renders, so a tag clicked in the sub-tag row visibly travels to the middle. That continuity is what makes stepping through a graph feel like moving rather than like loading pages.
 
 ## 8d. Pan and zoom
@@ -443,7 +445,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-521 tests across 93 suites:
+526 tests across 93 suites:
 
 | Suite | Covers |
 | --- | --- |
