@@ -125,6 +125,17 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Take a tag out of one specific main-tag, or out of a specific group directly from the Groups view
 - Shared-note relations are explicitly out of scope and the confirmation says why — there is nothing stored to delete
 
+## Export and import
+
+- Export horizontal links, group membership and pins to one portable `.json`
+- Available in settings, on the action bar, and as command-palette commands
+- Writes into the vault root (so it syncs) or copies to the clipboard
+- Import from a paste or from a `.json` already in the vault
+- Shows what it would change before applying, including what it will skip
+- Merge into what is there, or replace it; merging the same file twice is a no-op
+- A raw `data.json` imports directly — `manualLinks` is accepted as an alias
+- Imported group memberships are validated like any other, so a hand-edited file cannot create a fourth level or a cycle
+
 ## Editing
 
 > These write to your notes. Everything else only reads them.
@@ -170,5 +181,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 368 tests across 70 suites (`npm test`)
+- 396 tests across 77 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

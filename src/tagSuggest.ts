@@ -66,10 +66,15 @@ export interface ParsedTagList {
 	isList: boolean;
 	/** Names that can be added, in typed order, de-duplicated. */
 	valid: TagSuggestion[];
-	/** Fragments that are not usable tag names, kept so they can be named. */
-	invalid: string[];
+	/** Fragments that are not usable tag names, with the reason for each. */
+	invalid: RejectedName[];
 	/** Fragments naming something already chosen. */
 	duplicates: string[];
+}
+
+export interface RejectedName {
+	name: string;
+	reason: string;
 }
 
 const LIST_SEPARATORS = /[\s,;]+/;
@@ -84,14 +89,17 @@ export function parseTagList(
 
 	const tokens = query.split(LIST_SEPARATORS).filter((part) => part.length > 0);
 	const valid: TagSuggestion[] = [];
-	const invalid: string[] = [];
+	const invalid: RejectedName[] = [];
 	const duplicates: string[] = [];
 	const seen = new Set<string>();
 
 	for (const token of tokens) {
 		const validation = validateTagName(token);
 		if (!validation.ok || !validation.tag) {
-			invalid.push(token);
+			invalid.push({
+				name: token,
+				reason: validation.error ?? "Not a usable tag name.",
+			});
 			continue;
 		}
 		const lower = validation.tag.toLowerCase();
@@ -109,4 +117,35 @@ export function parseTagList(
 	}
 
 	return { isList: tokens.length > 1, valid, invalid, duplicates };
+}
+
+/**
+ * Why a single typed name cannot be used, or null when it can.
+ *
+ * The rules come from Obsidian, not from this plugin — a tag needs at least
+ * one non-numeric character, so `#1984` is not a tag while `#y1984` is. The
+ * point of surfacing this is that refusing silently looks like a bug: the
+ * user types a name, nothing appears, and nothing says why.
+ */
+export function rejectionFor(query: string): RejectedName | null {
+	const trimmed = query.trim();
+	if (trimmed.length === 0) return null;
+	const validation = validateTagName(trimmed);
+	if (validation.ok) return null;
+	return {
+		name: trimmed,
+		reason: validation.error ?? "Not a usable tag name.",
+	};
+}
+
+/** An actionable suggestion for a rejected name, where one exists. */
+export function hintFor(rejection: RejectedName): string | null {
+	if (/only digits/i.test(rejection.reason)) {
+		// The fix is concrete, so name it rather than leaving them to guess.
+		return `Obsidian needs at least one letter — try "n${rejection.name}" or "${rejection.name}x".`;
+	}
+	if (/spaces/i.test(rejection.reason)) {
+		return "Use a hyphen or underscore instead of a space.";
+	}
+	return null;
 }

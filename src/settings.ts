@@ -220,6 +220,7 @@ const SETTINGS_TABS: SettingsTab[] = [
 		render: (tab, el) => {
 			tab.displayRelationsCore(el);
 			tab.displayManualLinks(el);
+			tab.displayTransfer(el);
 		},
 	},
 	{ id: "groups", label: "Groups", render: (tab, el) => tab.displayGroups(el) },
@@ -703,6 +704,45 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 			);
 	}
 
+
+	displayTransfer(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Export and import").setHeading();
+
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Horizontal links, group membership and pins live in this plugin's data, not in your notes — which is what makes them free to reorganise, and also what leaves them behind if you move a vault by copying only its notes. Exporting writes them to one portable file.",
+		});
+		containerEl.createEl("p", {
+			cls: "tr-settings-empty",
+			text: "Your tags and every shared-note relation are already in your notes and need no export; they rebuild themselves wherever the notes go.",
+		});
+
+		new Setting(containerEl)
+			.setName("Export relations")
+			.setDesc("Writes a timestamped .json file into the root of this vault.")
+			.addButton((button) =>
+				button
+					.setButtonText("Export to file")
+					.onClick(() => void this.plugin.exportRelationsToFile())
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Copy as JSON")
+					.onClick(() => void this.plugin.copyRelationsToClipboard())
+			);
+
+		new Setting(containerEl)
+			.setName("Import relations")
+			.setDesc(
+				"Paste an export, or load one from this vault. You will see exactly what it would change before it is applied, and can merge it with what is here or replace what is here."
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Import…")
+					.setCta()
+					.onClick(() => this.plugin.promptImportRelations())
+			);
+	}
 
 	displayActionBar(containerEl: HTMLElement): void {
 		const settings = this.plugin.settings;
@@ -1223,6 +1263,8 @@ function previewHost(plugin: TagRelationsPlugin): ActionHost {
 		promptRemoveRelation: noop,
 		promptRemoveAllRelations: noop,
 		promptRename: noop,
+		exportRelations: noop,
+		importRelations: noop,
 		promptAssignTagToNotesOf: noop,
 		promptRemoveTagFromNotes: noop,
 		copyTag: noop,

@@ -203,6 +203,14 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.plugin.promptCreateNote(this.selection.slice());
 	}
 
+	exportRelations(): void {
+		void this.plugin.exportRelationsToFile();
+	}
+
+	importRelations(): void {
+		this.plugin.promptImportRelations();
+	}
+
 	copyTag(tag: string): void {
 		void navigator.clipboard.writeText(tag);
 		new Notice(`Copied ${tag}`);

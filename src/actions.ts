@@ -12,7 +12,13 @@ import { SelectMode } from "./types";
  * is exactly the sort of gap that is invisible until someone goes looking.
  */
 
-export type ActionGroup = "selection" | "notes" | "groups" | "links" | "edit";
+export type ActionGroup =
+	| "selection"
+	| "notes"
+	| "groups"
+	| "links"
+	| "edit"
+	| "transfer";
 
 export const ACTION_GROUP_LABELS: Record<ActionGroup, string> = {
 	selection: "Selection",
@@ -20,6 +26,7 @@ export const ACTION_GROUP_LABELS: Record<ActionGroup, string> = {
 	groups: "Grouping",
 	links: "Links",
 	edit: "Editing",
+	transfer: "Export and import",
 };
 
 export const ACTION_GROUP_ORDER: ActionGroup[] = [
@@ -28,6 +35,7 @@ export const ACTION_GROUP_ORDER: ActionGroup[] = [
 	"groups",
 	"links",
 	"edit",
+	"transfer",
 ];
 
 /**
@@ -62,6 +70,8 @@ export interface ActionHost {
 	promptRemoveAllRelations(tag: string): void;
 
 	promptRename(tag: string): void;
+	exportRelations(): void;
+	importRelations(): void;
 	promptAssignTagToNotesOf(tag: string): void;
 	promptRemoveTagFromNotes(tag: string): void;
 	copyTag(tag: string): void;
@@ -242,6 +252,23 @@ export const TAG_ACTIONS: TagAction[] = [
 		label: () => "Rename tag…",
 		isEnabled: hasTag,
 		run: (ctx) => ctx.tag && ctx.host.promptRename(ctx.tag),
+	},
+	{
+		id: "export-relations",
+		group: "transfer",
+		defaultIcon: "download",
+		label: () => "Export relations to a file",
+		// Never needs a tag: this is about the whole structure.
+		isEnabled: () => true,
+		run: (ctx) => ctx.host.exportRelations(),
+	},
+	{
+		id: "import-relations",
+		group: "transfer",
+		defaultIcon: "upload",
+		label: () => "Import relations…",
+		isEnabled: () => true,
+		run: (ctx) => ctx.host.importRelations(),
 	},
 	{
 		id: "copy",

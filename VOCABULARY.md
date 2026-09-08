@@ -38,6 +38,8 @@ Two tags can be related in three different ways. They look similar in the views 
 
 > **Code note:** horizontal links are called **manual links** throughout the source (`ManualLink`, `manualLinks`, `edge.manual`). The internal name predates the user-facing one and was deliberately left alone — see [ADR 0002](docs/adr/0002-relation-sources-cooccurrence-and-manual-links.md). If you are reading code, "manual link" and "horizontal link" are the same thing.
 
+> **What if a pair is both grouped and linked?** Both are kept — "B contains A" and "A relates to B" are different claims. They collapse onto one edge whose **containment wins**: the views draw and colour it as group membership, and the horizontal link is *shadowed*, not erased. Remove the grouping and the link reappears. "Remove this relation" removes both at once, so the two tags are not left half-joined; the removal picker shows such a pair as "horizontal link + inside it".
+
 **Relation strength** is a 0–1 number. Shared-note relations are scored by the chosen metric (Jaccard, cosine, or raw count); horizontal links and group membership are always exactly 1, because you declared them and there is nothing to estimate.
 
 ---
@@ -97,6 +99,12 @@ These are the only operations that **write to your notes**. Everything else in t
 > | **Remove this tag from all notes** | **Your notes** | Not covered by Obsidian's undo |
 
 ---
+
+## Moving between vaults
+
+- **Export / import relations** — writing the plugin's own data (horizontal links, group membership, pins) to a portable file and reading it back. Tags and shared-note relations are not included because they are already in your notes.
+- **Merge** — add what is missing, keep what is there. Idempotent: importing the same file twice changes nothing the second time.
+- **Replace** — discard what is stored, then apply the file.
 
 ## Under the hood
 

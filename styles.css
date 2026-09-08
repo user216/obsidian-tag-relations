@@ -1488,3 +1488,18 @@
 	white-space: normal;
 	line-height: 1.4;
 }
+
+.tr-new-note-rejected {
+	padding: 8px 9px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-error);
+}
+
+.tr-import-textarea {
+	width: 100%;
+	min-height: 130px;
+	margin: 8px 0;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	resize: vertical;
+}

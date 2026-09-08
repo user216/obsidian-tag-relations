@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-08
+
+### Added
+
+- **Export and import relations**, in three places: **Settings → Relations**, the **action bar**, and the **command palette** (`Export relations to a file`, `Copy relations to the clipboard`, `Import relations`).
+  - Export writes a timestamped `.json` into the vault root — so it syncs with the vault and can be found again — or copies to the clipboard.
+  - Import accepts a paste or a `.json` already in the vault, and **shows exactly what it would change before applying**: how many links, memberships and pins would be added, and what would be skipped.
+  - **Merge** (keep what is here, add what is missing) or **replace** (discard first). Merge treats a reversed horizontal link as the same link, so re-importing the same file changes nothing.
+  - A raw `data.json` imports directly — `manualLinks` is accepted as an alias for `horizontalLinks`.
+  - Imported group memberships go through the same validation as ones made in the UI, so **a hand-edited file cannot smuggle in a fourth level or a cycle**; anything refused is listed with its reason.
+
+### Fixed
+
+- **A refused tag name now says why.** Typing `108` appeared to do nothing: the plugin knew it was rejected because Obsidian requires at least one non-numeric character in a tag, and then discarded that reason in favour of a generic message. It now names the rule and suggests a concrete fix (`n108`, `108x`). The same applies in the multi-tag list, where each skipped name is reported individually rather than as a bare list.
+- An imported horizontal link without a label no longer gains an empty `label` key, so an export round-trips to exactly itself.
+- Adding a horizontal link between two tags that are **already grouped** now says what happened. Both relations are kept, but containment is what the views draw, so the new link previously appeared to do nothing — the same silent no-op that made a rejected tag name look like a broken dialog. The notice explains that the link is stored and will reappear if the tags are ungrouped.
+
+### Tests
+
+- 22 new tests: export round-tripping, import rejection (bad JSON, another plugin's file, a newer format, an empty file), tolerance (malformed entries dropped with warnings, `manualLinks` alias, missing sections), merge and replace planning, the pin cap, and that the three-level rule and cycle prevention hold for imported data.
+
 ## [0.8.0] - 2026-09-08
 
 ### Added
@@ -234,7 +255,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...0.7.0

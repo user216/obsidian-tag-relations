@@ -1,6 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseTagList, tagSuggestions } from "../src/tagSuggest";
+import {
+	hintFor,
+	parseTagList,
+	rejectionFor,
+	tagSuggestions,
+} from "../src/tagSuggest";
 
 const TAGS = ["#alpha", "#beta", "#alphabet", "#Gamma"];
 const names = (list: { tag: string }[]) => list.map((s) => s.tag);
@@ -170,10 +175,11 @@ describe("parseTagList — classifying the names", () => {
 		]);
 	});
 
-	test("unusable names are collected rather than silently dropped", () => {
+	test("unusable names are collected with the reason, not silently dropped", () => {
 		const parsed = parseTagList("good 2024 alsogood", TAGS);
 		assert.deepEqual(names(parsed.valid), ["#good", "#alsogood"]);
-		assert.deepEqual(parsed.invalid, ["2024"]);
+		assert.deepEqual(parsed.invalid.map((r) => r.name), ["2024"]);
+		assert.match(parsed.invalid[0].reason, /only digits/i);
 	});
 
 	test("already-chosen names are reported as duplicates, not re-added", () => {
@@ -195,6 +201,41 @@ describe("parseTagList — classifying the names", () => {
 	test("a list of only unusable names yields nothing to add", () => {
 		const parsed = parseTagList("2024 2025", TAGS);
 		assert.deepEqual(parsed.valid, []);
-		assert.deepEqual(parsed.invalid, ["2024", "2025"]);
+		assert.deepEqual(parsed.invalid.map((r) => r.name), ["2024", "2025"]);
+	});
+});
+
+
+describe("explaining why a name is refused", () => {
+	test("a usable name has no rejection", () => {
+		assert.equal(rejectionFor("project"), null);
+		assert.equal(rejectionFor("  "), null);
+	});
+
+	test("an all-digit name is refused, with Obsidian's actual reason", () => {
+		// This is the reported case: typing "108" appeared to do nothing.
+		const rejection = rejectionFor("108");
+		assert.ok(rejection);
+		assert.equal(rejection!.name, "108");
+		assert.match(rejection!.reason, /only digits/i);
+	});
+
+	test("the digits hint suggests a concrete fix", () => {
+		const hint = hintFor(rejectionFor("108")!);
+		assert.ok(hint);
+		assert.match(hint!, /at least one letter/i);
+		assert.match(hint!, /108/);
+	});
+
+	test("a spaced name is refused with a usable hint", () => {
+		const rejection = rejectionFor("two words");
+		assert.ok(rejection);
+		assert.match(hintFor(rejection!) ?? "", /hyphen or underscore/i);
+	});
+
+	test("reasons without an obvious fix simply have no hint", () => {
+		const rejection = rejectionFor("a//b");
+		assert.ok(rejection);
+		assert.equal(hintFor(rejection!), null);
 	});
 });

@@ -11,7 +11,14 @@ import { TagSuggestModal } from "./modals";
 import { remapManualLinks } from "./links";
 import { EditOutcome, TagEditor, validateTagName } from "./edit";
 import { NoteCreator } from "./newNote";
+import { formatDateTime } from "./datetime";
 import { NewNoteModal } from "./newNoteModal";
+import { ImportRelationsModal } from "./transferModals";
+import {
+	RelationPayload,
+	buildExport,
+	serializeExport,
+} from "./transfer";
 import { TagGroups } from "./groups";
 import { LEVEL_LABELS } from "./types";
 import { MAX_PINNED, togglePinned } from "./levels";
@@ -136,6 +143,21 @@ export default class TagRelationsPlugin extends Plugin {
 			callback: () => this.promptCreateNote(this.selectionFromViews()),
 		});
 		this.addCommand({
+			id: "export-relations",
+			name: "Export relations to a file",
+			callback: () => void this.exportRelationsToFile(),
+		});
+		this.addCommand({
+			id: "copy-relations",
+			name: "Copy relations to the clipboard",
+			callback: () => void this.copyRelationsToClipboard(),
+		});
+		this.addCommand({
+			id: "import-relations",
+			name: "Import relations",
+			callback: () => this.promptImportRelations(),
+		});
+		this.addCommand({
 			id: "rebuild-tag-graph",
 			name: "Rescan vault for tags",
 			callback: () => {
@@ -238,6 +260,20 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings.manualLinks.push({ a: tagA, b: tagB, label });
 		await this.saveSettings();
 		this.rebuildGraph();
+
+		// A pair can be both grouped and linked — they are different claims,
+		// and both are kept. But containment is what the views draw, so the
+		// new link would appear to do nothing. Say so rather than let it look
+		// like the action failed.
+		const groups = new TagGroups(this.settings.groupLinks);
+		const contains = groups.contains(tagA, tagB) || groups.contains(tagB, tagA);
+		if (contains) {
+			new Notice(
+				`Linked ${tagLabel(tagA)} ↔ ${tagLabel(tagB)}. They are already grouped, so the views will keep showing the group relationship — the link is stored and reappears if you ungroup them.`,
+				8000
+			);
+			return;
+		}
 		new Notice(`Linked ${tagLabel(tagA)} ↔ ${tagLabel(tagB)}`);
 	}
 
@@ -353,6 +389,72 @@ export default class TagRelationsPlugin extends Plugin {
 		this.settings.pinnedTags = result.pinned;
 		await this.saveSettings();
 		this.refreshViews();
+	}
+
+	// --- Export and import -------------------------------------------------
+
+	/** The portable half of the plugin's data: everything not in your notes. */
+	private relationPayload(): RelationPayload {
+		return {
+			horizontalLinks: this.settings.manualLinks,
+			groupLinks: this.settings.groupLinks,
+			pinnedTags: this.settings.pinnedTags,
+		};
+	}
+
+	exportJson(): string {
+		return serializeExport(
+			buildExport(this.relationPayload(), this.manifest.version)
+		);
+	}
+
+	/** Write an export into the vault, where it syncs and can be found again. */
+	async exportRelationsToFile(): Promise<void> {
+		const payload = this.relationPayload();
+		const total =
+			payload.horizontalLinks.length +
+			payload.groupLinks.length +
+			payload.pinnedTags.length;
+		if (total === 0) {
+			new Notice("Nothing to export yet — no links, groups or pins.");
+			return;
+		}
+		const stamp = formatDateTime(new Date(), "YYYYMMDD-HHmmss", "");
+		const path = `tag-relations-export-${stamp}.json`;
+		try {
+			await this.app.vault.create(path, this.exportJson());
+			new Notice(
+				`Exported ${payload.horizontalLinks.length} link(s), ${payload.groupLinks.length} group membership(s) and ${payload.pinnedTags.length} pin(s) to ${path}`
+			);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			new Notice(`Could not write the export — ${message}`);
+			console.error("Tag Relations: export failed", error);
+		}
+	}
+
+	async copyRelationsToClipboard(): Promise<void> {
+		await navigator.clipboard.writeText(this.exportJson());
+		new Notice("Relations copied to the clipboard as JSON.");
+	}
+
+	promptImportRelations(): void {
+		new ImportRelationsModal(this.app, {
+			current: this.relationPayload(),
+			maxPinned: MAX_PINNED,
+			onApply: (payload) => void this.applyImported(payload),
+		}).open();
+	}
+
+	private async applyImported(payload: RelationPayload): Promise<void> {
+		this.settings.manualLinks = payload.horizontalLinks;
+		this.settings.groupLinks = payload.groupLinks;
+		this.settings.pinnedTags = payload.pinnedTags;
+		await this.saveSettings();
+		this.rebuildGraph();
+		new Notice(
+			`Imported: ${payload.horizontalLinks.length} link(s), ${payload.groupLinks.length} group membership(s), ${payload.pinnedTags.length} pin(s).`
+		);
 	}
 
 	// --- Removing relations ------------------------------------------------

@@ -9,7 +9,13 @@ import {
 	withoutRelation,
 } from "../src/relations";
 import type { RelationStore } from "../src/relations";
-import { TAG_ACTIONS, actionById, actionsInGroup, iconFor } from "../src/actions";
+import {
+	ACTION_GROUP_ORDER,
+	TAG_ACTIONS,
+	actionById,
+	actionsInGroup,
+	iconFor,
+} from "../src/actions";
 
 /**
  * #a is horizontally linked to #b, contains #c, and sits inside #d.
@@ -211,12 +217,24 @@ describe("the action registry", () => {
 	test("actions needing a tag are disabled when there is none", () => {
 		const ctx = { tag: null, host: fakeHost() };
 		const needsTag = TAG_ACTIONS.filter((a) => !a.isEnabled(ctx));
-		// Only the three that genuinely work without one stay enabled.
 		assert.ok(needsTag.length > 0);
-		for (const action of TAG_ACTIONS) {
-			if (action.isEnabled(ctx)) {
-				assert.ok(["clear-selection", "show-notes", "new-note"].includes(action.id));
-			}
+		// The only actions that work without a tag are the ones about the
+		// whole structure rather than one tag in it. clear-selection and
+		// show-notes are additionally gated on there being a selection, so
+		// with an empty one they stay disabled here.
+		const tagless = TAG_ACTIONS.filter((a) => a.isEnabled(ctx)).map((a) => a.id);
+		assert.deepEqual(tagless.sort(), [
+			"export-relations",
+			"import-relations",
+			"new-note",
+		]);
+	});
+
+	test("export and import never depend on a tag or a selection", () => {
+		for (const id of ["export-relations", "import-relations"]) {
+			const action = actionById(id)!;
+			assert.equal(action.isEnabled({ tag: null, host: fakeHost() }), true, id);
+			assert.equal(action.destructive, undefined, id);
 		}
 	});
 
@@ -235,9 +253,11 @@ describe("the action registry", () => {
 	});
 
 	test("every action belongs to exactly one listed group", () => {
-		const grouped = (["selection", "notes", "groups", "links", "edit"] as const)
-			.flatMap((g) => actionsInGroup(g))
-			.map((a) => a.id);
+		// Reads the canonical order rather than a copy of it, so adding a
+		// group cannot leave this test silently checking the old set.
+		const grouped = ACTION_GROUP_ORDER.flatMap((g) => actionsInGroup(g)).map(
+			(a) => a.id
+		);
 		assert.equal(grouped.length, TAG_ACTIONS.length);
 		assert.equal(new Set(grouped).size, TAG_ACTIONS.length);
 	});
@@ -278,6 +298,8 @@ function fakeHost(): any {
 		promptRemoveRelation: noop,
 		promptRemoveAllRelations: noop,
 		promptRename: noop,
+		exportRelations: noop,
+		importRelations: noop,
 		promptAssignTagToNotesOf: noop,
 		promptRemoveTagFromNotes: noop,
 		copyTag: noop,

@@ -3,7 +3,9 @@ import { tagLabel } from "./graph";
 import {
 	ParsedTagList,
 	TagSuggestion,
+	hintFor,
 	parseTagList,
+	rejectionFor,
 	tagSuggestions,
 } from "./tagSuggest";
 
@@ -170,13 +172,24 @@ export class NewNoteModal extends Modal {
 		});
 
 		if (this.suggestions.length === 0) {
+			if (this.query.trim().length === 0) {
+				this.listEl.createDiv({
+					cls: "tr-new-note-empty",
+					text: "Every tag is already added.",
+				});
+				return;
+			}
+			// Nothing matched and nothing can be created — say which rule was
+			// hit. Refusing without a reason reads as the dialog being broken.
+			const rejection = rejectionFor(this.query);
 			this.listEl.createDiv({
-				cls: "tr-new-note-empty",
-				text:
-					this.query.trim().length === 0
-						? "Every tag is already added."
-						: "No match, and that is not a usable tag name.",
+				cls: "tr-new-note-rejected",
+				text: rejection ? rejection.reason : "No matching tag.",
 			});
+			const hint = rejection ? hintFor(rejection) : null;
+			if (hint) {
+				this.listEl.createDiv({ cls: "tr-new-note-empty", text: hint });
+			}
 			return;
 		}
 
@@ -215,7 +228,7 @@ export class NewNoteModal extends Modal {
 				text:
 					parsed.duplicates.length > 0
 						? "Those tags are already added."
-						: "None of those are usable tag names.",
+						: "None of those can be used as tag names.",
 			});
 			this.renderBulkNotes(parsed);
 			return;
@@ -246,10 +259,13 @@ export class NewNoteModal extends Modal {
 
 	/** Names the fragments that will be skipped, rather than dropping them quietly. */
 	private renderBulkNotes(parsed: ParsedTagList): void {
-		if (parsed.invalid.length > 0) {
+		for (const rejection of parsed.invalid) {
+			const hint = hintFor(rejection);
 			this.listEl.createDiv({
-				cls: "tr-new-note-empty",
-				text: `Not usable as tag names, and will be skipped: ${parsed.invalid.join(", ")}`,
+				cls: "tr-new-note-rejected",
+				text: `Skipping "${rejection.name}" — ${rejection.reason}${
+					hint ? ` ${hint}` : ""
+				}`,
 			});
 		}
 		if (parsed.duplicates.length > 0 && parsed.valid.length > 0) {

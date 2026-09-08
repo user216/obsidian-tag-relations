@@ -266,6 +266,21 @@ Not covered: DOM rendering and canvas drawing. Those are exercised by using the 
 
 The reasoning behind the bigger architectural choices — flat tags plus a relation graph, the two relation sources, sharing one graph across three views, hand-rolling the mind-map's force layout instead of pulling in a graph library, why the notes panel is a snapshot rather than a live query, and what changed when the plugin started writing to notes — is recorded in [docs/adr/](docs/adr/).
 
+## Moving to another vault
+
+Your tags and every shared-notes relation live **in your notes**, so they travel with the vault for free and rebuild themselves wherever the notes go.
+
+Horizontal links, group membership and pins do **not** — they live in `.obsidian/plugins/tag-relations/data.json`. That's what makes reorganising them free (nothing is rewritten in your notes), and also what leaves them behind if you migrate by copying only your markdown.
+
+| How you move the vault | Groups & horizontal links |
+| --- | --- |
+| Copy the whole vault folder, including `.obsidian/` | Come with it |
+| Obsidian Sync **with** "Sync settings" on | Come with it |
+| Obsidian Sync **without** it, or git with `.obsidian/` ignored | Left behind |
+| Copy only the `.md` files | Left behind |
+
+**Export relations** writes all of it to one portable `.json` — from Settings → Relations, the action bar, or the command palette. **Import relations** reads it back, showing exactly what it would change first, and can either merge into what's already there or replace it. Merging is idempotent, so re-importing the same file is a no-op, and it's also how you combine two vaults' structures.
+
 ## Vocabulary
 
 Several words here have narrow meanings — *main-tag*, *horizontal link*, *snapshot*, and three different things called "remove". [VOCABULARY.md](VOCABULARY.md) defines them all, including where the code's names differ from the interface's.

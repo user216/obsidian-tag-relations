@@ -54,6 +54,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/panzoom.ts` | 175 | Pan/zoom layer for the DOM-based views |
 | `src/actions.ts` | 300 | The action registry: every tag action defined once (pure) |
 | `src/relations.ts` | 140 | Which relations are removable, and removing them (pure) |
+| `src/transfer.ts` | 300 | Export payloads, import validation, merge planning (pure) |
+| `src/transferModals.ts` | 220 | The import dialog, showing a plan before applying |
 | `src/newNoteModal.ts` | 250 | The multi-tag picker shown when creating a note |
 | `src/tagSuggest.ts` | 55 | Tag-picker filtering and create-new offers (pure) |
 | `src/datetime.ts` | 214 | Timezone-aware formatting and filename sanitising (pure) |
@@ -399,7 +401,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-368 tests across 70 suites:
+396 tests across 77 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -412,6 +414,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `levels.test.ts` | Level style resolution and CSS, level filters, pin capping, zoom clamping |
 | `newNote.test.ts` | Note creation end to end: tags into frontmatter, explicit-versus-inherited tags, filename collisions, folder creation |
 | `tagSuggest.test.ts` | Substring and case matching, create-new offers and their suppression, exclusions, limits, and multi-name list parsing |
+| `transfer.test.ts` | Export round-tripping, import rejection and tolerance, merge/replace planning, and that the depth rule holds for imported data |
 | `relations.test.ts` | Removable-relation discovery, single/all/membership removal, and the action registry's ids, groups, enablement and icon fallbacks |
 | `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |
 

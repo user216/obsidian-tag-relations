@@ -438,3 +438,47 @@ describe("group membership as edges", () => {
 		assert.equal(g.groups.levelOf("#running"), "simple");
 	});
 });
+
+describe("a pair that is both grouped and horizontally linked", () => {
+	// Both are stored: "B contains A" and "A relates to B" are different
+	// claims, and removing one should not silently destroy the other.
+	const both = {
+		manualLinks: [{ a: "#project", b: "#work" }],
+		groupLinks: [{ parent: "#project", child: "#work" }],
+	};
+
+	test("they collapse onto one edge, not two", () => {
+		const g = built(both);
+		assert.equal(g.edges.size, built().edges.size);
+	});
+
+	test("containment wins the edge's kind, so views draw the structure", () => {
+		const edge = built(both).edgeBetween("#project", "#work");
+		assert.equal(edge?.parent, "#project");
+		assert.equal(edge?.kind, "main-simple");
+	});
+
+	test("but the horizontal link is not erased — the flag survives", () => {
+		// This is what lets it reappear if the grouping is removed later.
+		assert.equal(built(both).edgeBetween("#project", "#work")?.manual, true);
+	});
+
+	test("either alone is enough to force full strength", () => {
+		assert.equal(built(both).strength("#project", "#work"), 1);
+		assert.equal(
+			built({ manualLinks: both.manualLinks }).strength("#project", "#work"),
+			1
+		);
+		assert.equal(
+			built({ groupLinks: both.groupLinks }).strength("#project", "#work"),
+			1
+		);
+	});
+
+	test("removing only the grouping brings the link back into view", () => {
+		const linkOnly = built({ manualLinks: both.manualLinks });
+		const edge = linkOnly.edgeBetween("#project", "#work");
+		assert.equal(edge?.parent, undefined);
+		assert.equal(edge?.kind, "manual");
+	});
+});
