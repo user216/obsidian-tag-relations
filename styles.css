@@ -1652,3 +1652,31 @@
 .tr-inspector-details {
 	margin-top: 6px;
 }
+
+/* --------------------------------------------------- button arrangement */
+
+.tr-toolbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 1px;
+}
+
+.tr-toolbar-actions.is-hidden {
+	display: none;
+}
+
+.tr-toolbar-actions .tr-action-btn {
+	width: 28px;
+	height: 28px;
+}
+
+.tr-action-bar-empty {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	padding: 2px 4px;
+}
+
+.tr-button-row.is-hidden-action .setting-item-name {
+	opacity: 0.5;
+	text-decoration: line-through;
+}

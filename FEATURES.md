@@ -116,6 +116,10 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Acts on the last-selected tag, named at the left of the bar
 - Grouped by kind; buttons grey out rather than vanish, so the layout stays stable
 - Every button's icon customisable to any Lucide icon, with live preview
+- Every button placeable on the toolbar, the action bar, both, or hidden
+- Buttons reorderable, with one shared order across both surfaces
+- Reset returns every button to its default place, order and icon
+- Actions added by later versions append to a saved layout rather than vanishing
 - Context menu and button bar are generated from one shared registry, so they can never offer different capabilities
 
 ## Removing relations
@@ -196,5 +200,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 411 tests across 80 suites (`npm test`)
+- 431 tests across 84 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

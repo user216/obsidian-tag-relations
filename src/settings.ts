@@ -1,11 +1,5 @@
 import { App, PluginSettingTab, Setting, Notice, setIcon } from "obsidian";
-import {
-	ACTION_GROUP_LABELS,
-	ACTION_GROUP_ORDER,
-	ActionHost,
-	actionsInGroup,
-	iconFor,
-} from "./actions";
+import { ActionHost, TAG_ACTIONS, iconFor } from "./actions";
 import type TagRelationsPlugin from "./main";
 import { AddLocation } from "./edit";
 import {
@@ -17,6 +11,13 @@ import {
 } from "./datetime";
 import { titleFor } from "./newNote";
 import { MAX_PINNED, resolveLevelStyles } from "./levels";
+import {
+	ActionPlacement,
+	PLACEMENT_LABELS,
+	moveInOrder,
+	orderedActions,
+	placementOf,
+} from "./actionLayout";
 import {
 	CONNECTION_LABELS,
 	LEVEL_LABELS,
@@ -80,6 +81,10 @@ export interface TagRelationsSettings {
 	showActionBar: boolean;
 	/** Per-action Lucide icon overrides, keyed by action id. */
 	actionIcons: Record<string, string>;
+	/** Where each action's button appears; unset means its default. */
+	actionPlacement: Record<string, ActionPlacement>;
+	/** Action ids in display order; anything missing keeps registry order. */
+	actionOrder: string[];
 
 	// Cloud presentation
 	cloudLayout: CloudLayout;
@@ -158,6 +163,8 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 
 	showActionBar: false,
 	actionIcons: {},
+	actionPlacement: {},
+	actionOrder: [],
 
 	cloudLayout: "icons",
 	cloudZoom: 1,
@@ -249,7 +256,7 @@ const SETTINGS_TABS: SettingsTab[] = [
 	{ id: "newNote", label: "New note", render: (tab, el) => tab.displayNewNote(el) },
 	{
 		id: "actions",
-		label: "Action bar",
+		label: "Buttons",
 		render: (tab, el) => tab.displayActionBar(el),
 	},
 ];
@@ -757,16 +764,16 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 
 	displayActionBar(containerEl: HTMLElement): void {
 		const settings = this.plugin.settings;
-		new Setting(containerEl).setName("Action bar").setHeading();
+		new Setting(containerEl).setName("Buttons").setHeading();
 
 		containerEl.createEl("p", {
 			cls: "tr-settings-empty",
-			text: "A row of buttons for every tag action, so nothing is reachable only by right-clicking. Buttons act on the last tag you selected, and grey out rather than disappear when they do not apply — the bar keeps a stable shape so its layout stays learnable.",
+			text: "Every action can go on the toolbar, on the action bar, on both, or nowhere — and be arranged in whatever order you like. Both surfaces share one order, so a button keeps the same relative place wherever you put it.",
 		});
 
 		new Setting(containerEl)
 			.setName("Show the action bar")
-			.setDesc("Also toggleable on the fly from the view's toolbar.")
+			.setDesc("The row under the toolbar. Also toggleable from the toolbar itself.")
 			.addToggle((toggle) =>
 				toggle.setValue(settings.showActionBar).onChange(async (value) => {
 					settings.showActionBar = value;
@@ -775,59 +782,95 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl).setName("Button icons").setHeading();
-		containerEl.createEl("p", {
-			cls: "tr-settings-empty",
-			text: "Any Lucide icon name works — the same set Obsidian itself uses; see lucide.dev for the list. The preview updates as you type, and an unknown name simply leaves the button blank rather than breaking it. Leave a field empty for the default.",
-		});
+		new Setting(containerEl)
+			.setName("Reset the layout")
+			.setDesc("Put every button back to its default place, order and icon.")
+			.addButton((button) =>
+				button.setButtonText("Reset").onClick(async () => {
+					settings.actionPlacement = {};
+					settings.actionOrder = [];
+					settings.actionIcons = {};
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+					this.display();
+				})
+			);
 
-		for (const group of ACTION_GROUP_ORDER) {
-			const actions = actionsInGroup(group);
-			if (actions.length === 0) continue;
-			new Setting(containerEl)
-				.setName(ACTION_GROUP_LABELS[group])
-				.setHeading();
+		// Shown as one list in the arranged order rather than grouped by kind:
+		// the order is what is being edited here, so any other arrangement
+		// would make the move buttons read as lying.
+		const arranged = orderedActions(TAG_ACTIONS, settings.actionOrder);
+		const ids = arranged.map((action) => action.id);
 
-			for (const action of actions) {
-				const setting = new Setting(containerEl).setName(
-					action.label({ tag: "#tag", host: previewHost(this.plugin) })
-				);
-				const preview = setting.controlEl.createDiv({ cls: "tr-icon-preview" });
-				const paint = (name: string) => {
-					preview.empty();
-					try {
-						setIcon(preview, name);
-					} catch {
-						/* an unknown icon name just leaves it blank */
-					}
-				};
-				paint(iconFor(action, settings.actionIcons));
+		for (const [index, action] of arranged.entries()) {
+			const placement = placementOf(action.id, settings.actionPlacement);
+			const setting = new Setting(containerEl).setName(
+				action.label({ tag: "#tag", host: previewHost(this.plugin) })
+			);
+			setting.settingEl.toggleClass("tr-button-row", true);
+			setting.settingEl.toggleClass("is-hidden-action", placement === "hidden");
 
-				setting.addText((text) =>
-					text
-						.setPlaceholder(action.defaultIcon)
-						.setValue(settings.actionIcons[action.id] ?? "")
-						.onChange(async (value) => {
-							const trimmed = value.trim();
-							if (trimmed.length === 0) delete settings.actionIcons[action.id];
-							else settings.actionIcons[action.id] = trimmed;
-							paint(iconFor(action, settings.actionIcons));
-							await this.plugin.saveSettings();
-							this.plugin.refreshViews();
-						})
-				);
-				setting.addExtraButton((button) =>
-					button
-						.setIcon("rotate-ccw")
-						.setTooltip(`Back to ${action.defaultIcon}`)
-						.onClick(async () => {
-							delete settings.actionIcons[action.id];
-							await this.plugin.saveSettings();
-							this.plugin.refreshViews();
-							this.display();
-						})
-				);
-			}
+			const preview = setting.controlEl.createDiv({ cls: "tr-icon-preview" });
+			const paint = (name: string) => {
+				preview.empty();
+				try {
+					setIcon(preview, name);
+				} catch {
+					/* an unknown icon name just leaves it blank */
+				}
+			};
+			paint(iconFor(action, settings.actionIcons));
+
+			setting.addText((text) =>
+				text
+					.setPlaceholder(action.defaultIcon)
+					.setValue(settings.actionIcons[action.id] ?? "")
+					.onChange(async (value) => {
+						const trimmed = value.trim();
+						if (trimmed.length === 0) delete settings.actionIcons[action.id];
+						else settings.actionIcons[action.id] = trimmed;
+						paint(iconFor(action, settings.actionIcons));
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+			setting.addDropdown((dd) => {
+				for (const key of Object.keys(PLACEMENT_LABELS) as ActionPlacement[]) {
+					dd.addOption(key, PLACEMENT_LABELS[key]);
+				}
+				dd.setValue(placement).onChange(async (value) => {
+					settings.actionPlacement[action.id] = value as ActionPlacement;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+					this.display();
+				});
+			});
+
+			setting.addExtraButton((button) =>
+				button
+					.setIcon("chevron-up")
+					.setTooltip("Move up")
+					.setDisabled(index === 0)
+					.onClick(async () => {
+						settings.actionOrder = moveInOrder(ids, action.id, -1);
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+						this.display();
+					})
+			);
+			setting.addExtraButton((button) =>
+				button
+					.setIcon("chevron-down")
+					.setTooltip("Move down")
+					.setDisabled(index === arranged.length - 1)
+					.onClick(async () => {
+						settings.actionOrder = moveInOrder(ids, action.id, 1);
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+						this.display();
+					})
+			);
 		}
 	}
 

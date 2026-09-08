@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-08
+
+### Added
+
+- **Arrange the buttons.** Every action can now be placed on the **toolbar**, the **action bar**, **both**, or **hidden**, and moved into whatever order you like — all in **Settings → Buttons**, next to the icon field that was already there.
+  - Both surfaces share one order, so a button keeps the same relative place wherever you put it. Two independent orderings would be more expressive and much harder to hold in your head.
+  - **Reset the layout** puts every button back to its default place, order and icon.
+  - The settings list is shown in the arranged order rather than grouped by kind, since the order is the thing being edited.
+
+### Changed
+
+- The toolbar's **New note** and **Clear selection** buttons are no longer hard-coded — they are ordinary actions that simply default to the toolbar. The layout is unchanged out of the box, but both can now be moved, hidden, or joined by anything else.
+- An action added by a future version appends to a saved layout rather than disappearing from it, so customising the order can't hide features added later.
+
+### Tests
+
+- 20 new tests covering placement defaults and overrides, surface filtering, order preservation, appending of unknown actions, and that moving never loses or duplicates a button.
+
 ## [0.10.0] - 2026-09-08
 
 ### Added
@@ -275,7 +293,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.11.0...HEAD
+[0.11.0]: https://github.com/user216/obsidian-tag-relations/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/user216/obsidian-tag-relations/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/user216/obsidian-tag-relations/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...0.8.0

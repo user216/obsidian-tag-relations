@@ -29,6 +29,7 @@ import {
 	TagAction,
 	iconFor,
 } from "./actions";
+import { actionsForSurface } from "./actionLayout";
 import { MAX_PINNED, resolveLevelStyles } from "./levels";
 import { TagSuggestModal } from "./modals";
 import {
@@ -88,7 +89,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private searchInput!: HTMLInputElement;
 	private stickyButton!: HTMLElement;
 	private editButton!: HTMLElement;
-	private newNoteButton!: HTMLElement;
+	private toolbarActionsEl!: HTMLElement;
 	private actionBarEl!: HTMLElement;
 	private actionBarButton!: HTMLElement;
 	private matchSelect!: HTMLSelectElement;
@@ -333,7 +334,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	}
 
 	private afterSelectionChange(): void {
-		this.syncNewNoteButton();
+		this.renderToolbarActions();
 		this.renderActionBar();
 		this.renderActiveMode();
 		this.renderInspector();
@@ -576,6 +577,7 @@ export class TagRelationsView extends ItemView implements ViewHost {
 
 	renderAll(): void {
 		this.syncToolbar();
+		this.renderToolbarActions();
 		this.renderActionBar();
 		this.renderActiveMode();
 		this.renderInspector();
@@ -640,12 +642,6 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			void this.plugin.saveSettings();
 			this.renderActiveMode();
 		});
-
-		this.newNoteButton = toolbar.createDiv({ cls: "tr-icon-button" });
-		setIcon(this.newNoteButton, "file-plus");
-		this.newNoteButton.addEventListener("click", () =>
-			this.plugin.promptCreateNote(this.selection.slice())
-		);
 
 		this.editButton = toolbar.createDiv({ cls: "tr-icon-button" });
 		setIcon(this.editButton, "pencil");
@@ -726,12 +722,10 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			this.openViewOptions(event)
 		);
 
-		const actions = toolbar.createDiv({ cls: "tr-actions" });
-		const clearButton = actions.createDiv({ cls: "tr-icon-button" });
-		setIcon(clearButton, "x-circle");
-		setTooltip(clearButton, "Clear selection", { placement: "bottom" });
-		clearButton.addEventListener("click", () => this.clearSelection());
+		// Whichever actions the user placed on the toolbar, in their order.
+		this.toolbarActionsEl = toolbar.createDiv({ cls: "tr-toolbar-actions" });
 
+		const actions = toolbar.createDiv({ cls: "tr-actions" });
 		const inspectorButton = actions.createDiv({ cls: "tr-icon-button" });
 		setIcon(inspectorButton, "panel-right");
 		setTooltip(inspectorButton, "Toggle details panel", { placement: "bottom" });
@@ -865,8 +859,23 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			{ placement: "bottom" }
 		);
 
+		const placed = actionsForSurface(
+			"bar",
+			TAG_ACTIONS,
+			this.settings.actionOrder,
+			this.settings.actionPlacement
+		);
+		if (placed.length === 0) {
+			bar.createDiv({
+				cls: "tr-action-bar-empty",
+				text: "No buttons on the action bar — add some in Settings → Buttons.",
+			});
+			return;
+		}
+		// Still clustered by kind, but only over the actions actually placed
+		// here, and in the order the user arranged them.
 		for (const group of ACTION_GROUP_ORDER) {
-			const actions = TAG_ACTIONS.filter((action) => action.group === group);
+			const actions = placed.filter((action) => action.group === group);
 			if (actions.length === 0) continue;
 			const cluster = bar.createDiv({ cls: "tr-action-cluster" });
 			setTooltip(cluster, ACTION_GROUP_LABELS[group], { placement: "bottom" });
@@ -899,28 +908,24 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		);
 		this.editButton?.toggleClass("is-active", this.settings.editMode);
 		this.actionBarButton?.toggleClass("is-active", this.settings.showActionBar);
-		this.syncNewNoteButton();
 		if (this.matchSelect) this.matchSelect.value = this.settings.noteMatchMode;
 	}
 
-	/**
-	 * The button is hidden when disabled, and its tooltip names both the
-	 * filename it will produce and the tags it will carry, so the result is
-	 * predictable before clicking.
-	 */
-	private syncNewNoteButton(): void {
-		const button = this.newNoteButton;
-		if (!button) return;
-		const enabled = this.settings.newNoteEnabled;
-		button.toggleClass("is-hidden", !enabled);
-		if (!enabled) return;
-
-		const name = this.plugin.noteCreator.previewTitle();
-		const tags =
-			this.settings.newNoteApplySelectedTags && this.selection.length > 0
-				? ` tagged ${this.selection.map(tagLabel).join(", ")}`
-				: "";
-		setTooltip(button, `Create ${name}.md${tags}`, { placement: "bottom" });
+	/** The toolbar's configurable action strip. */
+	private renderToolbarActions(): void {
+		const strip = this.toolbarActionsEl;
+		if (!strip) return;
+		strip.empty();
+		const tag = this.actionTarget();
+		const ctx = { tag, host: this as ActionHost };
+		const actions = actionsForSurface(
+			"toolbar",
+			TAG_ACTIONS,
+			this.settings.actionOrder,
+			this.settings.actionPlacement
+		);
+		strip.toggleClass("is-hidden", actions.length === 0);
+		for (const action of actions) this.renderActionButton(strip, action, ctx);
 	}
 
 	private async setMode(mode: ViewMode): Promise<void> {

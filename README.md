@@ -79,7 +79,9 @@ Every tag action also exists as a button, so nothing is reachable only by right-
 
 Buttons act on the **last tag you selected**, named at the left of the bar so the target is never ambiguous. They're grouped by kind (selection · notes · grouping · links · editing) and **grey out rather than disappear** when they don't apply, so the layout stays in the same place and becomes muscle memory.
 
-Every button's icon can be changed in **Settings → Action bar** — any [Lucide](https://lucide.dev) icon name works, with a live preview as you type.
+**Settings → Buttons** controls the whole layout. Each action can sit on the **toolbar**, the **action bar**, **both**, or **nowhere**, and be moved up or down into whatever order suits you. Icons are set there too — any [Lucide](https://lucide.dev) icon name, with a live preview as you type — and one **Reset** puts everything back.
+
+Both surfaces share a single order, so a button keeps the same relative position wherever you place it. The toolbar's *New note* and *Clear selection* are just ordinary actions that happen to default there, so they can be moved or hidden like anything else.
 
 ## Removing relations
 
