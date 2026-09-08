@@ -291,6 +291,18 @@ export default class TagRelationsPlugin extends Plugin {
 		this.refreshViews();
 	}
 
+	/**
+	 * Choose how much of each note the plex previews. Turning a length on also
+	 * turns the preview on: a button that set an invisible panel's length
+	 * would look broken.
+	 */
+	async setPreviewLines(lines: number): Promise<void> {
+		this.settings.plexPreviewLines = Math.max(0, Math.round(lines));
+		this.settings.plexPreviewNotes = true;
+		await this.saveSettings();
+		this.refreshViews();
+	}
+
 	async stepFont(direction: number): Promise<void> {
 		await this.setFontScale(stepFontScale(this.settings.fontScale, direction));
 	}

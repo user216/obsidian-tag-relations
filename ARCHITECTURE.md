@@ -57,7 +57,8 @@ The vault is read into a single in-memory **graph** whose nodes are tags and who
 | `src/actionLayout.ts` | 115 | Button placement, ordering and reordering (pure) |
 | `src/toolbarControls.ts` | 110 | The toolbar's built-in controls and their visibility (pure) |
 | `src/bands.ts` | 100 | Splitting a tag list into pinned/bookmarked/rest bands (pure) |
-| `src/plex.ts` | 240 | The plex arrangement: rows, side bands, depth, where it opens (pure) |
+| `src/plex.ts` | 280 | The plex arrangement: rows, side bands, depth, where it opens (pure) |
+| `src/excerpt.ts` | 100 | A note's opening lines, frontmatter and metadata skipped (pure) |
 | `src/plexView.ts` | 340 | The plex renderer: pills, SVG connectors, walking animation |
 | `src/fontZoom.ts` | 78 | Font-zoom stops, stepping and labelling (pure) |
 | `src/transfer.ts` | 300 | Export payloads, import validation, merge planning (pure) |
@@ -384,6 +385,8 @@ The renderer is DOM rather than canvas, unlike the mind-map. The pills here are 
 
 The optional note preview under the plex is live, which is the one place the plugin has two different answers to "show me some notes". The Show notes panel is a *snapshot*: it freezes what matched when you asked, flags itself stale when the world moves on, and offers bulk edits over exactly that frozen list — the freezing is what makes those edits safe. The preview follows the centre as you walk and carries no actions at all, so the two can never be confused for one another.
 
+The preview can show each note's opening lines, and the interesting part is what "opening lines" means. A literal first-N-lines of the file is nearly always metadata and whitespace, so `excerptLines` (`src/excerpt.ts`) drops the frontmatter block, blank lines, lines that are only tags, and horizontal rules, then trims heading and quote markers. It stops there: markdown left in place still reads as text, and unwrapping links or emphasis would need a parser or a pile of regexes that get it subtly wrong. Reading is asynchronous while rendering is not, so rows go up immediately and text arrives after, guarded by a token so a read landing in a plex that has since walked elsewhere is dropped rather than painted over the current one. The cache is stamped with each file's modification time: switching between 3, 5 and 10 lines never re-reads, but a note edited elsewhere does.
+
 Walking is the whole interaction, so it takes the plainest gesture: a click makes that tag the centre. Two consequences had to be handled. Clicking the centre is a no-op — the shared "clicking the only selected tag clears it" rule would otherwise empty the selection and send the plex to some other tag entirely. And the surviving pills are FLIPped between renders, so a tag clicked in the sub-tag row visibly travels to the middle. That continuity is what makes stepping through a graph feel like moving rather than like loading pages.
 
 ## 8d. Pan and zoom
@@ -447,7 +450,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-533 tests across 93 suites:
+553 tests across 93 suites:
 
 | Suite | Covers |
 | --- | --- |

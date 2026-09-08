@@ -32,7 +32,8 @@ export type ToolbarControlId =
 	| "zen"
 	| "fontZoom"
 	| "plexDepth"
-	| "plexPreview";
+	| "plexPreview"
+	| "plexPreviewLines";
 
 export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 	{
@@ -96,6 +97,12 @@ export const TOOLBAR_CONTROLS: ToolbarControl[] = [
 		label: "Plex note preview button",
 		description:
 			"Shows or hides the list of notes under the plex. Only appears in the plex view; also a command and a switch in Settings → Views.",
+	},
+	{
+		id: "plexPreviewLines",
+		label: "Plex preview length buttons",
+		description:
+			"Name only, 3, 5 or 10 opening lines of each previewed note. Only appears in the plex view; any exact count can be set in Settings → Views.",
 	},
 	{
 		id: "fontZoom",

@@ -1,4 +1,4 @@
-import { Menu, setIcon, setTooltip } from "obsidian";
+import { Menu, TFile, setIcon, setTooltip } from "obsidian";
 import {
 	ModeRenderer,
 	ViewHost,
@@ -11,6 +11,7 @@ import {
 	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
+import { MAX_EXCERPT_LINES, excerptLines } from "./excerpt";
 import { levelCss, visibleLevels } from "./levels";
 import { PanZoom } from "./panzoom";
 import {
@@ -45,6 +46,14 @@ export class PlexRenderer implements ModeRenderer {
 	private renaming: string | null = null;
 	/** Which tag was centred last, so a walk can be told from a redraw. */
 	private lastActive: string | null = null;
+	/**
+	 * Note openings already read, keyed by path and stamped with the file's
+	 * modification time — a note edited outside this view must not keep
+	 * showing the text it had when it was first previewed.
+	 */
+	private excerpts = new Map<string, { mtime: number; lines: string[] }>();
+	/** Bumped every render, so a late read knows it is stale. */
+	private excerptToken = 0;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -138,9 +147,14 @@ export class PlexRenderer implements ModeRenderer {
 		panel.createDiv({ cls: "tr-plex-preview-head", text: preview.heading });
 		if (preview.paths.length === 0) return;
 
+		const lines = host.settings.plexPreviewLines;
+		const token = ++this.excerptToken;
+		const pending: Array<{ path: string; el: HTMLElement }> = [];
+
 		const list = panel.createDiv({ cls: "tr-plex-preview-list" });
 		for (const path of preview.paths) {
-			const row = list.createDiv({ cls: "tr-note-row" });
+			const entry = list.createDiv({ cls: "tr-plex-preview-entry" });
+			const row = entry.createDiv({ cls: "tr-note-row" });
 			row.createSpan({ cls: "tr-note-name", text: noteName(path) });
 			const folder = noteFolder(path);
 			if (folder) row.createSpan({ cls: "tr-note-folder", text: folder });
@@ -151,12 +165,72 @@ export class PlexRenderer implements ModeRenderer {
 				event.stopPropagation();
 				openNote(host.app, path, event);
 			});
+
+			if (lines <= 0) continue;
+			const body = entry.createDiv({ cls: "tr-note-excerpt" });
+			body.addEventListener("click", (event) => {
+				event.stopPropagation();
+				openNote(host.app, path, event);
+			});
+			const file = host.app.vault.getAbstractFileByPath(path);
+			const mtime = file instanceof TFile ? file.stat.mtime : 0;
+			const cached = this.excerpts.get(path);
+			if (cached && cached.mtime === mtime) {
+				this.fillExcerpt(body, cached.lines, lines);
+			} else {
+				pending.push({ path, el: body });
+			}
 		}
+		if (pending.length > 0) void this.loadExcerpts(pending, lines, token);
 		if (preview.hidden > 0) {
 			list.createDiv({
 				cls: "tr-note-more",
 				text: `+ ${preview.hidden} more (raise the count in settings)`,
 			});
+		}
+	}
+
+	private fillExcerpt(el: HTMLElement, lines: string[], count: number): void {
+		el.empty();
+		const shown = lines.slice(0, count);
+		if (shown.length === 0) {
+			el.createDiv({ cls: "tr-note-excerpt-empty", text: "(empty note)" });
+			return;
+		}
+		for (const line of shown) el.createDiv({ text: line });
+	}
+
+	/**
+	 * Read the opening of each previewed note and fill it in.
+	 *
+	 * Reading is asynchronous while rendering is not, so the rows go up
+	 * immediately and the text arrives after. `token` guards against a slow
+	 * read landing in a plex that has since walked somewhere else — the reply
+	 * to a question nobody is asking any more is dropped rather than painted
+	 * over whatever is on screen now.
+	 *
+	 * Cached by path, and always the full `MAX_EXCERPT_LINES`, so switching
+	 * between 3, 5 and 10 lines never touches the vault again.
+	 */
+	private async loadExcerpts(
+		pending: Array<{ path: string; el: HTMLElement }>,
+		count: number,
+		token: number
+	): Promise<void> {
+		const { app } = this.host;
+		for (const { path, el } of pending) {
+			const file = app.vault.getAbstractFileByPath(path);
+			if (!(file instanceof TFile)) continue;
+			let lines: string[];
+			try {
+				lines = excerptLines(await app.vault.cachedRead(file), MAX_EXCERPT_LINES);
+			} catch {
+				// An unreadable note should cost its own row, not the panel.
+				continue;
+			}
+			this.excerpts.set(path, { mtime: file.stat.mtime, lines });
+			if (token !== this.excerptToken || !el.isConnected) continue;
+			this.fillExcerpt(el, lines, count);
 		}
 	}
 

@@ -37,6 +37,7 @@ import { actionsForSurface, menuActions } from "./actionLayout";
 import { BandId } from "./bands";
 import { PlexRenderer, plexDepthMenu } from "./plexView";
 import { PLEX_DEPTH_LABELS } from "./plex";
+import { EXCERPT_STOPS, excerptStopLabel } from "./excerpt";
 import { ToolbarControlId, isControlVisible } from "./toolbarControls";
 import {
 	FONT_SCALE_DEFAULT,
@@ -108,6 +109,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 	private fontScaleLabelEl: HTMLElement | null = null;
 	private plexDepthButton: HTMLElement | null = null;
 	private plexPreviewButton: HTMLElement | null = null;
+	private previewLinesGroup: HTMLElement | null = null;
+	private previewLinesButtons: Array<{ stop: number; el: HTMLElement }> = [];
 	private fontZoomButtons: { smaller: HTMLElement; larger: HTMLElement } | null =
 		null;
 	private actionBarEl!: HTMLElement;
@@ -711,6 +714,8 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		this.fontZoomButtons = null;
 		this.plexDepthButton = null;
 		this.plexPreviewButton = null;
+		this.previewLinesGroup = null;
+		this.previewLinesButtons = [];
 
 		if (this.showsControl("modes")) {
 			const modes = toolbar.createDiv({ cls: "tr-modes" });
@@ -878,6 +883,25 @@ export class TagRelationsView extends ItemView implements ViewHost {
 			preview.addEventListener("click", () =>
 				void this.plugin.togglePlexPreview()
 			);
+		}
+
+		if (this.showsControl("plexPreviewLines")) {
+			const group = actions.createDiv({ cls: "tr-preview-lines" });
+			this.previewLinesGroup = group;
+			this.previewLinesButtons = [];
+			for (const stop of EXCERPT_STOPS) {
+				const button = group.createDiv({ cls: "tr-preview-lines-button" });
+				if (stop === 0) setIcon(button, "file-text");
+				else button.setText(String(stop));
+				setTooltip(button, excerptStopLabel(stop), { placement: "bottom" });
+				button.addEventListener("click", () => {
+					// Choosing a length turns the preview on if it was off —
+					// four buttons that silently do nothing would be worse
+					// than not offering them.
+					void this.plugin.setPreviewLines(stop);
+				});
+				this.previewLinesButtons.push({ stop, el: button });
+			}
 		}
 
 		if (this.showsControl("fontZoom")) {
@@ -1117,6 +1141,23 @@ export class TagRelationsView extends ItemView implements ViewHost {
 					: "Preview the notes carrying the centre tag",
 				{ placement: "bottom" }
 			);
+		}
+
+		if (this.previewLinesGroup) {
+			const on = this.settings.plexPreviewNotes;
+			const lines = this.settings.plexPreviewLines;
+			// Only meaningful in the plex, and only while there is a preview
+			// to set the length of.
+			this.previewLinesGroup.toggleClass(
+				"is-hidden",
+				this.settings.mode !== "plex" || !on
+			);
+			for (const { stop, el } of this.previewLinesButtons) {
+				// A count set from the slider that is not one of the stops
+				// leaves none of them lit, rather than one of them claiming a
+				// value it does not hold.
+				el.toggleClass("is-active", on && lines === stop);
+			}
 		}
 
 		if (this.plexDepthButton) {

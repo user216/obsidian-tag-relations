@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-08
+
+### Added
+
+- **The plex preview now shows the opening of each note,** not just its name — a classic preview. Four toolbar buttons choose how much: **name only, 3, 5 or 10 lines**, and any exact count up to 20 is settable in Settings → Views → Plex.
+  - "The first three lines of the file" is almost never what anyone means. A note usually opens with frontmatter, a blank line, a title, and often a line of nothing but tags, so a literal reading shows metadata and whitespace and none of the note. The preview drops the frontmatter block, skips blank lines, skips lines that are only tags, skips horizontal rules, and trims heading and quote markers so an excerpt does not open with `###`. What is left is the first lines of the *note*.
+  - Nothing else is stripped. Markdown left in place still reads as text; unwrapping links and emphasis would mean a parser or a pile of regexes that get it subtly wrong, and a preview is not a renderer.
+  - Lines are clipped rather than wrapped, because "the first three lines" should occupy three lines or the count stops meaning anything.
+  - Choosing a length turns the preview on if it was off — four buttons that silently did nothing would be worse than not offering them.
+  - Reading is asynchronous while rendering is not, so rows appear at once and their text arrives after. A read that lands in a plex which has since walked elsewhere is dropped rather than painted over what is now on screen.
+  - Excerpts are cached by path and stamped with the file's modification time, so switching between 3, 5 and 10 never touches the vault again, while a note edited elsewhere is re-read rather than showing stale text.
+  - The buttons are hideable like every other toolbar control, and a count set from the slider that is not one of the four leaves none of them lit rather than one claiming a value it does not hold.
+
+### Tests
+
+- 20 new tests for the excerpt logic: frontmatter in both fence styles, an unterminated fence treated as text, tag-only lines skipped while a line merely containing a tag is kept, `#tag` distinguished from a heading, nested quote markers, list markers preserved, CRLF, empty notes, and the cap.
+
 ## [0.20.0] - 2026-09-08
 
 ### Added
@@ -492,6 +509,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.21.0]: https://github.com/user216/obsidian-tag-relations/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/user216/obsidian-tag-relations/compare/0.19.2...0.20.0
 [0.19.2]: https://github.com/user216/obsidian-tag-relations/compare/0.19.1...0.19.2
 [0.19.1]: https://github.com/user216/obsidian-tag-relations/compare/0.19.0...0.19.1

@@ -58,7 +58,9 @@ Only the immediate neighbourhood is drawn, and that's the point — a full graph
 | **Relatives and siblings** *(default)* | The other members of the same main-tag |
 | **Relatives, siblings and beyond** | The level above the main-tags and below the sub-tags, drawn faintly |
 
-Turn on **preview tagged notes** — the toolbar button beside the depth button, the *Toggle the plex note preview* command, or Settings → Views → Plex — and the notes carrying the centre tag are listed underneath, following you as you walk. It's not the Show notes panel — that one deliberately freezes a result so bulk edits can act on exactly that list. This one is always live and carries no actions, so the two can't be mistaken for each other.
+Turn on **preview tagged notes** — the toolbar button beside the depth button, the *Toggle the plex note preview* command, or Settings → Views → Plex — and the notes carrying the centre tag are listed underneath, following you as you walk.
+
+Four buttons choose how much of each note to show: **name only, 3, 5 or 10 lines** (any exact count up to 20 is settable). "The first three lines of the file" is almost never what you mean — a note usually opens with frontmatter, a blank line, a title, and often a line of nothing but tags. So the preview drops the frontmatter, skips blank lines, tag-only lines and horizontal rules, and trims `###` and `>` markers. What you get is the first lines of the *note*. It's not the Show notes panel — that one deliberately freezes a result so bulk edits can act on exactly that list. This one is always live and carries no actions, so the two can't be mistaken for each other.
 
 With nothing selected it opens on a **pinned tag**, falling back to your most-connected one. Each row is capped so one very busy tag can't fill the screen; whatever's left out is counted (`+18 more`) rather than dropped quietly.
 

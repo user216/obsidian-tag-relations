@@ -7,6 +7,7 @@ import {
 	FONT_SCALE_MIN,
 	FONT_SCALE_STEP,
 } from "./fontZoom";
+import { MAX_EXCERPT_LINES } from "./excerpt";
 import {
 	PLEX_DEPTH_DESCRIPTIONS,
 	PLEX_DEPTH_LABELS,
@@ -93,6 +94,8 @@ export interface TagRelationsSettings {
 	plexPreviewNotes: boolean;
 	/** How many of those notes to list. */
 	plexPreviewCount: number;
+	/** Lines of each note's opening to show; 0 shows just the name. */
+	plexPreviewLines: number;
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -204,6 +207,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 	plexRowCap: 24,
 	plexPreviewNotes: false,
 	plexPreviewCount: 6,
+	plexPreviewLines: 0,
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",
@@ -696,6 +700,23 @@ export class TagRelationsSettingTab extends PluginSettingTab {
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.plexPreviewCount = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshViews();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Lines of each note to preview")
+			.setDesc(
+				"0 shows just the note's name. Higher counts show its opening lines — frontmatter, blank lines and lines of nothing but tags are skipped, so these are the first lines of the note rather than the first lines of the file. The toolbar offers name-only, 3, 5 and 10 directly."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(0, MAX_EXCERPT_LINES, 1)
+					.setValue(this.plugin.settings.plexPreviewLines)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.plexPreviewLines = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshViews();
 					})

@@ -80,6 +80,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Opens on a pinned tag, falling back to the most connected one
 - Per-row cap with an honest `+N more` count
 - Optional note preview under the plex, following the centre as you walk — toolbar button, command, or Settings → Views
+- Preview shows each note's opening lines: name only, 3, 5, 10, or any exact count up to 20
+- Frontmatter, blank lines, tag-only lines and horizontal rules are skipped, so it is the first lines of the note rather than of the file
 
 ## Selection
 
@@ -250,5 +252,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 533 tests across 93 suites (`npm test`)
+- 553 tests across 93 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

@@ -2097,3 +2097,81 @@
 .tr-plex-preview .tr-note-more {
 	text-align: center;
 }
+
+/* ------------------------------------------------- preview length buttons */
+
+.tr-preview-lines {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 0 2px;
+	border-radius: var(--radius-s);
+	background-color: var(--background-modifier-border);
+}
+
+.tr-preview-lines.is-hidden {
+	display: none;
+}
+
+.tr-preview-lines-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 24px;
+	padding: 0 4px;
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-preview-lines-button:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.tr-preview-lines-button.is-active {
+	background-color: var(--background-primary);
+	color: var(--text-accent);
+}
+
+.tr-preview-lines-button .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+/* The note opening, under its name in the plex preview. */
+.tr-plex-preview-entry {
+	padding-bottom: 4px;
+}
+
+.tr-note-excerpt {
+	padding: 1px 8px 3px 8px;
+	font-size: calc(var(--font-ui-smaller) * var(--tr-font-scale, 1));
+	line-height: 1.45;
+	color: var(--text-muted);
+	cursor: pointer;
+	/*
+	 * Long lines are clipped rather than wrapped: "the first three lines"
+	 * should occupy three lines, or the count stops meaning anything.
+	 */
+	overflow: hidden;
+}
+
+.tr-note-excerpt > div {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tr-note-excerpt:hover {
+	color: var(--text-normal);
+}
+
+.tr-note-excerpt-empty {
+	font-style: italic;
+	color: var(--text-faint);
+}
