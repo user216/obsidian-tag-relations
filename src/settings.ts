@@ -73,6 +73,12 @@ export interface TagRelationsSettings {
 	// Tag groups ("tags for tags")
 	groupLinks: GroupLink[];
 	collapsedGroups: string[];
+	/**
+	 * Band headings folded shut, by band id. Shared by every view: a band is
+	 * one thing, and "I don't want my pins expanded right now" is one wish,
+	 * not four.
+	 */
+	collapsedBands: string[];
 	/** Draw sub-groups as top-level sections too, not only nested. */
 	showSubGroupsStandalone: boolean;
 	groupsLayout: "clouds" | "tree";
@@ -177,6 +183,7 @@ export const DEFAULT_SETTINGS: TagRelationsSettings = {
 
 	groupLinks: [],
 	collapsedGroups: [],
+	collapsedBands: [],
 	showSubGroupsStandalone: false,
 	groupsLayout: "clouds",
 	levelFilter: "merged",

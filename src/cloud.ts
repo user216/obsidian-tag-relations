@@ -3,10 +3,12 @@ import {
 	ModeRenderer,
 	ViewHost,
 	applyLevelStyle,
+	renderBandHeader,
 	describeRelation,
 	pillFontSize,
 } from "./host";
 import { tagLabel } from "./graph";
+import { GroupSection, groupSections } from "./groups";
 import { PanZoom } from "./panzoom";
 import {
 	DetailsColumn,
@@ -18,7 +20,7 @@ import {
 	visibleLevels,
 } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
-import { splitIntoBands } from "./bands";
+import { TagBand, splitIntoBands } from "./bands";
 
 interface PillRect {
 	left: number;
@@ -100,11 +102,14 @@ export class CloudRenderer implements ModeRenderer {
 
 		if (layout === "details") {
 			this.renderDetails(body, pinned, rest);
+		} else if (layout === "groups") {
+			this.renderGroupsLayout(body, tags);
 		} else {
 			// The flow layouts band the whole list themselves, so they get it
 			// intact rather than pre-split.
 			this.renderFlow(body, [], tags, layout === "list");
 		}
+
 
 		if (before) this.flip(before);
 	}
@@ -147,26 +152,27 @@ export class CloudRenderer implements ModeRenderer {
 		const remainder = banded("rest")?.tags ?? [];
 		const bookmarksOnTop = host.settings.bookmarkedBandPosition === "top";
 
-		if (pinnedBand) {
-			this.appendGroup(field, `Pinned (${pinnedBand.tags.length})`, pinnedBand.tags);
-		}
-		if (bookmarkedBand && bookmarksOnTop) {
-			this.appendGroup(
-				field,
-				`Bookmarked (${bookmarkedBand.tags.length})`,
-				bookmarkedBand.tags
-			);
-		}
+		if (pinnedBand) this.appendBand(field, pinnedBand);
+		if (bookmarkedBand && bookmarksOnTop) this.appendBand(field, bookmarkedBand);
 
 		this.renderRemainder(field, remainder, pinnedBand !== undefined || bookmarkedBand !== undefined);
 
-		if (bookmarkedBand && !bookmarksOnTop) {
-			this.appendGroup(
-				field,
-				`Bookmarked (${bookmarkedBand.tags.length})`,
-				bookmarkedBand.tags
-			);
-		}
+		if (bookmarkedBand && !bookmarksOnTop) this.appendBand(field, bookmarkedBand);
+	}
+
+	/** A foldable Pinned or Bookmarked band: heading always, tags on demand. */
+	private appendBand(field: HTMLElement, band: TagBand): void {
+		const { host } = this;
+		const collapsed = host.isBandCollapsed(band.id);
+		renderBandHeader(field, {
+			cls: "tr-cloud-group",
+			label: band.label,
+			count: band.tags.length,
+			collapsed,
+			onToggle: () => host.toggleBandCollapsed(band.id),
+		});
+		if (collapsed) return;
+		for (const tag of band.tags) field.appendChild(this.pillFor(tag));
 	}
 
 	/** Everything that is neither pinned nor bookmarked, grouped as usual. */
@@ -227,6 +233,98 @@ export class CloudRenderer implements ModeRenderer {
 		for (const tag of rest) field.appendChild(this.pillFor(tag));
 	}
 
+	/**
+	 * The cloud arranged by group membership rather than by relatedness: one
+	 * section per main-tag, then whatever no group holds.
+	 *
+	 * This is the Groups *view* rendered as a cloud rather than a second copy
+	 * of it — the sections come from the same `TagGroups`, and the pills are
+	 * the same pills, so pinning, renaming and the context menu all behave as
+	 * they do everywhere else in the cloud. Because membership is a DAG, a tag
+	 * in two groups appears under both; that is the thing nested tags could
+	 * not express, so hiding it here would be hiding the point.
+	 */
+	/**
+	 * The cloud arranged by group membership: the Groups view's structure
+	 * drawn with the cloud's pills.
+	 *
+	 * The sections come from the same `TagGroups` and fold with the same
+	 * state, so a group folded here is folded in the Groups view too. Pinned
+	 * and bookmarked band whole *sections*, exactly as they do there — banding
+	 * individual tags instead would lift a pinned tag out of its group and
+	 * leave the group looking as though it had lost a member.
+	 *
+	 * Because membership is a DAG, a tag in two groups appears under both.
+	 * That is the thing nested tags cannot express, so collapsing it to one
+	 * would be hiding the point.
+	 */
+	private renderGroupsLayout(body: HTMLElement, tags: string[]): void {
+		const { host } = this;
+		const field = body.createDiv({ cls: "tr-cloud" });
+		const sections = groupSections(host.groups, tags);
+		const byGroup = new Map(sections.map((section) => [section.group, section]));
+
+		const bands = splitIntoBands(
+			sections.map((section) => section.group),
+			{
+				pinned: host.settings.pinnedTags,
+				bookmarked: host.bookmarkedTags(),
+				showPinned: host.settings.showPinnedBand,
+				showBookmarked: host.settings.showBookmarkedBand,
+				bookmarkedPosition: host.settings.bookmarkedBandPosition,
+			}
+		);
+
+		for (const band of bands) {
+			// The remainder holds the bulk of the structure; folding it away
+			// would leave a view showing nothing but its own headings.
+			const foldable = band.label !== "" && band.id !== "rest";
+			const collapsed = foldable && host.isBandCollapsed(band.id);
+			if (foldable) {
+				renderBandHeader(field, {
+					cls: "tr-cloud-group tr-cloud-band",
+					label: band.label,
+					count: band.tags.length,
+					collapsed,
+					onToggle: () => host.toggleBandCollapsed(band.id),
+				});
+			} else if (band.label) {
+				field.createDiv({
+					cls: "tr-cloud-group tr-cloud-band",
+					text: `${band.label} (${band.tags.length})`,
+				});
+			}
+			if (collapsed) continue;
+			for (const group of band.tags) {
+				const section = byGroup.get(group);
+				if (section) this.appendSection(field, section);
+			}
+		}
+
+		// Tags no group holds, so the layout still shows everything visible.
+		const loose = host.groups
+			.ungrouped(tags)
+			.filter((tag) => !host.groups.isGroup(tag));
+		if (loose.length > 0) {
+			this.appendGroup(field, `Ungrouped (${loose.length})`, loose);
+		}
+	}
+
+	/** One group's heading and members, folding with the Groups view. */
+	private appendSection(field: HTMLElement, section: GroupSection): void {
+		const { host } = this;
+		const collapsed = host.isGroupCollapsed(section.group);
+		renderBandHeader(field, {
+			cls: "tr-cloud-group",
+			label: tagLabel(section.group),
+			count: section.members.length,
+			collapsed,
+			onToggle: () => host.toggleGroupCollapsed(section.group),
+		});
+		if (collapsed) return;
+		for (const tag of section.members) field.appendChild(this.pillFor(tag));
+	}
+
 	private appendGroup(
 		field: HTMLElement,
 		label: string,
@@ -278,8 +376,26 @@ export class CloudRenderer implements ModeRenderer {
 
 		// Pinned tags stay pinned-first (that is the point of pinning); the
 		// column sort applies to everything else, matching a file browser
-		// where favourites still sit above a sorted list.
-		section(pinned.length > 0 ? `Pinned (${pinned.length})` : "", this.sortByColumn(pinned));
+		// where favourites still sit above a sorted list. The Pinned heading
+		// folds like the ones in the other layouts, using the same shared
+		// state, so folding it in the cloud folds it here too.
+		if (pinned.length > 0) {
+			const collapsed = host.isBandCollapsed("pinned");
+			const row = tbody.createEl("tr", { cls: "tr-details-section" });
+			const cell = row.createEl("td", { attr: { colspan: "5" } });
+			renderBandHeader(cell, {
+				cls: "tr-details-band",
+				label: "Pinned",
+				count: pinned.length,
+				collapsed,
+				onToggle: () => host.toggleBandCollapsed("pinned"),
+			});
+			if (!collapsed) {
+				for (const tag of this.sortByColumn(pinned)) {
+					this.renderDetailRow(tbody, tag);
+				}
+			}
+		}
 		section(pinned.length > 0 ? "All tags" : "", sorted);
 	}
 

@@ -59,15 +59,24 @@ The three levels are told apart by size, shadow and colour, via **subtle / balan
 
 ## Cloud layouts, pinning and zoom
 
-The cloud has three layouts, like a file browser:
+The cloud has four layouts, like a file browser:
 
 | Layout | Shows |
 | --- | --- |
 | **Icons** | The classic weighted cloud — size tracks note count |
 | **List** | One tag per line, compact |
 | **Details** | A table: kind, note count, relation count, group membership — click a column header to sort by it |
+| **Groups** | The group structure as cloud sections: one foldable heading per main-tag, then Ungrouped |
+
+The **Groups** layout is the Groups view drawn with the cloud's pills, and shares its fold state — a group folded in one is folded in the other. A tag in several groups appears under each of them, which is the thing nested tags can't express.
 
 **Pin up to 10 tags** from any context menu. Pinned and bookmarked tags are lifted into their own labelled bands in the cloud, tree and groups views, and the bookmarked band can sit above or below the rest (Settings → Views). Turning a band off doesn't hide its tags — they just sit with everything else. A tag that's both appears once, under Pinned. On the mind-map, where there's no list to band, they get reserved labelled rows above or below the main cluster instead — anchored in world space, so they pan and zoom with the graph.
+
+**Folding a band.** Each Pinned and Bookmarked heading has a twisty: fold it and the tags go away, leaving `Pinned (12)` and one click to bring them back. The fold state is shared by every view, because a band is one thing. The remainder band — "Other tags", "Unpinned" — deliberately doesn't fold, since folding the main content would leave a view showing nothing but its own headings.
+
+On the mind-map, folding means the row **stops reserving space** and its tags rejoin the cluster; the nodes stay drawn, because hiding them would strand the edges that make it a graph. The heading remains, marked `▸`, and clicking it unfolds.
+
+**Pinning a group** is pinning its main-tag — a group *is* a tag that contains other tags, so there's one pin, not two. Use the pin and bookmark toggles on a group's heading in the Groups view; the section moves into that view's Pinned or Bookmarked band, and the main-tag shows up in the cloud's and tree's bands too.
 
 **Pan and zoom**: drag empty space to pan, Ctrl/Cmd+wheel to zoom about the cursor. Plain scrolling still scrolls, and the zoom level is remembered. The mind-map keeps its own camera, and gains a **whole-vault** option that draws every tag and connection at once rather than just the selection's neighbourhood.
 

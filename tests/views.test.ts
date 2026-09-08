@@ -635,3 +635,100 @@ describe("map band rows", () => {
 		assert.equal(anchors.get("#solo")!.x, 0);
 	});
 });
+
+// --- folded band rows on the map ---------------------------------------
+
+test("a folded row anchors nothing, so its tags rejoin the cluster", () => {
+	const rows = bandRows({
+		pinned: ["#a", "#b"],
+		bookmarked: [],
+		linkDistance: 100,
+		bookmarkedPosition: "top",
+		showPinned: true,
+		showBookmarked: true,
+		collapsed: ["pinned"],
+	});
+	assert.equal(rows.length, 1);
+	assert.equal(rows[0].collapsed, true);
+	// The row and its count survive — folding is about space, not hiding.
+	assert.deepEqual(rows[0].tags, ["#a", "#b"]);
+	assert.equal(bandRowAnchors(rows, 100).size, 0);
+});
+
+test("an unfolded row still anchors its tags", () => {
+	const rows = bandRows({
+		pinned: ["#a", "#b"],
+		bookmarked: [],
+		linkDistance: 100,
+		bookmarkedPosition: "top",
+		showPinned: true,
+		showBookmarked: true,
+		collapsed: ["bookmarked"],
+	});
+	assert.equal(rows[0].collapsed, false);
+	assert.equal(bandRowAnchors(rows, 100).size, 2);
+});
+
+test("folding the outer row pulls the inner one no closer", () => {
+	// The row nearest the cluster is placed first, so folding something above
+	// it must not move it.
+	const options = {
+		pinned: ["#a"],
+		bookmarked: ["#b"],
+		linkDistance: 100,
+		bookmarkedPosition: "top" as const,
+		showPinned: true,
+		showBookmarked: true,
+	};
+	const open = bandRows(options);
+	const folded = bandRows({ ...options, collapsed: ["pinned"] });
+	const inner = (rows: typeof open) =>
+		rows.find((row) => row.id === "bookmarked")!.y;
+	assert.equal(inner(folded), inner(open));
+});
+
+test("a folded row costs less vertical space than an open one", () => {
+	const options = {
+		pinned: ["#a"],
+		bookmarked: ["#b"],
+		linkDistance: 100,
+		bookmarkedPosition: "top" as const,
+		showPinned: true,
+		showBookmarked: true,
+	};
+	const open = bandRows(options);
+	const folded = bandRows({ ...options, collapsed: ["bookmarked"] });
+	const outer = (rows: typeof open) => rows.find((row) => row.id === "pinned")!.y;
+	assert.ok(outer(folded) > outer(open));
+});
+
+test("collapsed ids that name no row are ignored", () => {
+	const rows = bandRows({
+		pinned: ["#a"],
+		bookmarked: [],
+		linkDistance: 100,
+		bookmarkedPosition: "top",
+		showPinned: true,
+		showBookmarked: true,
+		collapsed: ["bookmarked", "nonsense"],
+	});
+	assert.equal(rows.length, 1);
+	assert.equal(rows[0].collapsed, false);
+});
+
+test("folding is independent of hiding: a hidden band has no row to fold", () => {
+	const rows = bandRows({
+		pinned: ["#a"],
+		bookmarked: ["#b"],
+		linkDistance: 100,
+		bookmarkedPosition: "top",
+		showPinned: false,
+		showBookmarked: true,
+		collapsed: ["bookmarked"],
+	});
+	assert.deepEqual(
+		rows.map((row) => row.id),
+		["bookmarked"]
+	);
+	assert.equal(rows[0].collapsed, true);
+});

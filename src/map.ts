@@ -1,6 +1,7 @@
 import { setIcon, setTooltip } from "obsidian";
 import { ModeRenderer, ViewHost, describeRelation, scaleByCount } from "./host";
 import { clampFontScale } from "./fontZoom";
+import { BandId } from "./bands";
 import { TagEdge, TagGraph, tagLabel } from "./graph";
 
 interface Particle {
@@ -64,6 +65,16 @@ export class MapRenderer implements ModeRenderer {
 	private truncated = 0;
 	/** Reserved rows for pinned and bookmarked tags. */
 	private bands: BandRow[] = [];
+	/** World-space boxes around the drawn band headings, for clicking them. */
+	private headingBoxes: Array<{
+		id: BandId;
+		x0: number;
+		y0: number;
+		x1: number;
+		y1: number;
+	}> = [];
+	/** A heading pressed but not yet released. */
+	private pressedHeading: BandId | null = null;
 
 	constructor(container: HTMLElement, host: ViewHost) {
 		this.host = host;
@@ -165,6 +176,7 @@ export class MapRenderer implements ModeRenderer {
 			bookmarkedPosition: settings.bookmarkedBandPosition,
 			showPinned: settings.showPinnedBand,
 			showBookmarked: settings.showBookmarkedBand,
+			collapsed: settings.collapsedBands,
 		});
 
 		// Selected tags are held still so the map re-forms around them, and
@@ -455,12 +467,15 @@ export class MapRenderer implements ModeRenderer {
 		}
 
 		// Band headings, drawn in world space so they travel with their rows.
+		this.headingBoxes = [];
 		if (this.bands.length > 0) {
 			ctx.textAlign = "left";
 			ctx.textBaseline = "bottom";
 			for (const row of this.bands) {
 				const spacing = this.host.settings.mapLinkDistance * 0.95;
-				const halfWidth = ((row.tags.length - 1) * spacing) / 2;
+				const halfWidth = row.collapsed
+					? 0
+					: ((row.tags.length - 1) * spacing) / 2;
 				const left = -halfWidth - spacing * 0.5;
 				const right = halfWidth + spacing * 0.5;
 
@@ -477,11 +492,22 @@ export class MapRenderer implements ModeRenderer {
 				ctx.globalAlpha = 0.75;
 				ctx.fillStyle = palette.textMuted;
 				ctx.font = `600 ${11 / scale}px ${FONT_STACK}`;
-				ctx.fillText(
-					`${row.label} (${row.tags.length})`,
-					left,
-					row.y - spacing * 0.42
-				);
+				const heading = `${row.collapsed ? "▸" : "▾"} ${row.label} (${
+					row.tags.length
+				})`;
+				const baseline = row.y - spacing * 0.42;
+				ctx.fillText(heading, left, baseline);
+				// Kept in world space so the box pans and zooms with the text
+				// it was measured from.
+				const width = ctx.measureText(heading).width;
+				const height = 14 / scale;
+				this.headingBoxes.push({
+					id: row.id,
+					x0: left,
+					y0: baseline - height,
+					x1: left + width,
+					y1: baseline + height * 0.25,
+				});
 				ctx.globalAlpha = 1;
 			}
 		}
@@ -570,16 +596,33 @@ export class MapRenderer implements ModeRenderer {
 		return best;
 	}
 
+	/** Which band heading is under this screen point, if any. */
+	private headingAt(sx: number, sy: number): BandId | null {
+		const world = this.screenToWorld(sx, sy);
+		for (const box of this.headingBoxes) {
+			if (
+				world.x >= box.x0 &&
+				world.x <= box.x1 &&
+				world.y >= box.y0 &&
+				world.y <= box.y1
+			) {
+				return box.id;
+			}
+		}
+		return null;
+	}
+
 	private onPointerDown = (event: PointerEvent): void => {
 		if (event.button !== 0) return;
 		const pos = this.pointerPos(event);
 		this.lastPointer = pos;
 		this.pointerMoved = false;
 		const hit = this.hitTest(pos.x, pos.y);
+		this.pressedHeading = hit ? null : this.headingAt(pos.x, pos.y);
 		if (hit) {
 			this.dragging = hit;
 			this.kick(Math.max(this.alpha, 0.35));
-		} else {
+		} else if (!this.pressedHeading) {
 			this.panning = true;
 		}
 		this.canvas.setPointerCapture(event.pointerId);
@@ -611,14 +654,15 @@ export class MapRenderer implements ModeRenderer {
 
 		this.lastPointer = pos;
 		const hit = this.hitTest(pos.x, pos.y);
+		const heading = hit ? null : this.headingAt(pos.x, pos.y);
 		if (hit !== this.hovered) {
 			this.hovered = hit;
-			this.canvas.toggleClass("is-over-node", hit !== null);
 			setTooltip(this.canvas, hit ? this.tooltipFor(hit) : "", {
 				placement: "top",
 			});
 			this.kick(this.alpha);
 		}
+		this.canvas.toggleClass("is-over-node", hit !== null || heading !== null);
 	};
 
 	private tooltipFor(p: Particle): string {
@@ -646,15 +690,19 @@ export class MapRenderer implements ModeRenderer {
 
 	private onPointerUp = (event: PointerEvent): void => {
 		const wasDragging = this.dragging;
+		const heading = this.pressedHeading;
 		const moved = this.pointerMoved;
 		this.dragging = null;
 		this.panning = false;
+		this.pressedHeading = null;
 		if (this.canvas.hasPointerCapture(event.pointerId)) {
 			this.canvas.releasePointerCapture(event.pointerId);
 		}
 		if (moved) return;
-		// A press without movement is a click: select the node, or clear.
-		if (wasDragging) this.host.selectFromEvent(wasDragging.tag, event);
+		// A press without movement is a click: fold a band, select a node, or
+		// clear the selection.
+		if (heading) this.host.toggleBandCollapsed(heading);
+		else if (wasDragging) this.host.selectFromEvent(wasDragging.tag, event);
 		else if (this.host.selection.length > 0) this.host.clearSelection();
 	};
 
@@ -830,6 +878,14 @@ export interface BandRow {
 	tags: string[];
 	/** World-space y for the row. */
 	y: number;
+	/**
+	 * Folded shut. On a list this hides the tags; on a graph it means the row
+	 * stops reserving space and its tags rejoin the cluster. Hiding the nodes
+	 * outright would strand the edges that make it a graph, so "collapsed"
+	 * here is about space, not visibility — and the heading stays put with its
+	 * count, so it is still one click back.
+	 */
+	collapsed: boolean;
 }
 
 export interface BandRowOptions {
@@ -839,6 +895,8 @@ export interface BandRowOptions {
 	bookmarkedPosition: "top" | "bottom";
 	showPinned: boolean;
 	showBookmarked: boolean;
+	/** Band ids folded shut, shared with the list views. */
+	collapsed?: Iterable<string>;
 }
 
 /**
@@ -860,9 +918,17 @@ export function bandRows(options: BandRowOptions): BandRow[] {
 		(tag) => !pinnedSet.has(tag)
 	);
 
+	const folded = new Set(options.collapsed ?? []);
+
 	const above: BandRow[] = [];
 	if (pinnedTags.length > 0) {
-		above.push({ id: "pinned", label: "Pinned", tags: pinnedTags, y: 0 });
+		above.push({
+			id: "pinned",
+			label: "Pinned",
+			tags: pinnedTags,
+			y: 0,
+			collapsed: folded.has("pinned"),
+		});
 	}
 	if (bookmarkedTags.length > 0 && options.bookmarkedPosition === "top") {
 		above.push({
@@ -870,13 +936,18 @@ export function bandRows(options: BandRowOptions): BandRow[] {
 			label: "Bookmarked",
 			tags: bookmarkedTags,
 			y: 0,
+			collapsed: folded.has("bookmarked"),
 		});
 	}
-	// Stack upward so the row nearest the graph is the last one added.
-	above.forEach((row, index) => {
-		row.y = -gap * (above.length - index + 1.5);
-		rows.push(row);
-	});
+	// Stack upward from the cluster, nearest row first, so a folded row costs
+	// a heading's worth of space instead of a full row's.
+	let offset = gap * 2.5;
+	for (let index = above.length - 1; index >= 0; index--) {
+		const row = above[index];
+		row.y = -offset;
+		offset += row.collapsed ? gap * 0.4 : gap;
+	}
+	rows.push(...above);
 
 	if (bookmarkedTags.length > 0 && options.bookmarkedPosition === "bottom") {
 		rows.push({
@@ -884,6 +955,7 @@ export function bandRows(options: BandRowOptions): BandRow[] {
 			label: "Bookmarked",
 			tags: bookmarkedTags,
 			y: gap * 2.5,
+			collapsed: folded.has("bookmarked"),
 		});
 	}
 	return rows;
@@ -897,6 +969,8 @@ export function bandRowAnchors(
 	const anchors = new Map<string, { x: number; y: number }>();
 	const spacing = linkDistance * 0.95;
 	for (const row of rows) {
+		// A folded row anchors nothing; its tags go back to the simulation.
+		if (row.collapsed) continue;
 		const width = (row.tags.length - 1) * spacing;
 		row.tags.forEach((tag, index) => {
 			anchors.set(tag, { x: index * spacing - width / 2, y: row.y });

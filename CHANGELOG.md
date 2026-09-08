@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-08
+
+### Added
+
+- **Foldable bands.** The Pinned and Bookmarked headings now carry a twisty. Folding one leaves the heading and its count — `Pinned (12)` — and puts the tags away. Works in the cloud (all four layouts), the tree, the groups view and the mind-map.
+  - The fold state is **shared by every view**, because a band is one thing and "I don't want my pins expanded right now" is one wish rather than four.
+  - On the mind-map, folding means the row **stops reserving space** and its tags rejoin the cluster, rather than the nodes disappearing — hiding them would strand the edges that make it a graph. The heading stays, drawn with a `▸`, and clicking it unfolds.
+  - The remainder band ("Other tags", "Unpinned") does not fold. Folding the main content would leave a view showing nothing but its own headings.
+- **Pinning and bookmarking groups.** A group's heading now has pin and bookmark toggles, and the groups view bands its top-level sections into Pinned / Bookmarked / the rest, exactly as the lists do.
+  - Pinning a group *is* pinning its main-tag. A group is a tag that happens to contain other tags (ADR 0001), so a second store keyed by group would be the same data under another name — and would then need its own renaming, its own cap and its own import rules. Reusing the tag's means a pinned group also appears in the cloud's and tree's Pinned bands, which is what someone who pinned it would expect.
+- **A Groups layout in the cloud view.** Alongside Icons, List and Details, the cloud can arrange itself by group membership: a foldable section per main-tag, then an Ungrouped section.
+  - It shares the Groups view's fold state, so a group folded in one is folded in the other.
+  - Pinned and bookmarked band whole **sections** here, not individual tags — lifting a pinned tag out of its group would leave the group looking as though it had lost a member.
+  - A tag in several groups appears under each of them, which is exactly what nested tags cannot express.
+
+### Fixed
+
+- **The Groups layout would have been swapped out by selecting a tag.** The cloud's selection regrouping ran before the layout was consulted, so clicking a tag turned the group sections back into Selected/Related/Unrelated — the same early-return mistake that once made the pinned band vanish on selection. The layout now decides the structure first.
+
+### Tests
+
+- 13 new tests: group sections covering every visible tag, a group whose members are all filtered out keeping its heading, a tag in two groups appearing under both, and folded map rows anchoring nothing while costing less vertical space than open ones.
+
 ## [0.16.0] - 2026-09-08
 
 ### Added
@@ -386,6 +409,7 @@ Initial release.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
 [Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...HEAD
+[0.17.0]: https://github.com/user216/obsidian-tag-relations/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/user216/obsidian-tag-relations/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/user216/obsidian-tag-relations/compare/0.14.0...0.15.0
 [0.14.0]: https://github.com/user216/obsidian-tag-relations/compare/0.13.0...0.14.0

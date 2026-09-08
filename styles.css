@@ -1814,3 +1814,96 @@
 	background-color: transparent;
 	color: var(--text-muted);
 }
+
+/* ---------------------------------------------------------- band folding */
+
+/*
+ * A band heading that folds. It reuses each view's own heading class, so the
+ * cloud's dividers and the tree's labels keep their look and only gain the
+ * twisty and the pointer.
+ */
+.tr-band-head {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	cursor: pointer;
+	user-select: none;
+}
+
+.tr-band-head:hover {
+	color: var(--text-muted);
+}
+
+.tr-band-twisty {
+	width: 14px;
+	height: 14px;
+	flex: 0 0 14px;
+	color: inherit;
+}
+
+.tr-band-twisty .svg-icon {
+	width: 12px;
+	height: 12px;
+}
+
+/* The cloud's headings are full-width dividers, so the flex row is inline. */
+.tr-cloud-group.tr-band-head {
+	display: flex;
+	flex: 0 0 100%;
+}
+
+/*
+ * A band heading in the Groups layout sits above a run of group headings, so
+ * it needs to read as the outer of the two.
+ */
+.tr-cloud-band {
+	margin-top: 18px;
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 3px;
+}
+
+.tr-cloud-band:first-child {
+	margin-top: 0;
+}
+
+/* The details table's heading cell already has the section padding. */
+.tr-details-band {
+	text-transform: inherit;
+	letter-spacing: inherit;
+	color: inherit;
+}
+
+/* Pin and bookmark toggles on a group heading. */
+.tr-group-mark {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+	transition: opacity 120ms ease, color 120ms ease;
+}
+
+.tr-group-header:hover .tr-group-mark {
+	opacity: 1;
+}
+
+.tr-group-mark:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* An active mark stays visible without a hover — that is what it is for. */
+.tr-group-mark.is-active {
+	opacity: 1;
+	color: var(--text-accent);
+}
+
+.tr-group-mark .svg-icon {
+	width: 13px;
+	height: 13px;
+}

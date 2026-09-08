@@ -30,6 +30,7 @@ import {
 	iconFor,
 } from "./actions";
 import { actionsForSurface } from "./actionLayout";
+import { BandId } from "./bands";
 import { ToolbarControlId, isControlVisible } from "./toolbarControls";
 import {
 	FONT_SCALE_DEFAULT,
@@ -193,6 +194,21 @@ export class TagRelationsView extends ItemView implements ViewHost {
 		else collapsed.push(tag);
 		void this.plugin.saveSettings();
 		this.renderActiveMode();
+	}
+
+	isBandCollapsed(id: BandId): boolean {
+		return this.settings.collapsedBands.includes(id);
+	}
+
+	toggleBandCollapsed(id: BandId): void {
+		const collapsed = this.settings.collapsedBands;
+		const index = collapsed.indexOf(id);
+		if (index >= 0) collapsed.splice(index, 1);
+		else collapsed.push(id);
+		void this.plugin.saveSettings();
+		// Every view shares the state, so refresh them all rather than only
+		// the one that was clicked.
+		this.plugin.refreshViews();
 	}
 
 	promptAddToGroup(parent: string): void {

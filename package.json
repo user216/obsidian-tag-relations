@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-tag-relations",
-	"version": "0.16.0",
+	"version": "0.17.0",
 	"description": "Explore relations between tags as a tag cloud, mind-map and tree.",
 	"main": "main.js",
 	"scripts": {

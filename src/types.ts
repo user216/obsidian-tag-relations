@@ -84,12 +84,13 @@ export const LEVEL_FILTER_LABELS: Record<LevelFilter, string> = {
 };
 
 /** How the tag cloud lays its tags out, in the manner of a file browser. */
-export type CloudLayout = "icons" | "list" | "details";
+export type CloudLayout = "icons" | "list" | "details" | "groups";
 
 export const CLOUD_LAYOUT_LABELS: Record<CloudLayout, string> = {
 	icons: "Icons",
 	list: "List",
 	details: "Details",
+	groups: "Groups",
 };
 
 /** How strongly the three levels are told apart visually. */

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { TagGroups } from "../src/groups";
+import { TagGroups, groupSections } from "../src/groups";
 import { visibleGroupChildren } from "../src/groupsView";
 import { GroupLink } from "../src/types";
 
@@ -373,4 +373,100 @@ describe("visibleGroupChildren (level-filter flattening)", () => {
 		);
 		assert.deepEqual(result, { subGroups: [], plain: [] });
 	});
+});
+
+// --- groupSections ------------------------------------------------------
+
+test("groupSections lists each group with the members that are visible", () => {
+	const groups = new TagGroups([
+		{ parent: "#work", child: "#urgent" },
+		{ parent: "#work", child: "#email" },
+		{ parent: "#home", child: "#garden" },
+	]);
+	const sections = groupSections(groups, [
+		"#work",
+		"#home",
+		"#urgent",
+		"#email",
+		"#garden",
+	]);
+	assert.deepEqual(
+		sections.map((section) => section.group),
+		["#home", "#work"]
+	);
+	assert.deepEqual(sections[1].members, ["#urgent", "#email"]);
+});
+
+test("groupSections drops members that are filtered out", () => {
+	const groups = new TagGroups([
+		{ parent: "#work", child: "#urgent" },
+		{ parent: "#work", child: "#email" },
+	]);
+	const sections = groupSections(groups, ["#work", "#email"]);
+	assert.equal(sections.length, 1);
+	assert.deepEqual(sections[0].members, ["#email"]);
+});
+
+test("a group whose members are all filtered out keeps its heading", () => {
+	// Otherwise the main-tag itself falls through to "Ungrouped", which is
+	// the one thing it definitely is not.
+	const groups = new TagGroups([{ parent: "#work", child: "#urgent" }]);
+	const sections = groupSections(groups, ["#work"]);
+	assert.deepEqual(sections, [{ group: "#work", members: [] }]);
+});
+
+test("a group with nothing visible at all gets no section", () => {
+	const groups = new TagGroups([{ parent: "#work", child: "#urgent" }]);
+	assert.deepEqual(groupSections(groups, ["#other"]), []);
+});
+
+test("sub-group sections come after the main groups holding them", () => {
+	const groups = new TagGroups([
+		{ parent: "#work", child: "#projects" },
+		{ parent: "#projects", child: "#alpha" },
+	]);
+	const sections = groupSections(groups, ["#work", "#projects", "#alpha"]);
+	assert.deepEqual(
+		sections.map((section) => section.group),
+		["#work", "#projects"]
+	);
+	// The sub-group appears as a member above and as a heading below, which
+	// is how the nesting stays readable in a flat list of sections.
+	assert.deepEqual(sections[0].members, ["#projects"]);
+	assert.deepEqual(sections[1].members, ["#alpha"]);
+});
+
+test("a tag in two groups appears under both", () => {
+	// The thing nested tags cannot express, so it must not be collapsed to one.
+	const groups = new TagGroups([
+		{ parent: "#work", child: "#urgent" },
+		{ parent: "#home", child: "#urgent" },
+	]);
+	const sections = groupSections(groups, ["#work", "#home", "#urgent"]);
+	assert.equal(sections.length, 2);
+	for (const section of sections) {
+		assert.deepEqual(section.members, ["#urgent"]);
+	}
+});
+
+test("every visible tag is covered by a section or by the ungrouped list", () => {
+	const groups = new TagGroups([
+		{ parent: "#work", child: "#urgent" },
+		{ parent: "#work", child: "#projects" },
+		{ parent: "#projects", child: "#alpha" },
+	]);
+	const visible = ["#work", "#projects", "#urgent", "#alpha", "#loose", "#solo"];
+	const sections = groupSections(groups, visible);
+	const covered = new Set<string>();
+	for (const section of sections) {
+		covered.add(section.group);
+		for (const member of section.members) covered.add(member);
+	}
+	for (const tag of groups.ungrouped(visible)) {
+		if (!groups.isGroup(tag)) covered.add(tag);
+	}
+	assert.deepEqual(
+		visible.filter((tag) => !covered.has(tag)),
+		[]
+	);
 });

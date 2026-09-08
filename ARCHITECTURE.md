@@ -378,6 +378,14 @@ The mind-map draws to canvas and owns its own camera. The cloud, groups and tree
 
 One interaction worth noting: FLIP measures `getBoundingClientRect`, which is in screen pixels, but the pill's own transform lives *inside* the scaled layer — so the measured delta is divided by the current scale before being applied.
 
+### Folding a band
+
+A band heading folds, and the fold state — `collapsedBands` — is one list shared by every view, keyed by band id. Four independent copies would be more expressive and worse: "why is Pinned open here and shut there" is a question nobody should have to answer, the same reasoning that gave the action bar and the toolbar one shared ordering.
+
+Folding is the one place in this plugin that is allowed to hide tags. Everywhere else the rule is that turning something off must not make its contents unreachable — a disabled band drops its tags into the remainder rather than dropping them. A fold is different because the affordance survives the action: the heading stays put, the count still reads `Pinned (12)`, and the twisty says which way it goes. What makes hiding dangerous is not being able to tell that anything is hidden.
+
+The mind-map cannot follow that model literally. Removing nodes from a graph strands the edges that make it a graph, so there "folded" means the row stops reserving space and its tags rejoin the cluster — visible, just not lifted out. `bandRows` stacks upward by accumulating offsets rather than multiplying a uniform gap, so a folded row costs a heading's worth of height instead of a row's, and `bandRowAnchors` skips it entirely. The heading is still drawn, and its world-space box is recorded during the draw so a click can hit-test against exactly what was painted.
+
 ### Font zoom is a different thing, on purpose
 
 `src/fontZoom.ts` scales the *type*, not the layer, and the distinction is the reason both exist. A transform magnifies spacing, borders and text together and the layout does not reflow, so zooming in means scrolling around a larger copy of the same arrangement. Changing the font size makes the browser lay the tags out again: they rewrap to the available width, so zooming out fits more of them on screen and zooming in keeps them readable without panning. The two compose — a zoomed-in transform over larger type behaves as you would expect.
@@ -419,7 +427,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-483 tests across 92 suites:
+496 tests across 92 suites:
 
 | Suite | Covers |
 | --- | --- |

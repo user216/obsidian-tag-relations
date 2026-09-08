@@ -1,5 +1,10 @@
 import { setIcon, setTooltip } from "obsidian";
-import { ModeRenderer, ViewHost, attachRenameInput } from "./host";
+import {
+	ModeRenderer,
+	ViewHost,
+	attachRenameInput,
+	renderBandHeader,
+} from "./host";
 import { TagGraph, tagLabel } from "./graph";
 import { splitIntoBands } from "./bands";
 
@@ -85,12 +90,27 @@ export class TreeRenderer implements ModeRenderer {
 			bookmarkedPosition: host.settings.bookmarkedBandPosition,
 		});
 		for (const band of bands) {
+			// The unlabelled single band is the whole list; there is nothing
+			// to fold it away from, so it gets no heading and no twisty.
+			const foldable = band.label !== "" && band.id !== "rest";
+			const collapsed = foldable && host.isBandCollapsed(band.id);
 			if (band.label) {
-				list.createDiv({
-					cls: "tr-band-label",
-					text: `${band.label} (${band.tags.length})`,
-				});
+				if (foldable) {
+					renderBandHeader(list, {
+						cls: "tr-band-label",
+						label: band.label,
+						count: band.tags.length,
+						collapsed,
+						onToggle: () => host.toggleBandCollapsed(band.id),
+					});
+				} else {
+					list.createDiv({
+						cls: "tr-band-label",
+						text: `${band.label} (${band.tags.length})`,
+					});
+				}
 			}
+			if (collapsed) continue;
 			const body = list.createDiv({ cls: "tr-band-body" });
 			for (const tag of band.tags) this.renderNode(body, [tag], 0);
 		}

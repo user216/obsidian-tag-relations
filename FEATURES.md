@@ -32,6 +32,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Level styling by size, shadow and colour — subtle / balanced / bold, or custom
 - Level filters: plain tags, tags + main-tags, all levels side by side, all levels together
 - Nothing is written to your notes; grouping lives in plugin data
+- Pin or bookmark a whole group from its heading — the same pin as its main-tag, so it bands everywhere
+- The groups view bands its top-level sections into Pinned / Bookmarked / the rest
 
 ## Cloud view
 
@@ -46,6 +48,7 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Up to 10 pinned tags held at the top in every layout, and honoured by every view
 - Pan by dragging empty space; Ctrl/Cmd+wheel zooms about the cursor
 - Zoom level remembered between sessions
+- **Groups layout**: sections by main-tag, folding with the Groups view, then an Ungrouped section
 
 ## Mind-map view
 
@@ -175,6 +178,10 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 ## Bands
 
+- **Foldable**: a twisty on each Pinned / Bookmarked heading puts its tags away, leaving the name and count
+- Fold state is shared by every view, since a band is one thing
+- The remainder band never folds — the main content stays visible
+- On the mind-map, folding stops the row reserving space; its tags rejoin the cluster rather than vanishing
 - Pinned and bookmarked tags separated into labelled sections in the cloud, tree and groups views
 - Bands survive selection and level grouping — they are lifted out first, not skipped
 - On the mind-map the same split becomes reserved, labelled rows above or below the cluster
@@ -229,5 +236,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 483 tests across 92 suites (`npm test`)
+- 496 tests across 92 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

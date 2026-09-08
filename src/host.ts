@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, setIcon, setTooltip } from "obsidian";
 import { TagEdge, tagLabel } from "./graph";
 import { TagGraph } from "./graph";
 import { TagRelationsSettings } from "./settings";
@@ -6,6 +6,7 @@ import { TagGroups } from "./groups";
 import { levelCss } from "./levels";
 import { clampFontScale } from "./fontZoom";
 import { LevelStyles, SelectMode, SortMode, TagLevel } from "./types";
+import { BandId } from "./bands";
 
 /**
  * What each mode renderer is allowed to see and do. Keeping this narrow lets
@@ -52,9 +53,13 @@ export interface ViewHost {
 	/** Every bookmarked tag, for splitting a list into bands. */
 	bookmarkedTags(): string[];
 	togglePin(tag: string): void;
+	toggleBookmark(tag: string): void;
 
 	isGroupCollapsed(tag: string): boolean;
 	toggleGroupCollapsed(tag: string): void;
+	/** Whether a band heading is folded shut, hiding its tags. */
+	isBandCollapsed(id: BandId): boolean;
+	toggleBandCollapsed(id: BandId): void;
 	/** Ask the user which tag to put inside `parent`. */
 	promptAddToGroup(parent: string): void;
 	/** Ask the user which main-tag/sub-tag should contain `child`. */
@@ -116,6 +121,53 @@ export function pillFontSize(options: PillSizeOptions): number {
 	// browser would reject or a person could not read.
 	if (!Number.isFinite(size)) return options.minSize;
 	return Math.max(1, size);
+}
+
+export interface BandHeaderOptions {
+	/** The view's own class for the heading, so each keeps its look. */
+	cls: string;
+	label: string;
+	count: number;
+	collapsed: boolean;
+	onToggle: () => void;
+}
+
+/**
+ * A band heading with a fold twisty — the one place that draws one.
+ *
+ * Collapsing is deliberately allowed to hide tags, which every other feature
+ * here refuses to do, because here the affordance is the point: the heading
+ * stays put with its count, the twisty says which way it goes, and one click
+ * brings the tags back. A count that reads "Pinned (12)" with nothing under it
+ * is a fold, not a disappearance.
+ */
+export function renderBandHeader(
+	parent: HTMLElement,
+	options: BandHeaderOptions
+): HTMLElement {
+	const header = parent.createDiv({ cls: `tr-band-head ${options.cls}` });
+	header.toggleClass("is-collapsed", options.collapsed);
+
+	const twisty = header.createSpan({ cls: "tr-twisty tr-band-twisty" });
+	setIcon(twisty, "chevron-right");
+	twisty.toggleClass("is-open", !options.collapsed);
+
+	header.createSpan({
+		cls: "tr-band-head-text",
+		text: `${options.label} (${options.count})`,
+	});
+	setTooltip(
+		header,
+		options.collapsed
+			? `Show the ${options.count} tag${options.count === 1 ? "" : "s"}`
+			: "Fold this band away",
+		{ placement: "top" }
+	);
+	header.addEventListener("click", (event) => {
+		event.stopPropagation();
+		options.onToggle();
+	});
+	return header;
 }
 
 /** A modifier-click always means "add/remove", regardless of sticky mode. */

@@ -5,12 +5,14 @@ import {
 	applyLevelStyle,
 	attachRenameInput,
 	pillFontSize,
+	renderBandHeader,
 } from "./host";
 import { tagLabel } from "./graph";
 import { PanZoom } from "./panzoom";
 import { levelCss, orderedLevels, separatesLevels, visibleLevels } from "./levels";
 import { LEVEL_LABELS, TagLevel } from "./types";
 import { TagGroups } from "./groups";
+import { splitIntoBands } from "./bands";
 
 /**
  * The groups view: tags organised by the containment structure rather than by
@@ -66,8 +68,35 @@ export class GroupsRenderer implements ModeRenderer {
 			return;
 		}
 
-		for (const group of roots) {
-			this.renderGroup(body, group, 0, new Set([group]));
+		for (const band of splitIntoBands(roots, {
+			pinned: host.settings.pinnedTags,
+			bookmarked: host.bookmarkedTags(),
+			showPinned: host.settings.showPinnedBand,
+			showBookmarked: host.settings.showBookmarkedBand,
+			bookmarkedPosition: host.settings.bookmarkedBandPosition,
+		})) {
+			// The remainder is the main content; folding it away would leave a
+			// view showing nothing but its own headings.
+			const foldable = band.label !== "" && band.id !== "rest";
+			const collapsed = foldable && host.isBandCollapsed(band.id);
+			if (foldable) {
+				renderBandHeader(body, {
+					cls: "tr-band-label",
+					label: band.label,
+					count: band.tags.length,
+					collapsed,
+					onToggle: () => host.toggleBandCollapsed(band.id),
+				});
+			} else if (band.label) {
+				body.createDiv({
+					cls: "tr-band-label",
+					text: `${band.label} (${band.tags.length})`,
+				});
+			}
+			if (collapsed) continue;
+			for (const group of band.tags) {
+				this.renderGroup(body, group, 0, new Set([group]));
+			}
 		}
 
 		// Everything no group contains, so nothing is unreachable from here.
@@ -263,6 +292,43 @@ export class GroupsRenderer implements ModeRenderer {
 			name.addEventListener("contextmenu", (event) => {
 				event.preventDefault();
 				host.openContextMenu(tag, event);
+			});
+
+			// Pinning or bookmarking a group is pinning or bookmarking its
+			// main-tag. A group *is* a tag here (ADR 0001), so a second store
+			// keyed by group would be the same data under another name — and
+			// would then need its own renaming, its own cap and its own import
+			// rules. Reusing the tag's makes a pinned group show up in the
+			// cloud's and tree's Pinned bands too, which is what someone who
+			// pinned it would expect.
+			const pin = header.createSpan({ cls: "tr-group-mark" });
+			const pinned = host.isPinned(tag);
+			setIcon(pin, "pin");
+			pin.toggleClass("is-active", pinned);
+			setTooltip(
+				pin,
+				pinned ? `Unpin ${tagLabel(tag)}` : `Pin ${tagLabel(tag)} to the top`,
+				{ placement: "top" }
+			);
+			pin.addEventListener("click", (event) => {
+				event.stopPropagation();
+				host.togglePin(tag);
+			});
+
+			const mark = header.createSpan({ cls: "tr-group-mark" });
+			const bookmarked = host.isBookmarked(tag);
+			setIcon(mark, "bookmark");
+			mark.toggleClass("is-active", bookmarked);
+			setTooltip(
+				mark,
+				bookmarked
+					? `Remove ${tagLabel(tag)} from bookmarks`
+					: `Bookmark ${tagLabel(tag)}`,
+				{ placement: "top" }
+			);
+			mark.addEventListener("click", (event) => {
+				event.stopPropagation();
+				host.toggleBookmark(tag);
 			});
 
 			const add = header.createSpan({ cls: "tr-group-add" });
