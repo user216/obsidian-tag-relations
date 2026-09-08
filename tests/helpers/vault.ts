@@ -13,6 +13,8 @@ import { TFile } from "obsidian";
  */
 export class MockVault {
 	files = new Map<string, string>();
+	/** Folders created through the API, so folder resolution can be asserted. */
+	folders = new Set<string>();
 
 	constructor(files: Record<string, string> = {}) {
 		for (const [path, content] of Object.entries(files)) {
@@ -40,6 +42,16 @@ export class MockVault {
 					vault.files.set(file.path, next);
 					return next;
 				},
+				create: async (path: string, data: string) => {
+					if (vault.files.has(path)) {
+						throw new Error(`File already exists: ${path}`);
+					}
+					vault.files.set(path, data);
+					return vault.fileFor(path);
+				},
+				createFolder: async (path: string) => {
+					vault.folders.add(path);
+				},
 			},
 			metadataCache: {
 				getFileCache: (file: { path: string }) =>
@@ -58,6 +70,11 @@ export class MockVault {
 				},
 			},
 		};
+	}
+
+	/** Public form of fileAt, for stubs that must hand back a TFile. */
+	fileFor(path: string): TFile {
+		return this.fileAt(path);
 	}
 
 	private fileAt(path: string): TFile {

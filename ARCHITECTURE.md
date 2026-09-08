@@ -399,7 +399,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 
 `npm test` bundles each `tests/*.test.ts` with esbuild — **the same pipeline the plugin is built with**, aliasing `obsidian` to a local stub — then runs them on Node's built-in test runner. Building tests the same way as production means a test cannot pass against code the bundler would reject.
 
-344 tests across 65 suites:
+356 tests across 68 suites:
 
 | Suite | Covers |
 | --- | --- |
@@ -410,6 +410,7 @@ Manual links live here rather than in notes, which is why they are invisible to 
 | `views.test.ts` | Tree branching, map node collection and anchoring, `scaleByCount`, modifier detection, manual-link remapping, settings invariants |
 | `groups.test.ts` | Every depth-rule case, multi-parent membership, promotion/demotion, cycle resistance, rename propagation |
 | `levels.test.ts` | Level style resolution and CSS, level filters, pin capping, zoom clamping |
+| `newNote.test.ts` | Note creation end to end: tags into frontmatter, explicit-versus-inherited tags, filename collisions, folder creation |
 | `tagSuggest.test.ts` | Substring and case matching, create-new offers and their suppression, exclusions, limits |
 | `relations.test.ts` | Removable-relation discovery, single/all/membership removal, and the action registry's ids, groups, enablement and icon fallbacks |
 | `datetime.test.ts` | Every format token, `[literal]` escaping, timezone conversion across DST / date-line / year boundaries, invalid-zone fallback, filename sanitising, frontmatter generation |

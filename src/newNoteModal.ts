@@ -12,7 +12,12 @@ export interface NewNoteModalOptions {
 	onCreate(tags: string[]): void;
 }
 
-const VISIBLE_SUGGESTIONS = 8;
+/**
+ * A render cap, not a visible count — the list scrolls, so this only exists
+ * so a vault with thousands of tags does not build thousands of rows on every
+ * keystroke. Anything beyond this is reachable by typing to narrow instead.
+ */
+const MAX_RENDERED_SUGGESTIONS = 200;
 
 /**
  * The new-note dialog: choose any number of tags, then create.
@@ -137,7 +142,7 @@ export class NewNoteModal extends Modal {
 	private renderSuggestions(): void {
 		this.suggestions = tagSuggestions(this.query, this.options.allTags, {
 			exclude: this.chosen,
-			limit: VISIBLE_SUGGESTIONS,
+			limit: MAX_RENDERED_SUGGESTIONS,
 		});
 		this.listEl.empty();
 
@@ -253,8 +258,22 @@ export class NewNoteModal extends Modal {
 	}
 
 	private submit(): void {
+		// Whatever is still in the box was typed on purpose. Discarding it
+		// silently loses the tag the user thought they were adding — which is
+		// especially easy to hit with a brand-new name, where the only thing
+		// on screen is a "create this" row they may reasonably expect the
+		// Create button to honour.
+		this.commitPending();
 		const tags = this.chosen.slice();
 		this.close();
 		this.options.onCreate(tags);
+	}
+
+	/** Add whatever the box currently points at, if anything. */
+	private commitPending(): void {
+		if (this.query.trim().length === 0) return;
+		const pending =
+			this.suggestions[this.highlighted] ?? this.suggestions[0] ?? null;
+		if (pending) this.addTag(pending.tag);
 	}
 }

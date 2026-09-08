@@ -95,6 +95,8 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 - Add any number of tags, existing or newly created, shown as removable chips
 - Live preview of the filename the note will get
 - Keyboard-first: arrows to move, Enter to add, Backspace to undo, Enter on an empty box to create
+- A tag left typed in the box is added when you press Create, not discarded
+- The suggestion list scrolls through every matching tag
 - The dialog can be turned off for one-click creation
 - Title from the current date and time, `YYYYMMDDHHmm` by default
 - Configurable format with moment-style tokens and `[literal]` escaping
@@ -166,5 +168,5 @@ Every implemented feature, in brief. See [README.md](README.md) for how to use t
 
 - Zero runtime dependencies; single bundled `main.js`
 - `npm run package` produces a manual-install folder and flat release assets
-- 344 tests across 65 suites (`npm test`)
+- 356 tests across 68 suites (`npm test`)
 - Architecture decisions recorded in [docs/adr/](docs/adr/); terminology in [VOCABULARY.md](VOCABULARY.md)

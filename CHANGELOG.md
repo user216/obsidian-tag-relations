@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-09-08
+
+Two bugs in the new-note dialog, both found in real use.
+
+### Fixed
+
+- **A tag typed but not explicitly added was silently discarded.** Typing a name — especially a brand-new one, where the only thing on screen is a "create this" row — and then pressing **Create note** threw the typed tag away, so the note was created without it. Whatever is left in the box is now committed before the note is created, which is what pressing Create plainly implies.
+- **The suggestion list could not be scrolled**, because it was capped at eight rows — so there was never anything below the fold to scroll to, and any tag past the eighth was unreachable except by typing. The list now renders every match (up to a generous cap that exists only to keep very large vaults responsive) and scrolls as intended.
+
+### Tests
+
+- 12 new end-to-end tests for note creation, now possible because the in-memory vault fixture gained `create` and `createFolder`. They cover a brand-new tag reaching the note, explicit tags overriding the "apply the selected tags" setting, same-minute filename collisions, folder creation, and the filename preview matching what is actually written.
+
 ## [0.7.0] - 2026-09-08
 
 ### Added
@@ -208,7 +221,8 @@ Initial release.
 - Packaging script (`npm run package`) producing a manual-install plugin folder, a zipped copy of it, and flat release assets (`main.js`, `manifest.json`, `styles.css`) for GitHub releases / BRAT.
 - Architecture Decision Records under `docs/adr/` covering the flat-tags-plus-graph model, the two relation sources, the shared-graph multi-view design, and the choice of a hand-rolled canvas force layout over a graph library.
 
-[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/user216/obsidian-tag-relations/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/user216/obsidian-tag-relations/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/user216/obsidian-tag-relations/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/user216/obsidian-tag-relations/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/user216/obsidian-tag-relations/compare/0.5.0...0.5.1
